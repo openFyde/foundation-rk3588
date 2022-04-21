@@ -1,0 +1,18 @@
+# NAME		Relative path
+#
+#HWDEF		HWDEF
+package-file	package-file
+bootloader	Image/MiniLoaderAll.bin
+parameter	Image/parameter.txt
+STATE   Image/STATE.img
+KERN-A		Image/KERN-A.img
+ROOT-A    Image/ROOT-A.img
+#KERN-B    RESERVED
+#ROOT-B    RESERVED
+#KERN-C    RESERVED
+#ROOT-C    RESERVED
+OEM       Image/OEM.img
+#reserved1  RESERVED
+#reserved2  RESERVED
+uboot		Image/uboot.img
+EFI-SYSTEM Image/EFI-SYSTEM.img

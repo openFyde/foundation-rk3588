@@ -1,0 +1,17 @@
+#BOARD_COMPILER_FLAGS="-march=armv8-a+crc -mtune=cortex-a57.cortex-a53 -mfpu=crypto-neon-fp-armv8 -mfloat-abi=hard"
+BOARD_COMPILER_FLAGS="-march=armv8-a+crc -mtune=cortex-a76 -mfpu=crypto-neon-fp-armv8 -mfloat-abi=hard"
+BOARD_RUSTFLAGS="-Ctarget-feature=+armv8-a,+crc"
+CHROMEOS_KERNEL_ARCH="arm64"
+
+USE=""
+USE="${USE} big_little"
+USE="${USE} drm_atomic"
+USE="${USE} hardfp"
+USE="${USE} kernel-5_10"
+USE="${USE} neon"
+USE="${USE} v4l2_codec"
+USE="${USE} disable_cros_video_decoder"
+USE="${USE} native_gpu_memory_buffers"
+USE="${USE} direncryption direncription_allow_v2"
+
+ACCEPT_LICENSE="${ACCEPT_LICENSE} Google-TOS"

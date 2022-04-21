@@ -1,0 +1,36 @@
+# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Initial value just for style purposes.
+LINUX_FIRMWARE=""
+USE=""
+
+USE="${USE} opengles touchview watchdog"
+USE="${USE} gpu_sandbox_start_early wayland"
+
+# Does not apply to all boards, but is a noop where it is not needed.
+USE="${USE} h1_over_spi"
+
+# Enable TPM2
+USE="${USE} -tpm tpm2"
+
+# Enable KVM
+USE="${USE} kvm_host crosvm-gpu"
+
+VIDEO_CARDS="rockchip"
+
+# Declare set of enabled consoles
+TTY_CONSOLE="ttyS2"
+
+# Enable eMMC tools
+USE="${USE} mmc"
+
+# Disable document scanning due to insufficient rootfs.
+#USE="${USE} -ondevice_document_scanner"
+
+# Disable on-device grammar check for boards with 2GB rootfs.
+#USE="${USE} -ondevice_grammar"
+
+# Disable Floss Bluetooth for boards with 2GB rootfs.
+#USE="${USE} -floss"
