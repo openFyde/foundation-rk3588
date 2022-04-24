@@ -1,0 +1,77 @@
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
+index caed803f8..87424a459 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
+@@ -1145,7 +1145,7 @@
+ };
+ 
+ /* vp0 & vp1 splice for 8K output */
+-&vp0 {
++&vp2 {
+ 	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0)>;
+ 	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
+ };
+@@ -1155,12 +1155,13 @@
+ 	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART1>;
+ };
+ 
+-&vp2 {
+-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER2 | 1 << ROCKCHIP_VOP2_ESMART2)>;
++&vp0 {
++  cursor-win-id=<ROCKCHIP_VOP2_CLUSTER3>;
++	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_CLUSTER2 | 1 << ROCKCHIP_VOP2_ESMART2)>;
+ 	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART2>;
+ };
+ 
+ &vp3 {
+-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
+-	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART3>;
++	rockchip,plane-mask;// = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
++	rockchip,primary-plane;// = <ROCKCHIP_VOP2_ESMART3>;
+ };
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi b/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
+index 954e3e5f2..43af48d73 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
+@@ -255,7 +255,7 @@
+  * when dsi0 is enabled
+  */
+ &dsi0 {
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &dsi0_in_vp2 {
+@@ -263,7 +263,7 @@
+ };
+ 
+ &dsi0_in_vp3 {
+-	status = "okay";
++	status = "disabled";
+ };
+ 
+ &dsi0_panel {
+@@ -271,6 +271,7 @@
+ 	reset-gpios = <&gpio2 RK_PB4 GPIO_ACTIVE_LOW>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&lcd_rst_gpio>;
++  status = "disabled";
+ };
+ 
+ /*
+@@ -631,10 +632,14 @@
+ };
+ 
+ &route_dsi0 {
+-	status = "okay";
++	status = "disabled";
+ 	connect = <&vp3_out_dsi0>;
+ };
+ 
++&route_hdmi0 {
++  status = "okay";
++};
++
+ &route_dsi1 {
+ 	status = "disabled";
+ 	connect = <&vp3_out_dsi1>;
