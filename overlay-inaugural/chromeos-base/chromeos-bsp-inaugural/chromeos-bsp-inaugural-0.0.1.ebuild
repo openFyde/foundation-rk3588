@@ -28,4 +28,6 @@ src_install() {
   udev_dorules "${FILESDIR}/93-powerd-overrides.rules"
   insinto /lib/firmware
   doins -r ${FILESDIR}/firmware/*
+  insinto /etc/init
+  doins ${FILESDIR}/ethernet_issue_workaround.conf
 }

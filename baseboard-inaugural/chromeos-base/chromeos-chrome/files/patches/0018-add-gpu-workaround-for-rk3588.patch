@@ -1,0 +1,35 @@
+Index: src/gpu/config/gpu_driver_bug_list.json
+===================================================================
+--- src.orig/gpu/config/gpu_driver_bug_list.json
++++ src/gpu/config/gpu_driver_bug_list.json
+@@ -3893,6 +3893,16 @@
+       "features": [
+         "disable_accelerated_h264_encode"
+       ]
++    },
++    {
++      "id": 386,
++      "description": "The Mali-Lxx driver does not guarantee flush ordering",
++      "cr_bugs": [678508],
++      "gl_vendor": "ARM",
++      "gl_renderer": "Mali-L.*",
++      "features": [
++        "use_virtualized_gl_contexts"
++      ]
+     }
+   ]
+ }
+Index: src/gpu/config/software_rendering_list.json
+===================================================================
+--- src.orig/gpu/config/software_rendering_list.json
++++ src/gpu/config/software_rendering_list.json
+@@ -1152,7 +1152,8 @@
+         { "gl_renderer": "Mali-G.*",
+           "subpixel_font_rendering": "unsupported"},
+         { "gl_renderer": "PowerVR.*" },
+-        { "vendor_id": "0x1002" }
++        { "vendor_id": "0x1002" },
++        { "gl_renderer": "Mali-L.*" }
+       ]
+     },
+     {
