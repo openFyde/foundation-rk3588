@@ -16,6 +16,7 @@ IUSE=""
 RDEPEND="
   chromeos-base/chromeos-bsp-baseboard-inaugural
   chromeos-base/device-appid
+  net-wireless/brcm_bt_patchrom
   "
 
 DEPEND="${RDEPEND}"

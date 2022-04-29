@@ -1,0 +1,2 @@
+env BRCM_BT_ROM_FILE="/lib/firmware/BCM4362A2.hcd"
+env BRCM_BT_TTY="/dev/ttyS8"
