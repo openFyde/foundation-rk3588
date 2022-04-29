@@ -1,0 +1,1 @@
+env ALLOWED_DEVICES=eth0,eth1,wlan0

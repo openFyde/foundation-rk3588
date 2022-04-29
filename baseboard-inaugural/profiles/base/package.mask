@@ -1,1 +1,2 @@
 chromeos-base/tty::chromiumos
+media-sound/adhd::chromiumos

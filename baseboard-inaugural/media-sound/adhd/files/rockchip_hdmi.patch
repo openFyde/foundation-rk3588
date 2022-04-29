@@ -1,0 +1,27 @@
+diff --git a/src/server/cras_alsa_card.c b/src/server/cras_alsa_card.c
+index b0f944ab..38569d8e 100644
+--- a/src/server/cras_alsa_card.c
++++ b/src/server/cras_alsa_card.c
+@@ -103,11 +103,19 @@ struct cras_iodev *create_iodev_for_device(
+ 	new_dev = calloc(1, sizeof(*new_dev));
+ 	if (new_dev == NULL)
+ 		return NULL;
+-
++  syslog(LOG_INFO, "create pcm device for card:%s %s:%s:%s [%u] info:type:%d, card_index:%u,usb_bendor_id:0x%x, usb_product_id:0x%x",
++          alsa_card->name, card_name, dev_name, dev_id, device_index,
++          info->card_type, info->card_index, info->usb_vendor_id, info->usb_product_id);
+ 	/* Append device index to card namem, ex: 'hw:0', for the PCM name of
+ 	 * target iodev. */
+-	snprintf(pcm_name, MAX_ALSA_PCM_NAME_LENGTH, "%s,%u", alsa_card->name,
+-		 device_index);
++  if (!strncmp(card_name, "HDMI",4) || !strncmp(card_name, "IEC958",6)){
++    snprintf(pcm_name, MAX_ALSA_PCM_NAME_LENGTH, "iec958:%u,%u", info->card_index,
++		  device_index);
++    syslog(LOG_INFO, "create iec958 device for:%s", card_name);
++  } else {
++    snprintf(pcm_name, MAX_ALSA_PCM_NAME_LENGTH, "%s,%u", alsa_card->name,
++      device_index); 
++  }
+ 
+ 	new_dev->direction = direction;
+ 	new_dev->iodev =
