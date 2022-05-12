@@ -3,7 +3,7 @@
 
 EAPI="5"
 
-inherit udev
+inherit udev user
 
 DESCRIPTION="empty project"
 HOMEPAGE="http://fydeos.com"
@@ -38,4 +38,8 @@ src_install() {
   doins -r ${FILESDIR}/ucm-config/* 
   insinto /usr/share/alsa/cards
   doins ${FILESDIR}/alsa-card/HDMI_DP-rockchi.conf
+}
+
+pkg_preinst() {
+  enewgroup tun
 }

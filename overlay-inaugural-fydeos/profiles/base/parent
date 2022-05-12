@@ -1,0 +1,4 @@
+baseboard-inaugural:base
+inaugural:base
+chromiumos:features/selinux
+arc-plus:arm

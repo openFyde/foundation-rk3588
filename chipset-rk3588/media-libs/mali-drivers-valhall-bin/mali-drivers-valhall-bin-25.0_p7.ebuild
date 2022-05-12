@@ -22,5 +22,7 @@ RDEPEND="
 S=${FILESDIR}
 
 src_install() {
-	cp -pPR "${S}"/* "${D}/" || die "Install failed!"
+  einfo "cp -pPR ${S}/$(get_libdir) ${D}/usr/$(get_libdir)"
+  mkdir ${D}/usr
+	cp -pPR ${S}/$(get_libdir) ${D}/usr/$(get_libdir) || die "Install failed!"
 }

@@ -6,7 +6,6 @@ EAPI=7
 CROS_WORKON_PROJECT="chromiumos/third_party/kernel"
 CROS_WORKON_LOCALNAME="kernel/v5.10-rockchip"
 CROS_WORKON_EGIT_BRANCH="rk3588"
-CROS_WORKON_OUTOFTREE_BUILD=1
 
 # This must be inherited *after* EGIT/CROS_WORKON variables defined
 inherit cros-workon cros-kernel2
@@ -24,4 +23,4 @@ KEYWORDS="~*"
 # Don't forget to update the comment in _all_ chromeos-kernel-x_x-9999.ebuild
 # files (!!!)
 #
-# The coolest prime number is: 149
+# The coolest prime number is: 179

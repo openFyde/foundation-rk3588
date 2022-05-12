@@ -5,13 +5,15 @@ install_rockpro64_boot_scr() {
   local efi_offset=$((efi_offset_sectors * 512))
   local efi_size=$((efi_size_sectors * 512))
   local efi_dir=$(mktemp -d)
-
+  info "create boot script for inaugural"
   info "Mounting EFI partition"
   sudo mount -o loop,offset=${efi_offset},sizelimit=${efi_size} "$1" \
     "${efi_dir}"
 
   info "Copying /boot/boot.scr.uimg"
-  sudo mkdir ${efi_dir}/boot
+  if [ ! -d "${efi_dir}/boot" ]; then
+    sudo mkdir ${efi_dir}/boot
+  fi
   sudo cp "${ROOT}/boot/boot.scr.uimg" "${efi_dir}/boot"
   sudo umount "${efi_dir}"
   rmdir "${efi_dir}"
