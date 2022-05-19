@@ -1,0 +1,100 @@
+Index: src/media/gpu/v4l2/generic_v4l2_device.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/generic_v4l2_device.cc
++++ src/media/gpu/v4l2/generic_v4l2_device.cc
+@@ -115,7 +115,7 @@ bool GenericV4L2Device::Poll(bool poll_d
+     VPLOGF(1) << "poll() failed";
+     return false;
+   }
+-  *event_pending = (pollfd != -1 && pollfds[pollfd].revents & POLLPRI);
++  *event_pending = (pollfd != -1 && pollfds[pollfd].revents & POLLIN);
+   return true;
+ }
+ 
+@@ -125,10 +125,19 @@ void* GenericV4L2Device::Mmap(void* addr
+                               int flags,
+                               unsigned int offset) {
+   DCHECK(device_fd_.is_valid());
++  if (use_libv4l2_) {
++    VPLOGF(1) << "v4l2_mmap";
++    return v4l2_mmap(addr, len, prot, flags, device_fd_.get(), offset);
++  }
++  VPLOGF(1) << "system_mmap";
+   return mmap(addr, len, prot, flags, device_fd_.get(), offset);
+ }
+ 
+ void GenericV4L2Device::Munmap(void* addr, unsigned int len) {
++  if (use_libv4l2_) {
++    v4l2_munmap(addr, len);
++    return;
++  }
+   munmap(addr, len);
+ }
+ 
+@@ -441,7 +450,7 @@ bool GenericV4L2Device::OpenDevicePath(c
+     return false;
+ 
+ #if BUILDFLAG(USE_LIBV4L2)
+-  if (type == Type::kEncoder &&
++  if (/*type == Type::kEncoder &&*/
+       HANDLE_EINTR(v4l2_fd_open(device_fd_.get(), V4L2_DISABLE_CONVERSION)) !=
+           -1) {
+     DVLOGF(3) << "Using libv4l2 for " << path;
+Index: src/media/gpu/v4l2/v4l2.sig
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2.sig
++++ src/media/gpu/v4l2/v4l2.sig
+@@ -8,3 +8,5 @@
+ LIBV4L_PUBLIC int v4l2_close(int fd);
+ LIBV4L_PUBLIC int v4l2_ioctl(int fd, unsigned long int request, ...);
+ LIBV4L_PUBLIC int v4l2_fd_open(int fd, int v4l2_flags);
++LIBV4L_PUBLIC void *v4l2_mmap(void *start, size_t length, int prot, int flags, int fd, int64_t offset);
++LIBV4L_PUBLIC int v4l2_munmap(void *_start, size_t length);
+Index: src/content/gpu/gpu_sandbox_hook_linux.cc
+===================================================================
+--- src.orig/content/gpu/gpu_sandbox_hook_linux.cc
++++ src/content/gpu/gpu_sandbox_hook_linux.cc
+@@ -89,6 +89,7 @@ static const char kLibTegraPath[] = "/us
+ static const char kLibV4l2Path[] = "/usr/lib64/libv4l2.so";
+ static const char kLibV4lEncPluginPath[] =
+     "/usr/lib64/libv4l/plugins/libv4l-encplugin.so";
++static const char kLibRkMppPath[] = "/usr/lib64/librockchip_mpp.so";
+ #else
+ static const char kLibGlesPath[] = "/usr/lib/libGLESv2.so.2";
+ static const char kLibEglPath[] = "/usr/lib/libEGL.so.1";
+@@ -97,6 +98,7 @@ static const char kLibTegraPath[] = "/us
+ static const char kLibV4l2Path[] = "/usr/lib/libv4l2.so";
+ static const char kLibV4lEncPluginPath[] =
+     "/usr/lib/libv4l/plugins/libv4l-encplugin.so";
++static const char kLibRkMppPath[] = "/usr/lib/librockchip_mpp.so";
+ #endif
+ 
+ constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
+@@ -127,6 +129,11 @@ void AddV4L2GpuPermissions(
+           BrokerFilePermission::ReadWrite(mediaDevicePath.str()));
+     }
+   }
++  // Video decoder of rk3588
++  static const char kDevRkMppPath[] = "/dev/mpp_service";
++  permissions->push_back(BrokerFilePermission::ReadWrite(kDevRkMppPath));
++  static const char kDevRkRgaPath[] = "/dev/rga";
++  permissions->push_back(BrokerFilePermission::ReadWrite(kDevRkRgaPath));
+ 
+   // Image processor used on ARM platforms.
+   static const char kDevImageProc0Path[] = "/dev/image-proc0";
+@@ -279,6 +286,7 @@ void AddArmGpuPermissions(std::vector<Br
+   permissions->push_back(BrokerFilePermission::ReadOnly(kLdSoCache));
+   permissions->push_back(BrokerFilePermission::ReadOnly(kLibGlesPath));
+   permissions->push_back(BrokerFilePermission::ReadOnly(kLibEglPath));
++  permissions->push_back(BrokerFilePermission::ReadOnly(kLibRkMppPath));
+ 
+   AddArmMaliGpuPermissions(permissions);
+ }
+@@ -477,6 +485,7 @@ void LoadV4L2Libraries(
+     if (options.accelerated_video_encode_enabled) {
+       // This is a device-specific encoder plugin.
+       dlopen(kLibV4lEncPluginPath, dlopen_flag);
++      dlopen(kLibRkMppPath, dlopen_flag);
+     }
+   }
+ }

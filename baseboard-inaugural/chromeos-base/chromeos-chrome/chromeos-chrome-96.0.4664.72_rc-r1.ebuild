@@ -191,6 +191,7 @@ DEPEND="${DEPEND}
 
 PATCHES=( 
   "${FILESDIR}/patches/0018-add-gpu-workaround-for-rk3588.patch" 
+  "${FILESDIR}/patches/0001-hardware-video-decoder.patch"
 )
 
 AUTOTEST_COMMON="src/chrome/test/chromeos/autotest/files"
