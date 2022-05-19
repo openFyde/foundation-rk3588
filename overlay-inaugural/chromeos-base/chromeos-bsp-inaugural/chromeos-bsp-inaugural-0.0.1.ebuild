@@ -36,8 +36,8 @@ src_install() {
   doexe ${FILESDIR}/wifi_init/start_wifi.sh
   insinto /usr/share/alsa/ucm
   doins -r ${FILESDIR}/ucm-config/* 
-  insinto /usr/share/alsa/cards
-  doins ${FILESDIR}/alsa-card/HDMI_DP-rockchi.conf
+#  insinto /usr/share/alsa/cards
+#  doins ${FILESDIR}/alsa-card/HDMI_DP-rockchi.conf
 }
 
 pkg_preinst() {

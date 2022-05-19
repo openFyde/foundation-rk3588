@@ -1,0 +1,13 @@
+diff --git a/src/libv4l-rkmpp.c b/src/libv4l-rkmpp.c
+index 87211fd..2ac79b3 100644
+--- a/src/libv4l-rkmpp.c
++++ b/src/libv4l-rkmpp.c
+@@ -703,7 +703,7 @@ static void *plugin_init(int fd)
+ 	if (!ctx)
+ 		RETURN_ERR(ENOMEM, NULL);
+ 
+-	ctx->drm_fd = open("/dev/dri/card0", O_RDWR);
++	ctx->drm_fd = open("/dev/dri/renderD128", O_RDWR);
+ 	if (ctx->drm_fd < 0) {
+ 		LOGE("failed to open drm device\n");
+ 		goto err_free_ctx;
