@@ -1,0 +1,4 @@
+cameras:
+  "/i2c@fead0000/imx415@1a":
+    location: front
+    rotation: 0

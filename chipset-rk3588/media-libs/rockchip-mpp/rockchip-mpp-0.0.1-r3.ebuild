@@ -35,6 +35,9 @@ src_install() {
   cmake-utils_src_install
   default 
   insinto /etc/init
-  doins ${FILESDIR}/init_rockchip_v4l2_mpp.conf
   udev_dorules ${FILESDIR}/99-rockchip-permissions.rules
 }
+
+PATCHES=(
+  "${FILESDIR}/chang-drm-device-to-render.patch"
+)

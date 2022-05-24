@@ -6,4 +6,6 @@ USE="${USE} edge_touch_filtering"
 USE="${USE} -tpm tpm2_simulator tpm2 -vtpm_proxy tpm2_simulator_manufacturer"
 USE="${USE} include_vmlinuz chrome_media"
 # chrome doesn't support nacl with aarch64 arch 
-USE="${USE} -nacl"
+#USE="${USE} -nacl"
+
+#USE="${USE} libcamera rkisp1"

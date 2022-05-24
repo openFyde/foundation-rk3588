@@ -4,7 +4,7 @@
 EAPI="5"
 
 EGIT_REPO_URI="https://github.com/JeffyCN/libv4l-rkmpp.git"
-EGIT_COMMIT="ce051a37ea22ed46be7446a1da5e52b9fd68ca03"
+EGIT_COMMIT="9f7cbec9d792f6822b471c0bbab5fe32c808b009"
 
 inherit autotools git-r3 eutils flag-o-matic
 
@@ -28,7 +28,7 @@ src_prepare() {
     append-cflags -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
   fi
   eautoreconf
-  epatch ${FILESDIR}/change_drm_device_to_render.patch
+#  epatch ${FILESDIR}/change_drm_device_to_render.patch
 }
 
 src_configure() {
