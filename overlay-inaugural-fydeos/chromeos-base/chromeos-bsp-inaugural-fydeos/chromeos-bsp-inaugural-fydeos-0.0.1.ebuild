@@ -15,9 +15,3 @@ RDEPEND=""
 
 DEPEND="${RDEPEND}"
 
-S=$FILESDIR
-
-src_install() {
-  insinto /etc/init
-  doins boot-splash.override
-}

@@ -21,10 +21,6 @@ install_rockpro64_boot_scr2() {
   info "Installed /boot/boot.scr.uimg"
 }
 
-#board_setup() {
-#  install_rockpro64_boot_scr2 "$1"
-#}
-
 . $(dirname ${BASH_SOURCE[0]})/fydeos_version.sh
 CHROMEOS_ARC_ANDROID_SDK_VERSION=28
 CHROMEOS_ARC_VERSION=7441130
