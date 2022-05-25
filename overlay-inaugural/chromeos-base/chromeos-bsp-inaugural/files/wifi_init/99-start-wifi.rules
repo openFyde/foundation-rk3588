@@ -1,1 +1,0 @@
-KERNEL=="wlan0", ACTION=="add", RUN+="/lib/udev/start_wifi.sh"
