@@ -1,4 +1,4 @@
-#BOARD_COMPILER_FLAGS="-march=armv8-a+crc -mtune=cortex-a57.cortex-a53 -mfpu=crypto-neon-fp-armv8 -mfloat-abi=hard"
+#BOARD_COMPILER_FLAGS="-march=armv8-a+crc -mtune=cortex-a57 -mfpu=crypto-neon-fp-armv8 -mfloat-abi=hard"
 BOARD_COMPILER_FLAGS="-march=armv8-a+crc -mtune=cortex-a76 -mfpu=crypto-neon-fp-armv8 -mfloat-abi=hard"
 BOARD_RUSTFLAGS="-Ctarget-feature=+a76,+crc"
 CHROMEOS_KERNEL_ARCH="arm64"

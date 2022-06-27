@@ -1,8 +1,14 @@
 #!/bin/bash
 top=$(dirname $0)
+pushd $top 2>&1 1>/dev/null
+top=$(pwd)
 img_dir="$top/Image"
 chromeos_image=$1
 loopdev=$(sudo losetup -f)
+declare -A LINK_MAP=(
+  [inaugural]="v1.04.106"
+  [fydetab_duo]="v1.07.111"
+)
 die() {
   echo $@
   exit 1  
@@ -30,6 +36,17 @@ link_img() {
   sudo chmod 666 $src
 }
 
+link_miniloader() {
+  for board in "${!LINK_MAP[@]}"; do
+    echo "check board:$board"
+    if [ -n "$(echo $chromeos_image | grep $board)" ]; then
+      echo "link miniloader: ${LINK_MAP[$board]}"
+      ln -sf $top/rk3588-uboot-bin/rk3588_spl_loader_${LINK_MAP["$board"]}.bin $img_dir/MiniLoaderAll.bin 
+      break
+    fi
+  done
+}
+
 main() {
   mount_loopdev $chromeos_image
   link_img p1 STATE
@@ -37,6 +54,8 @@ main() {
   link_img p3 ROOT-A
   link_img p8 OEM
   link_img p12 EFI-SYSTEM
+  link_miniloader
 }
 
 main
+popd 2>&1 1>/dev/null
