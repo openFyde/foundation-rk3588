@@ -19,7 +19,11 @@ RDEPEND="
 	!media-libs/mesa
 "
 
-S=${FILESDIR}
+S=$WORKDIR
+
+src_unpack() {
+  unpack ${FILESDIR}/mali-rk3588-10.8.6-r0p0.tar.gz
+}
 
 src_install() {
   einfo "cp -pPR ${S}/$(get_libdir) ${D}/usr/$(get_libdir)"
