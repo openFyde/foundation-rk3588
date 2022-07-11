@@ -25,6 +25,7 @@ TTY_CONSOLE="ttyS2"
 
 # Enable eMMC tools
 USE="${USE} mmc"
+USE="${USE} -video_capture_use_gpu_memory_buffer"
 
 # Disable document scanning due to insufficient rootfs.
 #USE="${USE} -ondevice_document_scanner"

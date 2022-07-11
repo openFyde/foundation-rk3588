@@ -7,11 +7,11 @@ chromeos_image=$1
 loopdev=$(sudo losetup -f)
 declare -A LINK_MAP=(
   [inaugural]="v1.04.106"
-  [fydetab_duo]="v1.07.111"
+  [fydetab_duo]="v1.06.111"
 )
 die() {
   echo $@
-  exit 1  
+  exit 1
 }
 
 [ -b "$loopdev" ] || die "no loop device found."
@@ -41,7 +41,7 @@ link_miniloader() {
     echo "check board:$board"
     if [ -n "$(echo $chromeos_image | grep $board)" ]; then
       echo "link miniloader: ${LINK_MAP[$board]}"
-      ln -sf $top/rk3588-uboot-bin/rk3588_spl_loader_${LINK_MAP["$board"]}.bin $img_dir/MiniLoaderAll.bin 
+      ln -sf $top/rk3588-uboot-bin/rk3588_spl_loader_${LINK_MAP["$board"]}.bin $img_dir/MiniLoaderAll.bin
       break
     fi
   done

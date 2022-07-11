@@ -1,8 +1,8 @@
-diff --git a/drivers/gpu/drm/drm_auth.c b/drivers/gpu/drm/drm_auth.c
-index 232abbba3..4975cad0f 100644
---- a/drivers/gpu/drm/drm_auth.c
-+++ b/drivers/gpu/drm/drm_auth.c
-@@ -203,7 +203,7 @@ static int drm_new_set_master(struct drm_device *dev, struct drm_file *fpriv)
+Index: kernel-rockchip/drivers/gpu/drm/drm_auth.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/drm_auth.c
++++ kernel-rockchip/drivers/gpu/drm/drm_auth.c
+@@ -203,7 +203,7 @@ static int drm_new_set_master(struct drm
  static int
  drm_master_check_perm(struct drm_device *dev, struct drm_file *file_priv)
  {
@@ -11,11 +11,11 @@ index 232abbba3..4975cad0f 100644
  		return 0;
  
  	if (!capable(CAP_SYS_ADMIN))
-diff --git a/drivers/gpu/drm/drm_drv.c b/drivers/gpu/drm/drm_drv.c
-index cd162d406..5389b5d87 100644
---- a/drivers/gpu/drm/drm_drv.c
-+++ b/drivers/gpu/drm/drm_drv.c
-@@ -1023,6 +1023,8 @@ static int drm_stub_open(struct inode *inode, struct file *filp)
+Index: kernel-rockchip/drivers/gpu/drm/drm_drv.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/drm_drv.c
++++ kernel-rockchip/drivers/gpu/drm/drm_drv.c
+@@ -1023,6 +1023,8 @@ out:
  	return err;
  }
  
@@ -37,10 +37,10 @@ index cd162d406..5389b5d87 100644
  	ret = register_chrdev(DRM_MAJOR, "drm", &drm_stub_fops);
  	if (ret < 0)
  		goto error;
-diff --git a/include/drm/drm_drv.h b/include/drm/drm_drv.h
-index e395d1fc1..651729a42 100644
---- a/include/drm/drm_drv.h
-+++ b/include/drm/drm_drv.h
+Index: kernel-rockchip/include/drm/drm_drv.h
+===================================================================
+--- kernel-rockchip.orig/include/drm/drm_drv.h
++++ kernel-rockchip/include/drm/drm_drv.h
 @@ -601,6 +601,8 @@ struct drm_driver {
  void *__devm_drm_dev_alloc(struct device *parent, struct drm_driver *driver,
  			   size_t size, size_t offset);

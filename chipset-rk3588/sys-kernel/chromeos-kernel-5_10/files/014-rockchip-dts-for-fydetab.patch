@@ -1256,7 +1256,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +      default-state = "off";
 +      gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
 +      linux,default-trigger = "sbs-5-000b-charging";
-+      label = "red:charging";
++      label = "power-charging";
 +      retain-state-suspended;
 +    };
 +
@@ -1265,7 +1265,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +      default-state = "off";
 +      gpios = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
 +      linux,default-trigger = "sbs-5-000b-full";
-+      label = "green:full";
++      label = "power-full";
 +    };
 +
 +  };
@@ -2006,7 +2006,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +};
 +
 +&usbdrd_dwc3_0 {
-+	dr_mode = "peripheral";
++	dr_mode = "otg";
 +	usb-role-switch;
 +	port {
 +		#address-cells = <1>;

@@ -9985,7 +9985,7 @@ Index: kernel-rockchip/mm/Kconfig
  config ARCH_SUPPORTS_MEMORY_FAILURE
  	bool
  
-@@ -888,4 +916,77 @@ config ARCH_HAS_HUGEPD
+@@ -904,4 +932,77 @@ config ARCH_HAS_HUGEPD
  config MAPPING_DIRTY_HELPERS
          bool
  
@@ -10067,7 +10067,7 @@ Index: kernel-rockchip/mm/Makefile
 ===================================================================
 --- kernel-rockchip.orig/mm/Makefile
 +++ kernel-rockchip/mm/Makefile
-@@ -115,6 +115,7 @@ obj-$(CONFIG_CMA_SYSFS) += cma_sysfs.o
+@@ -116,6 +116,7 @@ obj-$(CONFIG_CMA_SYSFS) += cma_sysfs.o
  obj-$(CONFIG_USERFAULTFD) += userfaultfd.o
  obj-$(CONFIG_IDLE_PAGE_TRACKING) += page_idle.o
  obj-$(CONFIG_FRAME_VECTOR) += frame_vector.o
@@ -11929,3 +11929,17 @@ Index: kernel-rockchip/include/linux/mm_inline.h
  static __always_inline void add_page_to_lru_list(struct page *page,
  				struct lruvec *lruvec, enum lru_list lru)
  {
+Index: kernel-rockchip/mm/mmap.c
+===================================================================
+--- kernel-rockchip.orig/mm/mmap.c
++++ kernel-rockchip/mm/mmap.c
+@@ -1598,7 +1598,8 @@ unsigned long do_mmap(struct file *file,
+ 			if (path_noexec(&file->f_path)) {
+ 				if (vm_flags & VM_EXEC)
+ 					return -EPERM;
+-				vm_flags &= ~VM_MAYEXEC;
++        if (sysctl_mmap_noexec_taint)
++				  vm_flags &= ~VM_MAYEXEC;
+ 			}
+ 
+ 			if (!file->f_op->mmap)
