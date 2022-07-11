@@ -138,5 +138,5 @@ pkg_preinst() {
 }
 
 PATCHES=(
-  "${FILESDIR}"/rockchip_hdmi.patch
+  "${FILESDIR}"/headset-mic.patch
 )
