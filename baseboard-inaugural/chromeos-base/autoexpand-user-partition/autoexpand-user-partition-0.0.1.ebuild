@@ -11,7 +11,7 @@ SLOT="0"
 KEYWORDS="*"
 IUSE=""
 
-RDEPEND=""
+RDEPEND="chromeos-base/auto-expand-partition"
 
 DEPEND="${RDEPEND}"
 
@@ -19,5 +19,5 @@ S=${FILESDIR}
 
 src_install() {
   insinto /etc/init
-  doins autoexpand-user-partition.conf
+  doins auto-expand-partition.override
 }

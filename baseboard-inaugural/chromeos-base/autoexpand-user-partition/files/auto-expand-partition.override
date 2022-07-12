@@ -1,0 +1,8 @@
+script
+  if [ -f /mnt/stateful_partition/.autoexpanded ]; then
+    exit 0
+  fi
+  stateful_partition=$(findmnt -n -o source /mnt/stateful_partition)
+  /usr/sbin/expand-partition.sh -d $stateful_partition > /tmp/auto-expand-partition 2>&1
+  touch /mnt/stateful_partition/.autoexpanded
+end script

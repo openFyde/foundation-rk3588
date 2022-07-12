@@ -5362,7 +5362,7 @@ Index: kernel-rockchip/net/netfilter/xt_qtaguid.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/net/netfilter/xt_qtaguid.c
-@@ -0,0 +1,3328 @@
+@@ -0,0 +1,3327 @@
 +/*
 + * Kernel iptables module to track stats for packets based on user tags.
 + *
@@ -5377,7 +5377,6 @@ Index: kernel-rockchip/net/netfilter/xt_qtaguid.c
 + * There are run-time debug flags enabled via the debug_mask module param, or
 + * via the DEFAULT_DEBUG_MASK. See xt_qtaguid_internal.h.
 + */
-+#define DEBUG
 +
 +#include <linux/file.h>
 +#include <linux/inetdevice.h>
@@ -9053,7 +9052,7 @@ Index: kernel-rockchip/net/netfilter/xt_qtaguid_print.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/net/netfilter/xt_qtaguid_print.c
-@@ -0,0 +1,565 @@
+@@ -0,0 +1,563 @@
 +/*
 + * Pretty printing Support for iptables xt_qtaguid module.
 + *
@@ -9071,8 +9070,6 @@ Index: kernel-rockchip/net/netfilter/xt_qtaguid_print.c
 + * Those funcs that fail to allocate memory will panic as there is no need to
 + * hobble allong just pretending to do the requested work.
 + */
-+
-+#define DEBUG
 +
 +#include <linux/fs.h>
 +#include <linux/gfp.h>

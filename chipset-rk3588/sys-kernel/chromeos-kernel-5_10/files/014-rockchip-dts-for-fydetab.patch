@@ -1044,7 +1044,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-@@ -0,0 +1,1011 @@
+@@ -0,0 +1,1013 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
@@ -1990,6 +1990,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +	sbu2-dc-gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&sbu1_dc &sbu2_dc>;
++  keep-dp-normal;
++
 +	port {
 +		#address-cells = <1>;
 +		#size-cells = <0>;
@@ -7260,20 +7262,23 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -6024,7 +6024,11 @@ static int vop2_calc_dsc_clk(struct drm_
+@@ -6024,7 +6024,14 @@ static int vop2_calc_dsc_clk(struct drm_
  	 * bits_per_pixel = [8-12];
  	 * As only support 1/2/4 div, so we set dsc_cds = crtc_clock / 8;
  	 */
 -	vcstate->dsc_cds_clk_rate = v_pixclk / 8;
 +#ifdef CONFIG_DRM_PANEL_FYDETAB
-+	vcstate->dsc_cds_clk_rate = v_pixclk / (vcstate->dsc_txp_clk_rate == v_pixclk ? 4 : 8);
++  if (output_if_is_mipi(vcstate->output_if))
++	  vcstate->dsc_cds_clk_rate = v_pixclk / (vcstate->dsc_txp_clk_rate == v_pixclk ? 4 : 8);
++  else
++    vcstate->dsc_cds_clk_rate = v_pixclk / 8;
 +#else
 +  vcstate->dsc_cds_clk_rate = v_pixclk / 8;
 +#endif
  
  	return 0;
  }
-@@ -6131,7 +6135,13 @@ static void vop2_crtc_enable_dsc(struct
+@@ -6131,7 +6138,13 @@ static void vop2_crtc_enable_dsc(struct
  	bool mipi_ds_mode = false;
  	uint32_t *reg_base = vop2->regs;
  	u32 offset = 0;
@@ -7288,13 +7293,16 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	if (!vop2->data->nr_dscs) {
  		DRM_WARN("Unsupported DSC\n");
  
-@@ -6203,7 +6213,11 @@ static void vop2_crtc_enable_dsc(struct
+@@ -6203,7 +6216,14 @@ static void vop2_crtc_enable_dsc(struct
  		VOP_MODULE_SET(vop2, dsc, dsc_init_dly_num, dly_num);
  
  		dsc_hsync = hsync_len / 2;
 -		dsc_htotal = htotal / (1 << dsc_cds_clk->div_val);
 +#ifdef CONFIG_DRM_PANEL_FYDETAB
-+    dsc_htotal = htotal * (1 << dsc_cds_clk->div_val) * (1 << dsc_txp_clk->div_val) / (1 << dclk_core->div_val);
++    if (output_if_is_mipi(vcstate->output_if))
++      dsc_htotal = htotal * (1 << dsc_cds_clk->div_val) * (1 << dsc_txp_clk->div_val) / (1 << dclk_core->div_val);
++    else
++      dsc_htotal = htotal / (1 << dsc_cds_clk->div_val);
 +#else
 +    dsc_htotal = htotal / (1 << dsc_cds_clk->div_val);
 +#endif
@@ -10054,7 +10062,15 @@ Index: kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
-@@ -356,6 +356,21 @@ static const struct reg_sequence rk3588_
+@@ -135,6 +135,7 @@ struct rockchip_udphy {
+ 	u32 dp_aux_din_sel;
+ 	bool dp_sink_hpd_sel;
+ 	bool dp_sink_hpd_cfg;
++  bool keep_dp_pol_normal;
+ 	u8 bw;
+ 	int id;
+ 
+@@ -356,6 +357,21 @@ static const struct reg_sequence rk3588_
  	{0x0024, 0x6e},
  };
  
@@ -10076,7 +10092,32 @@ Index: kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
  static inline int grfreg_write(struct regmap *base,
  			       const struct udphy_grf_reg *reg, bool en)
  {
-@@ -1062,6 +1077,10 @@ static int usbdp_typec_mux_set(struct ty
+@@ -559,8 +575,13 @@ static int upphy_set_typec_default_mappi
+ 		udphy->lane_mux_sel[1] = PHY_LANE_MUX_DP;
+ 		udphy->lane_mux_sel[2] = PHY_LANE_MUX_USB;
+ 		udphy->lane_mux_sel[3] = PHY_LANE_MUX_USB;
+-		udphy->dp_aux_dout_sel = PHY_AUX_DP_DATA_POL_INVERT;
+-		udphy->dp_aux_din_sel = PHY_AUX_DP_DATA_POL_INVERT;
++    if (udphy->keep_dp_pol_normal) {
++		  udphy->dp_aux_dout_sel = PHY_AUX_DP_DATA_POL_NORMAL;
++		  udphy->dp_aux_din_sel = PHY_AUX_DP_DATA_POL_NORMAL;
++    } else {
++      udphy->dp_aux_dout_sel = PHY_AUX_DP_DATA_POL_INVERT;
++      udphy->dp_aux_din_sel = PHY_AUX_DP_DATA_POL_INVERT;
++    }
+ 		gpiod_set_value_cansleep(udphy->sbu1_dc_gpio, 1);
+ 		gpiod_set_value_cansleep(udphy->sbu2_dc_gpio, 0);
+ 	} else {
+@@ -805,6 +826,8 @@ static int udphy_parse_dt(struct rockchi
+ 		udphy->hs = maximum_speed <= USB_SPEED_HIGH ? true : false;
+ 	}
+ 
++  udphy->keep_dp_pol_normal = of_property_read_bool(np, "keep-dp-normal");
++
+ 	ret = udphy_clk_init(udphy, dev);
+ 	if (ret)
+ 		return ret;
+@@ -1062,6 +1085,10 @@ static int usbdp_typec_mux_set(struct ty
  	struct rockchip_udphy *udphy = typec_mux_get_drvdata(mux);
  	const struct rockchip_udphy_cfg *cfg = udphy->cfgs;
  	u8 mode;
@@ -10087,7 +10128,7 @@ Index: kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
  
  	mutex_lock(&udphy->mutex);
  
-@@ -1354,7 +1373,6 @@ static int rk3588_udphy_init(struct rock
+@@ -1354,7 +1381,6 @@ static int rk3588_udphy_init(struct rock
  		dev_err(udphy->dev, "refclk set error %d\n", ret);
  		goto assert_apb;
  	}
