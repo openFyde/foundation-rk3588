@@ -5,10 +5,14 @@ top=$(pwd)
 img_dir="$top/Image"
 chromeos_image=$1
 loopdev=$(sudo losetup -f)
+newest_loader="v1.07.111"
+get_miniloader=false
+
 declare -A LINK_MAP=(
   [inaugural]="v1.04.106"
   [fydetab_duo]="v1.06.111"
 )
+
 die() {
   echo $@
   exit 1
@@ -42,9 +46,14 @@ link_miniloader() {
     if [ -n "$(echo $chromeos_image | grep $board)" ]; then
       echo "link miniloader: ${LINK_MAP[$board]}"
       ln -sf $top/rk3588-uboot-bin/rk3588_spl_loader_${LINK_MAP["$board"]}.bin $img_dir/MiniLoaderAll.bin
+      get_miniloader=true
       break
     fi
   done
+  if ! $get_miniloader; then
+    echo "Use the newset loader: $newest_loader"
+    ln -sf $top/rk3588-uboot-bin/rk3588_spl_loader_${newest_loader}.bin $img_dir/MiniLoaderAll.bin
+  fi
 }
 
 main() {
