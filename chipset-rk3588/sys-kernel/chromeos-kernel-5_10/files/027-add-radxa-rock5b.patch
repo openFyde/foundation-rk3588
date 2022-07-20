@@ -576,7 +576,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
-@@ -0,0 +1,951 @@
+@@ -0,0 +1,954 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
@@ -679,6 +679,9 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 +		simple-audio-card,format = "i2s";
 +		simple-audio-card,mclk-fs = <256>;
 +		simple-audio-card,name = "rockchip-es8316";
++    pinctrl-names = "default";
++    pinctrl-0 = <&hp_det>;
++    simple-audio-card,hp-det-gpio = <&gpio1 RK_PD5 GPIO_ACTIVE_HIGH>;
 +		simple-audio-card,dai-link@0 {
 +			format = "i2s";
 +			cpu {
@@ -691,7 +694,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 +	};
 +
 +	rk_headset: rk-headset {
-+		status = "okay";
++		status = "disabled";
 +		compatible = "rockchip_headset";
 +		headset_gpio = <&gpio1 RK_PD5 GPIO_ACTIVE_HIGH>;
 +		pinctrl-names = "default";
@@ -1537,3 +1540,16 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
  dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc-mipi101-M101014-BE45-A1.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-rock-5b.dtb
+Index: kernel-rockchip/sound/soc/generic/simple-card-utils.c
+===================================================================
+--- kernel-rockchip.orig/sound/soc/generic/simple-card-utils.c
++++ kernel-rockchip/sound/soc/generic/simple-card-utils.c
+@@ -558,7 +558,7 @@ int asoc_simple_init_jack(struct snd_soc
+ 
+ 	if (is_hp) {
+ 		snprintf(prop, sizeof(prop), "%shp-det-gpio", prefix);
+-		pin_name	= pin ? pin : "Headphones";
++		pin_name	= pin ? pin : "Headphone";
+ 		gpio_name	= "Headphone detection";
+ 		mask		= SND_JACK_HEADPHONE;
+ 	} else {
