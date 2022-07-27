@@ -1,43 +1,23 @@
-## How to build.
-### WARNING: these ebuilds are still in developing. The image is not working properly.
+## foundation-rk3399
 
-1. Get Chromium OS: refer to [Build Chromium OS for raspberry pi 4](https://github.com/FydeOS/chromium_os-raspberry_pi#readme)
+![Logo badge](https://img.shields.io/endpoint?url=https://logo-badge-without-release-image-0lnvd7unef6z.runkit.sh) 
 
-2. Prepare ebuild for rk3588:
+A "**foundation**" in openFyde is where we keep reusable and shared assets, they usually form a foundational layer to a family of hardware devices. 
 
-```
-(inside cros sdk)
-(cr) git clone <this project> ~/github/chromium_os-rk3588
-(cr) cd ~/trunk/src/overlays/
-(cr) ln -s ~/github/chromium_os-rk3588/chipset-rk3588 .
-(cr) ln -s ~/github/chromium_os-rk3588/baseboard-inaugural .
-(cr) ln -s ~/github/chromium_os-rk3588/overlay-inaugural .
-# edit kernel git source to internal url
-(cr) vi ~/github/chipset-rk3588/sys-kernel/chromeos-kernel-5_10/chromeos-kernel-5_10-5.10.66.ebuild
-(cr) cd ~/trunk/src/script
-(cr) setup_board --board=inaugural
-```
+Often a foundation is made towards a family or a specific model of SoC, all devices in openFyde having this (family of) SoC will then be able to inherit from this foundation.
 
-3. Build Image
+This repository has the foundation for the RK3588 SoC.
 
-```
-(cr) ./build_package --board=inaugural --nowithautotest
-(cr) ./build_image --board=inaugural --noenable_rootfs_verification test
-```
 
-3. Prepare rk3588 image for rockchip upgrade_tool
+<br>
 
-```
-(cr) cd ~/github/chromium_os-rk3588/rk3588-image-maker
-(cr) ./map_chromiumos_image.sh ~/trunk/src/build/images/inaugural/latest/chromiumos_test_image.bin
-(cr) ./rk3588-mkupdate.sh
+## Contents
 
-```
+We store packages that are reused across multiple hardware devices that share similarities in a foundation. Specifically, this usually includes `chipset` and `baseboard`:
 
-4. Set your rk3588 evb board to loader mode, update new image
+ - a `chipset` is a special overlay that consists of necessary configuration scripts and required packages for the corresponding SoC itself. This usually includes media codecs (under media-libs), Mali GPU User-Space drivers and necessary Linux kernel patches.
+ - a `baseboard` is a special overlay that has most of the common packages needed for all openFyde devices as well as a family of devices sharing similar design principles. For example, `baseboard-rockpi4` contains software packages needed for openFyde under all Rock Pi 4 variants (Rock Pi 4B, Rock Pi 4C Plus and etc.).
 
-```
-(cr) sudo upgrade_tool UF update.img
-```
+ <br>
 
-5. The board will reboot. Login with the account: chronos, passwd: test0000.
+###### Copyright (c) 2022 Fyde Innovations and the openFyde Authors. Distributed under the license specified in the root directory of this repository.
