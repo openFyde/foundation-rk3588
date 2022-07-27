@@ -1,4 +1,4 @@
-## foundation-rk3399
+## foundation-rk3588
 
 ![Logo badge](https://img.shields.io/endpoint?url=https://logo-badge-without-release-image-0lnvd7unef6z.runkit.sh) 
 
