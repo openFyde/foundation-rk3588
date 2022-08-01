@@ -34,7 +34,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-@@ -43,13 +43,13 @@
+@@ -43,7 +43,7 @@
  */
  
    dp0_sound: dp0-sound {
@@ -43,13 +43,6 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
        compatible = "rockchip,hdmi";
        rockchip,card-name = "HDMI/DP-rockchip-0";
        rockchip,mclk-fs = <512>;
-       rockchip,cpu = <&spdif_tx2>;
-       rockchip,codec = <&dp0 1>;
--      rockchip,jack-det;
-+//      rockchip,jack-det;
-   };
- 
- 	spdif_tx1_dc: spdif-tx1-dc {
 @@ -181,10 +181,22 @@
  		regulator-name = "sdmmc_power";
  		regulator-boot-on;
@@ -217,17 +210,99 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &pwm14 {
+@@ -898,17 +888,17 @@
+ 
+ 
+ &spi0 {
+-	status = "disabled";
++	status = "okay";
+ 	assigned-clocks = <&cru CLK_SPI0>;
+ 	assigned-clock-rates = <200000000>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&spi0m2_cs0 &spi0m2_pins>;
+ 	num-cs = <1>;
+-    madev@0 {
++  madev@0 {
+ 		status = "okay";
+ 		compatible = "microarray,microarray-fp";
+ 		/*irq-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;*/
+-        fingerprint,touch-int-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;
++    fingerprint,touch-int-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;
+ 		reg = <0>;
+ 		spi-max-frequency = <6000000>;
+ 		spi-cpha;
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
-@@ -290,8 +290,7 @@
+@@ -219,6 +219,7 @@
+ 				regulator-max-microvolt = <950000>;
+ 				regulator-ramp-delay = <12500>;
+ 				regulator-name = "vdd_gpu_s0";
++        regulator-enable-ramp-delay = <400>;
+ 				regulator-state-mem {
+ 					regulator-off-in-suspend;
+ 				};
+@@ -239,12 +240,13 @@
+ 			vdd_log_s0: DCDC_REG3 {
+ 				regulator-always-on;
+ 				regulator-boot-on;
+-				regulator-min-microvolt = <750000>;
++				regulator-min-microvolt = <675000>;
+ 				regulator-max-microvolt = <750000>;
+ 				regulator-ramp-delay = <12500>;
+ 				regulator-name = "vdd_log_s0";
+ 				regulator-state-mem {
+-					regulator-on-in-suspend;
++					regulator-off-in-suspend;
++          regulator-suspend-microvolt = <750000>;
+ 				};
+ 			};
+ 
+@@ -264,8 +266,8 @@
+ 			vdd_ddr_s0: DCDC_REG5 {
+ 				regulator-always-on;
+ 				regulator-boot-on;
+-				regulator-min-microvolt = <850000>;
+-				regulator-max-microvolt = <850000>;
++				regulator-min-microvolt = <725000>;
++				regulator-max-microvolt = <900000>;
+ 				regulator-ramp-delay = <12500>;
+ 				regulator-name = "vdd_ddr_s0";
+ 				regulator-state-mem {
+@@ -290,8 +292,7 @@
  				regulator-max-microvolt = <2000000>;
  				regulator-name = "vdd_2v0_pldo_s3";
  				regulator-state-mem {
 -					regulator-on-in-suspend;
 -					regulator-suspend-microvolt = <2000000>;
 +					regulator-off-in-suspend;
+ 				};
+ 			};
+ 
+@@ -303,6 +304,7 @@
+ 				regulator-name = "vcc_3v3_s3";
+ 				regulator-state-mem {
+ 					regulator-on-in-suspend;
++          regulator-suspend-microvolt = <3300000>;
+ 				};
+ 			};
+ 
+@@ -323,7 +325,7 @@
+ 				regulator-name = "vcc_1v8_s3";
+ 				regulator-state-mem {
+ 					regulator-on-in-suspend;
+-					regulator-suspend-microvolt = <1800000>;
++          regulator-suspend-microvolt = <1800000>;
+ 				};
+ 			};
+ 
+@@ -346,7 +348,7 @@
+ 				regulator-name = "vcc_1v8_s0";
+ 				regulator-state-mem {
+ 					regulator-off-in-suspend;
+-					regulator-suspend-microvolt = <1800000>;
++          regulator-suspend-microvolt = <1800000>;
  				};
  			};
  
@@ -1029,7 +1104,15 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  #define REG_ADDR_SPEC_INFO		0x1A
  #define SPEC_INFO_VERSION_MASK		GENMASK(7, 4)
  #define SPEC_INFO_VERSION_SHIFT		4
-@@ -201,6 +203,7 @@ struct sbs_info {
+@@ -72,6 +74,7 @@ enum sbs_capacity_mode {
+ 
+ /* manufacturer access defines */
+ #define MANUFACTURER_ACCESS_STATUS	0x0006
++#define MANUFACTURER_ACCESS_SHIP  0x0010
+ #define MANUFACTURER_ACCESS_SLEEP	0x0011
+ 
+ /* battery status value bits */
+@@ -201,6 +204,7 @@ struct sbs_info {
  	struct delayed_work		work;
  	struct mutex			mode_lock;
  	u32				flags;
@@ -1037,7 +1120,7 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  };
  
  static char model_name[I2C_SMBUS_BLOCK_MAX + 1];
-@@ -617,13 +620,6 @@ static int sbs_get_battery_property(stru
+@@ -617,13 +621,6 @@ static int sbs_get_battery_property(stru
  
  		sbs_status_correct(client, &val->intval);
  
@@ -1051,7 +1134,7 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  	} else {
  		if (psp == POWER_SUPPLY_PROP_STATUS)
  			val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
-@@ -635,6 +631,13 @@ static int sbs_get_battery_property(stru
+@@ -635,6 +632,13 @@ static int sbs_get_battery_property(stru
  		else
  			val->intval = 0;
  	}
@@ -1065,7 +1148,7 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  
  	return 0;
  }
-@@ -998,10 +1001,14 @@ static void sbs_supply_changed(struct sb
+@@ -998,10 +1002,14 @@ static void sbs_supply_changed(struct sb
  	struct power_supply *battery = chip->power_supply;
  	int ret;
  
@@ -1084,7 +1167,7 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  	power_supply_changed(battery);
  }
  
-@@ -1071,6 +1078,21 @@ static const struct power_supply_desc sb
+@@ -1071,6 +1079,58 @@ static const struct power_supply_desc sb
  	.external_power_changed = sbs_external_power_changed,
  };
  
@@ -1103,20 +1186,58 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
 +  del_timer_sync(&chip->timer);
 +}
 +
++ssize_t shipping_mode_show(struct device *dev, struct device_attribute *attr,
++      char *buf) {
++  struct i2c_client *client = to_i2c_client(dev);
++  return sprintf(buf, "%d\n", sbs_read_word_data(client, sbs_data[REG_MANUFACTURER_DATA].addr));
++}
++
++ssize_t shipping_mode_store(struct device *dev, struct device_attribute *attr,
++       const char *buf, size_t count) {
++  struct i2c_client *client = to_i2c_client(dev);
++  int new_state, ret;
++  ret = kstrtoint(buf, 10, &new_state);
++  if (!ret && new_state == 16) {
++    dev_info(dev, "(%d), enter shipping mode.\n", new_state);
++    ret = sbs_write_word_data(client, sbs_data[REG_MANUFACTURER_DATA].addr, MANUFACTURER_ACCESS_SHIP);
++    if (!ret) {
++      return count;
++    }
++  }
++  dev_err(dev, "invalid parameter. %d\n", ret);
++  return count;
++}
++
++static struct device_attribute sbs_bat_attr[] = {
++  __ATTR_RW(shipping_mode),
++};
++
++static void sbs_init_sysfs(struct sbs_info *chip) {
++  int i, ret;
++  for (i = 0; i < ARRAY_SIZE(sbs_bat_attr); i++) {
++    ret = sysfs_create_file(&chip->client->dev.kobj,
++      &sbs_bat_attr[i].attr);
++    if (ret)
++      dev_err(&chip->client->dev, "create bat node(%s) error\n",
++        sbs_bat_attr[i].attr.name);
++  }
++}
++
  static int sbs_probe(struct i2c_client *client)
  {
  	struct sbs_info *chip;
-@@ -1177,7 +1199,8 @@ skip_gpio:
+@@ -1177,7 +1237,9 @@ skip_gpio:
  		rc = PTR_ERR(chip->power_supply);
  		goto exit_psupply;
  	}
 -
 +  if (!chip->gpio_detect)
 +    sbs_timed_poll_start(chip);
++  sbs_init_sysfs(chip);
  	dev_info(&client->dev,
  		"%s: battery gas gauge device registered\n", client->name);
  
-@@ -1190,7 +1213,8 @@ exit_psupply:
+@@ -1190,7 +1252,8 @@ exit_psupply:
  static int sbs_remove(struct i2c_client *client)
  {
  	struct sbs_info *chip = i2c_get_clientdata(client);

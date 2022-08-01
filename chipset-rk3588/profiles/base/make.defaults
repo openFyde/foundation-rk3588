@@ -11,7 +11,7 @@ USE="${USE} kernel-5_10"
 USE="${USE} neon"
 USE="${USE} v4l2_codec"
 USE="${USE} disable_cros_video_decoder"
-USE="${USE} native_gpu_memory_buffers"
+USE="${USE} native_gpu_memory_buffers disable_explicit_dma_fences"
 USE="${USE} direncryption direncription_allow_v2"
 
 ACCEPT_LICENSE="${ACCEPT_LICENSE} Google-TOS"
