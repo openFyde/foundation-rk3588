@@ -4324,7 +4324,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.c
-@@ -0,0 +1,3424 @@
+@@ -0,0 +1,3425 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for debug nodes
 + *
@@ -7498,7 +7498,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.c
 +fail_2_4: remove_proc_entry(HIMAX_PROC_DC_FILE, himax_proc_diag_dir);
 +fail_2_3: remove_proc_entry(HIMAX_PROC_DELTA_FILE, himax_proc_diag_dir);
 +fail_2_2: remove_proc_entry(HIMAX_PROC_STACK_FILE, himax_proc_diag_dir);
-+fail_2_1:
++fail_2_1: remove_proc_entry(HIMAX_PROC_DIAG_FOLDER, himax_touch_proc_dir);
 +	return -ENOMEM;
 +}
 +
@@ -7511,6 +7511,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	remove_proc_entry(HIMAX_PROC_DC_FILE, himax_proc_diag_dir);
 +	remove_proc_entry(HIMAX_PROC_DELTA_FILE, himax_proc_diag_dir);
 +	remove_proc_entry(HIMAX_PROC_STACK_FILE, himax_proc_diag_dir);
++  remove_proc_entry(HIMAX_PROC_DIAG_FOLDER, himax_touch_proc_dir);
 +}
 +
 +int himax_debug_init(void)
