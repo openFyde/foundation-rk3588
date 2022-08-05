@@ -2,21 +2,18 @@
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=7
-CROS_WORKON_COMMIT="f0dd0588cab9af6e64870de51fe8a63d98e48030"
-CROS_WORKON_TREE="61178030d7dd62f6c8a8b20845d8d427deac6d06"
+CROS_WORKON_COMMIT="0ce5c0dc4cd4b5d1c5e37ad43791ccefe6ab2a5e"
+CROS_WORKON_TREE="e9aad72f8d0a01e50c77cf64cd4901fb98fa9de6"
 CROS_WORKON_PROJECT="chromiumos/platform/crosvm"
 CROS_WORKON_LOCALNAME="platform/crosvm"
 CROS_WORKON_INCREMENTAL_BUILD=1
-
-# Pupr handles uprevs of crosvm.
-CROS_WORKON_MANUAL_UPREV="1"
 
 # We don't use CROS_WORKON_OUTOFTREE_BUILD here since crosvm/Cargo.toml is
 # using "# ignored by ebuild" macro which supported by cros-rust.
 
 inherit cros-fuzzer cros-rust cros-workon user
 
-PREBUILT_VERSION="r0000"
+PREBUILT_VERSION="r0001"
 KERNEL_FILE="crosvm-testing-bzimage-x86_64-${PREBUILT_VERSION}"
 ROOTFS_FILE="crosvm-testing-rootfs-x86_64-${PREBUILT_VERSION}"
 
@@ -31,9 +28,10 @@ SRC_URI="
 	)
 "
 
-LICENSE="BSD-Google"
+# 'Apache-2.0' and 'BSD-vmm_vhost' are for third_party/vmm_vhost.
+LICENSE="BSD-Google Apache-2.0 BSD-vmm_vhost"
 KEYWORDS="*"
-IUSE="test cros-debug crosvm-gpu -crosvm-direct -crosvm-plugin +crosvm-power-monitor-powerd +crosvm-video-decoder +crosvm-video-encoder +crosvm-wl-dmabuf fuzzer tpm2 android-vm-master arcvm_gce_l1"
+IUSE="test cros-debug crosvm-gpu -crosvm-direct -crosvm-plugin +crosvm-power-monitor-powerd +crosvm-video-decoder +crosvm-video-encoder +crosvm-video-libvda +crosvm-wl-dmabuf fuzzer tpm2 android-vm-master arcvm_gce_l1"
 
 COMMON_DEPEND="
 	sys-apps/dtc:=
@@ -55,25 +53,37 @@ RDEPEND="${COMMON_DEPEND}
 	tpm2? ( sys-apps/dbus )
 "
 
+# TODO: Currently, we install two versions of gdbstub/gdbstub_arch.
+# Once crrev.com/c/3578025 comes to crosvm's 'chromeos' branch, we should
+# remove the old version of gdbstub/gdbstub_arch.
 DEPEND="${COMMON_DEPEND}
 	dev-libs/wayland-protocols:=
 	=dev-rust/android_log-sys-0.2*:=
 	>=dev-rust/anyhow-1.0.32:= <dev-rust/anyhow-2.0
+	>=dev-rust/argh-0.1.7:= <dev-rust/argh-0.2.0
 	=dev-rust/async-task-4*:=
 	=dev-rust/async-trait-0.1*:=
 	=dev-rust/bitflags-1*:=
-	~dev-rust/cc-1.0.25:=
+	>=dev-rust/cc-1.0.25 <dev-rust/cc-2_alpha:=
+	=dev-rust/cfg-if-1*:=
+	dev-rust/chrono:=
 	>=dev-rust/crc32fast-1.2.1:= <dev-rust/crc32fast-2
 	dev-rust/cros_fuzz:=
+	=dev-rust/crossbeam-utils-0.8*:=
 	=dev-rust/dbus-0.8*:=
 	>=dev-rust/downcast-rs-1.2.0:= <dev-rust/downcast-rs-2.0
+	=dev-rust/enumn-0.1*:=
 	=dev-rust/futures-0.3*:=
-	dev-rust/intrusive-collections:=
-	=dev-rust/gdbstub-0.5*:=
+	>=dev-rust/gdbstub-0.5.0:= <dev-rust/gdbstub-0.6
+	>=dev-rust/gdbstub-0.6.1:= <dev-rust/gdbstub-0.7
 	>=dev-rust/gdbstub_arch-0.1.1:= <dev-rust/gdbstub_arch-0.2
+	>=dev-rust/gdbstub_arch-0.2.2:= <dev-rust/gdbstub_arch-0.3
 	~dev-rust/getopts-0.2.18:=
+	dev-rust/intrusive-collections:=
 	>=dev-rust/libc-0.2.93:= <dev-rust/libc-0.3.0
+	>=dev-rust/memoffset-0.6:= <dev-rust/memoffset-1
 	dev-rust/minijail:=
+	>=dev-rust/mio-0.7.14 <dev-rust/mio-0.8.0_alpha:=
 	~dev-rust/num_cpus-1.9.0:=
 	>=dev-rust/once_cell-1.7.2:= <dev-rust/once_cell-2
 	dev-rust/p9:=
@@ -87,32 +97,31 @@ DEPEND="${COMMON_DEPEND}
 	!>=dev-rust/protoc-rust-3
 	=dev-rust/quote-1*:=
 	=dev-rust/rand-0.6*:=
+	dev-rust/regex:=
+	dev-rust/remain:=
+	>=dev-rust/scudo-0.1.2 <dev-rust/scudo-0.2_alpha:=
 	=dev-rust/serde-1*:=
 	=dev-rust/serde_json-1*:=
 	>=dev-rust/smallvec-1.6.1:= <dev-rust/smallvec-2
 	=dev-rust/syn-1*:=
+	dev-rust/system_api:=
+	=dev-rust/tempfile-3*:=
+	>=dev-rust/terminal_size-0.1.17:=
 	>=dev-rust/thiserror-1.0.20:= <dev-rust/thiserror-2.0
 	>=dev-rust/uuid-0.8.2:= <dev-rust/uuid-0.9
-	dev-rust/remain:=
-	dev-rust/system_api:=
-	dev-rust/vmm_vhost:=
+	dev-rust/winapi:=
+	>=dev-rust/windows-0.10.0:= <dev-rust/windows-0.11
+	media-sound/libcras:=
 	tpm2? (
 		chromeos-base/tpm2:=
 		chromeos-base/trunks:=
 		=dev-rust/dbus-0.6*:=
 	)
-	media-sound/libcras:=
 	crosvm-power-monitor-powerd? (
 		chromeos-base/system_api
 		=dev-rust/dbus-0.6*:=
 	)
 "
-
-# Rust tests are currently run on the host, not inside the target sysroot.
-# Hence we need to provide required runtime dependencies for tests at
-# build-time.
-# TODO(crbug.com/1154084): Remove when tests can run in sysroot.
-BDEPEND="test? ( chromeos-base/libvda:= )"
 
 get_seccomp_path() {
 	local seccomp_arch="unknown"
@@ -147,7 +156,7 @@ src_prepare() {
 		eapply "${FILESDIR}"/0001-betty-arcvm-Loose-mprotect-mmap-for-software-renderi.patch
 	fi
 
-  eapply "${FILESDIR}"/0002-fix-gpu-policy-for-rk3599-mali.patch
+	eapply "${FILESDIR}"/0002-fix-gpu-policy-for-rk3599-mali.patch
 
 	default
 }
@@ -168,6 +177,7 @@ src_compile() {
 		$(usex crosvm-power-monitor-powerd power-monitor-powerd "")
 		$(usex crosvm-video-decoder video-decoder "")
 		$(usex crosvm-video-encoder video-encoder "")
+		$(usex crosvm-video-libvda libvda "")
 		$(usex crosvm-wl-dmabuf wl-dmabuf "")
 		$(usex tpm2 tpm "")
 		$(usex cros-debug gdb "")
@@ -195,7 +205,7 @@ src_compile() {
 	fi
 
 	if use fuzzer; then
-		cd fuzz || die "failed to move directory"
+		cd crosvm-fuzz || die "failed to move directory"
 		local f
 		for f in "${FUZZERS[@]}"; do
 			ecargo_build_fuzzer --bin "${f}"
@@ -205,9 +215,10 @@ src_compile() {
 }
 
 src_test() {
-	# Some of the tests will use /dev/kvm.
-	addwrite /dev/kvm
-	local test_opts=()
+	local test_opts=(
+		# TODO(b/211023371): Re-enable libvda tests.
+		--exclude libvda
+	)
 	use tpm2 || test_opts+=( --exclude tpm2 --exclude tpm2-sys )
 
 	# io_jail tests fork the process, which cause memory leak errors when
@@ -216,7 +227,7 @@ src_test() {
 
 	# Pass kernel/rootfs prebuilts to integration tests.
 	# See crosvm/integration_tests/README.md for details.
-	local CROSVM_CARGO_TEST_PREBUILT_VERSION="${PREBUILT_VERSION}"
+	export CROSVM_CARGO_TEST_PREBUILT_VERSION="${PREBUILT_VERSION}"
 	local kernel_binary="${DISTDIR}/${KERNEL_FILE}"
 	[[ -e "${kernel_binary}" ]] || die "expected to find kernel binary at ${kernel_binary}"
 	CROS_RUST_PLATFORM_TEST_ARGS+=(
@@ -228,9 +239,6 @@ src_test() {
 	CROS_RUST_PLATFORM_TEST_ARGS+=(
 		"--env" "CROSVM_CARGO_TEST_ROOTFS_IMAGE=${rootfs_image}"
 	)
-
-	# TODO(b/194848000): Reenable when /dev/log starts working inside cros_sdk.
-	test_opts+=( --exclude "integration_tests" )
 
 	# kernel versions between 5.1 and 5.10 have io_uring bugs, skip the io_uring
 	# integration test on these platforms.  See b/189879899
@@ -252,7 +260,7 @@ src_test() {
 		test_opts+=( --exclude "crosvm_plugin" )
 	fi
 
-	# Excluding tests that run on a different arch, use /dev/dri,
+	# Excluding tests that run on a different arch, use /dev/kvm, /dev/dri,
 	# /dev/net/tun, or wayland access because the bots don't support these.
 	local args=(
 		--workspace -v
@@ -260,29 +268,45 @@ src_test() {
 		--exclude gpu_display
 		--exclude rutabaga_gfx
 		--exclude crosvm-fuzz
+		# Exclude crates that require KVM.
+		--exclude integration_tests
+		--exclude hypervisor
+		--exclude kvm
+		--exclude kvm_sys
 		# Also exclude the following since their tests are run in their ebuilds.
 		--exclude enumn
 		--exclude sys_util
 		"${test_opts[@]}"
 	)
 
-	# Non-x86 platforms set --no-run to disable executing the tests.
-	if ! has "--no-run" "${args[@]}"; then
-		# Run the "boot" test on the host until the syslog is properly passed
-		# into the sandbox.
-		# TODO(crbug.com/1154084) Run these on the host until libtest and libstd
-		# are available on the target.
-		cros-rust_get_host_test_executables "${args[@]}" --lib --tests
+	# cargo test requires --skip options to be passed to the test itself (after the
+	# dividing -- option), so these are in a separate array from args.
+	local skip_tests=(
+		# Skip tests in devices that need KVM.
+		--skip "irqchip::kvm"
+		# Skip tests in x86_64 that need KVM.
+		--skip "cpuid::tests::feature_and_vendor_name"
+		--skip "test_integration::simple_kvm"
+	)
+
+	# If syslog isn't available, skip the tests.
+	[[ -S /dev/log ]] || skip_tests+=(--skip "unix::syslog")
+
+	if use crosvm-plugin; then
+		# crosvm_plugin is a cdylibs, so we need to use a profile
+		# that doesn't include panic=abort.
+		args+=(--profile release-test)
 	fi
 
 	ecargo_test "${args[@]}" \
 		-- --test-threads=1 \
+		"${skip_tests[@]}" \
 		|| die "cargo test failed"
 
 	# Plugin tests all require /dev/kvm, but we want to make sure they build
 	# at least.
 	if use crosvm-plugin; then
-		ecargo_test --no-run --features plugin \
+		ecargo_test --no-run --features plugin --profile release-test \
 			|| die "cargo build with plugin feature failed"
 	fi
 }
@@ -341,11 +365,11 @@ src_install() {
 	fi
 
 	if use fuzzer; then
-		cd fuzz || die "failed to move directory"
+		cd crosvm-fuzz || die "failed to move directory"
 		local f
 		for f in "${FUZZERS[@]}"; do
 			local fuzzer_component_id="982362"
-			fuzzer_install "${S}/fuzz/OWNERS" \
+			fuzzer_install "${S}/crosvm-fuzz/OWNERS" \
 				"${build_dir}/${f}" \
 				--comp "${fuzzer_component_id}"
 		done

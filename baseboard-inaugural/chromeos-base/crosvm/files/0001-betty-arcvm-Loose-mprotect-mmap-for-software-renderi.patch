@@ -8,13 +8,13 @@ execute dynamically generated code.
 
 Change-Id: Ia7b213056e0bdcdfa2a2026f512dc39badaa04a1
 ---
- seccomp/x86_64/gpu_device.policy | 4 ++--
+ seccomp/x86_64/gpu_common.policy | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/seccomp/x86_64/gpu_device.policy b/seccomp/x86_64/gpu_device.policy
+diff --git a/seccomp/x86_64/gpu_common.policy b/seccomp/x86_64/gpu_common.policy
 index b98dbd2..bf0184c 100644
---- a/seccomp/x86_64/gpu_device.policy
-+++ b/seccomp/x86_64/gpu_device.policy
+--- a/seccomp/x86_64/gpu_common.policy
++++ b/seccomp/x86_64/gpu_common.policy
 @@ -61,8 +61,8 @@ lstat: 1
  # Used for sharing memory with wayland. arg1 == MFD_CLOEXEC|MFD_ALLOW_SEALING
  memfd_create: arg1 == 3
@@ -26,6 +26,6 @@ index b98dbd2..bf0184c 100644
  open: 1
  openat: 1
  readlink: 1
--- 
+--
 2.24.1.735.g03f4e72817-goog
 
