@@ -3,8 +3,8 @@
 
 EAPI=7
 
-CROS_WORKON_COMMIT="962df634bd0afe12e6f38464f5e602cf1460c430"
-CROS_WORKON_TREE="c66f4eadb3ce21b120447bb910bc9606c3fc499b"
+CROS_WORKON_COMMIT="72b6c710d448d5a1ff9407f9f7c7780660ee556a"
+CROS_WORKON_TREE="4662bf133b2155e155c25375baefc17f970be9e1"
 CROS_WORKON_PROJECT="chromiumos/third_party/libcamera"
 CROS_WORKON_INCREMENTAL_BUILD="1"
 
@@ -37,6 +37,13 @@ DEPEND="
 "
 
 src_configure() {
+	# By default Chrome OS build system adds the CFLAGS/CXXFLAGS
+	# -fno-unwind-tables and -fno-asynchronous-unwind-table as part of
+	# disabling exception support. This prevents unwinding of stack frames to
+	# show backtrace. Calling 'cros_enable_cxx_exceptions' to remove those
+	# flags when debugging is enabled.
+	use debug && cros_enable_cxx_exceptions
+
 	local pipelines=(
 		"uvcvideo"
 		$(usev ipu3)

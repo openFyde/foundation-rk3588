@@ -35,6 +35,13 @@ DEPEND="
 "
 
 src_configure() {
+	# By default Chrome OS build system adds the CFLAGS/CXXFLAGS
+	# -fno-unwind-tables and -fno-asynchronous-unwind-table as part of
+	# disabling exception support. This prevents unwinding of stack frames to
+	# show backtrace. Calling 'cros_enable_cxx_exceptions' to remove those
+	# flags when debugging is enabled.
+	use debug && cros_enable_cxx_exceptions
+
 	local pipelines=(
 		"uvcvideo"
 		$(usev ipu3)
