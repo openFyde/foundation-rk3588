@@ -1,0 +1,109 @@
+Index: kernel-rockchip/drivers/regulator/core.c
+===================================================================
+--- kernel-rockchip.orig/drivers/regulator/core.c
++++ kernel-rockchip/drivers/regulator/core.c
+@@ -3391,6 +3391,7 @@ static int _regulator_do_set_voltage(str
+ 	    ops->set_voltage_time_sel && ops->get_voltage_sel) {
+ 		old_selector = ops->get_voltage_sel(rdev);
+ 		if (old_selector < 0)
++      rdev_err(rdev, "error old_selector:%d\n", old_selector);
+ 			return old_selector;
+ 	}
+ 
+@@ -3428,9 +3429,10 @@ static int _regulator_do_set_voltage(str
+ 		ret = -EINVAL;
+ 	}
+ 
+-	if (ret)
++	if (ret) {
++    rdev_err(rdev, "set_voltage, ret:%d\n", ret);
+ 		goto out;
+-
++  }
+ 	if (ops->set_voltage_time_sel) {
+ 		/*
+ 		 * Call set_voltage_time_sel if successfully obtained
+@@ -3542,9 +3544,10 @@ static int regulator_set_voltage_unlocke
+ 
+ 	/* constraints check */
+ 	ret = regulator_check_voltage(rdev, &min_uV, &max_uV);
+-	if (ret < 0)
++	if (ret < 0) {
++    rdev_err(rdev, "regulator_check_voltage err:%d\n",ret);
+ 		goto out;
+-
++  }
+ 	/* restore original values in case of error */
+ 	old_min_uV = voltage->min_uV;
+ 	old_max_uV = voltage->max_uV;
+@@ -3554,6 +3557,7 @@ static int regulator_set_voltage_unlocke
+ 	/* for not coupled regulators this will just set the voltage */
+ 	ret = regulator_balance_voltage(rdev, state);
+ 	if (ret < 0) {
++    rdev_err(rdev, "regulator_balance_voltage err:%d\n",ret);
+ 		voltage->min_uV = old_min_uV;
+ 		voltage->max_uV = old_max_uV;
+ 	}
+@@ -3580,12 +3584,14 @@ int regulator_set_voltage_rdev(struct re
+ 		selector = regulator_map_voltage(rdev, min_uV, max_uV);
+ 		if (selector < 0) {
+ 			ret = selector;
++      rdev_err(rdev, "%s:regulator_map_voltage, min_uv:%lu, max_uv:%lu, ret:%d\n", __func__, min_uV, max_uV, ret);
+ 			goto out;
+ 		}
+ 
+ 		best_supply_uV = _regulator_list_voltage(rdev, selector, 0);
+ 		if (best_supply_uV < 0) {
+ 			ret = best_supply_uV;
++      rdev_err(rdev, "%s:_regulator_list_voltage, ret:%d\n", __func__, ret);
+ 			goto out;
+ 		}
+ 
+@@ -3594,6 +3600,7 @@ int regulator_set_voltage_rdev(struct re
+ 		current_supply_uV = regulator_get_voltage_rdev(rdev->supply->rdev);
+ 		if (current_supply_uV < 0) {
+ 			ret = current_supply_uV;
++      rdev_err(rdev->supply->rdev, "%s:regulator_get_voltage_rdev, ret:%d\n", __func__, ret);
+ 			goto out;
+ 		}
+ 
+@@ -3615,9 +3622,10 @@ int regulator_set_voltage_rdev(struct re
+ 	else
+ 		ret = _regulator_do_set_suspend_voltage(rdev, min_uV,
+ 							max_uV, state);
+-	if (ret < 0)
++	if (ret < 0) {
++    rdev_err(rdev, "_regulator_do_set_voltage, min_uv:%lu, max_uv:%lu, state:%d, ret:%d\n", min_uV, max_uV, state, ret);
+ 		goto out;
+-
++  }
+ 	if (supply_change_uV < 0) {
+ 		ret = regulator_set_voltage_unlocked(rdev->supply,
+ 				best_supply_uV, INT_MAX, state);
+@@ -3853,9 +3861,10 @@ int regulator_do_balance_voltage(struct
+ 							    &optimal_uV,
+ 							    &optimal_max_uV,
+ 							    state, n_coupled);
+-			if (ret < 0)
++			if (ret < 0) {
++        rdev_err(c_rdevs[i], "regulator_get_optimal_voltage ret:%d\n", ret);
+ 				goto out;
+-
++      }
+ 			delta = abs(optimal_uV - current_uV);
+ 
+ 			if (delta && best_delta <= delta) {
+@@ -3877,9 +3886,11 @@ int regulator_do_balance_voltage(struct
+ 		ret = regulator_set_voltage_rdev(best_rdev, best_min_uV,
+ 						 best_max_uV, state);
+ 
+-		if (ret < 0)
++		if (ret < 0) {
++      rdev_err(best_rdev, "regulator_set_voltage_rdev best_min_uv:%lu, best_max_uv:%lu, ret:%d",
++                  best_min_uV, best_max_uV, ret);
+ 			goto out;
+-
++    }
+ 		if (best_c_rdev_done)
+ 			set_bit(best_c_rdev, &c_rdev_done);
+ 

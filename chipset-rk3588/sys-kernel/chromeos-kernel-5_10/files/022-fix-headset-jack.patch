@@ -34,8 +34,24 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-@@ -43,7 +43,7 @@
- */
+@@ -27,23 +27,9 @@
+ 			sound-dai = <&hdmi0>;
+ 		};
+ 	};
+-/*
+-    dp0_sound: dp0-sound {
+-        compatible = "simple-audio-card";
+-        simple-audio-card,name = "rockchip-dp-sound";
+-
+-        simple-audio-card,cpu {
+-            sound-dai = <&spdif_tx2>;
+-        };
+-
+-        simple-audio-card,codec {
+-            sound-dai = <&dp0 1>;
+-        };
+-    };
+-*/
  
    dp0_sound: dp0-sound {
 -      status = "disabled";
@@ -43,53 +59,73 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
        compatible = "rockchip,hdmi";
        rockchip,card-name = "HDMI/DP-rockchip-0";
        rockchip,mclk-fs = <512>;
-@@ -181,10 +181,22 @@
- 		regulator-name = "sdmmc_power";
- 		regulator-boot-on;
- 		enable-active-high;
--		gpio = <&gpio4 RK_PB4 GPIO_ACTIVE_HIGH>;
-+    regulator-always-on;
-+		gpio = <&gpio4 RK_PB4 GPIO_ACTIVE_LOW>;
- 		pinctrl-names = "default";
- 		pinctrl-0 = <&sdmmc_power_en>;
+@@ -176,15 +162,19 @@
+ 		pinctrl-0 = <&cam_power_en>;
  	};
-+/*
-+  sdmmc_power: sdmmc-gpio-power {
-+    compatible = "regulator-gpio";
-+    regulator-name = "sdmmc-gpio-power";
+ 
+-	sdmmc_power: sdmmc-power {
+-		compatible = "regulator-fixed";
+-		regulator-name = "sdmmc_power";
+-		regulator-boot-on;
+-		enable-active-high;
+-		gpio = <&gpio4 RK_PB4 GPIO_ACTIVE_HIGH>;
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&sdmmc_power_en>;
+-	};
++  vcc_3v3_sd_s0: vcc-3v3-sd-s0 {
++    compatible = "regulator-fixed";
++    regulator-name = "vcc_3v3_sd_s0";
++    regulator-min-microvolt = <3300000>;
++    regulator-max-microvolt = <3300000>;
++    gpios = <&gpio4 RK_PB4 GPIO_ACTIVE_HIGH>;
 +    enable-active-high;
-+    enable-gpios = <&gpio4 RK_PB4 GPIO_ACTIVE_LOW>;
-+    gpios-states = <1>;
-+    pinctrl-names = "default";
-+    pinctrl-0 = <&sdmmc_power_en>;
++    regulator-boot-on;
++    vin-supply = <&vcc_3v3_s3>;
++    regulator-state-mem {
++      regulator-off-in-suspend;
++    };
 +  };
-+*/
  
  	vcc_lcd_en: vcc-lcd-en {
  		compatible = "regulator-fixed";
-@@ -431,15 +443,16 @@
- 	max-frequency = <150000000>;
- 	no-sdio;
- 	no-mmc;
+@@ -233,7 +223,7 @@
+   			rockchip,pins = <3 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+   		};
+   		sdmmc_power_en: sdmmc-power-en {
+-  			rockchip,pins = <4 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
++  			rockchip,pins = <4 RK_PB4 RK_FUNC_GPIO &pcfg_pull_up>;
+   		};
+   		vcc_headset_mic: vcc-headset-mic {
+   			rockchip,pins = <1 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
+@@ -428,18 +418,15 @@
+ };
+ 
+ &sdmmc {
+-	max-frequency = <150000000>;
+-	no-sdio;
+-	no-mmc;
 -  /*broken-cd;*/
-+  cd-gpios = <&gpio0 RK_PA4 0>;
-+  card-detect-delay = <200>;
- 	bus-width = <4>;
- 	cap-mmc-highspeed;
- 	cap-sd-highspeed;
- 	disable-wp;
+-	bus-width = <4>;
+-	cap-mmc-highspeed;
+-	cap-sd-highspeed;
+-	disable-wp;
 -	sd-uhs-sdr104;
 -	pinctrl-0 = <&sdmmc_clk &sdmmc_cmd &sdmmc_bus4>;
 -	vmmc-supply = <&sdmmc_power>;
 -	vqmmc-supply = <&vccio_sd_s0>;
-+	/*sd-uhs-sdr104;*/
-+  pinctrl-0 = <&sdmmc_bus4 &sdmmc_clk &sdmmc_cmd &sdmmc_det>;
-+/*	vmmc-supply = <&sdmmc_power>; */
-+/*	vqmmc-supply = <&vccio_sd_s0>;*/
++  max-frequency = <150000000>;
++  no-sdio;
++  no-mmc;
++  cap-sd-highspeed;
++  disable-wp;
++  sd-uhs-sdr104;
++  cd-gpios = <&gpio0 RK_PA4 0>;
++  card-detect-delay = <200>;
++  vmmc-supply = <&vcc_3v3_sd_s0>;
  	status = "okay";
  };
  
-@@ -538,25 +551,55 @@
+@@ -538,25 +525,52 @@
  };
  
  &vp0 {
@@ -126,38 +162,43 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +  rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER3>;
 +};
 +
++/*
 +&sdmmc_bus4 {
 +	rockchip,pins =
-+        /* sdmmc_d0 */
-+        <4 RK_PD0 1 &pcfg_pull_up_drv_level_12>,
-+        /* sdmmc_d1 */
-+        <4 RK_PD1 1 &pcfg_pull_up_drv_level_12>,
-+        /* sdmmc_d2 */
-+        <4 RK_PD2 1 &pcfg_pull_up_drv_level_12>,
-+        /* sdmmc_d3 */
-+        <4 RK_PD3 1 &pcfg_pull_up_drv_level_12>;
++        <4 RK_PD0 1 &pcfg_pull_up_drv_level_15>,
++        <4 RK_PD1 1 &pcfg_pull_up_drv_level_15>,
++        <4 RK_PD2 1 &pcfg_pull_up_drv_level_15>,
++        <4 RK_PD3 1 &pcfg_pull_up_drv_level_15>;
 +};
 +
 +&sdmmc_clk {
 +   rockchip,pins =
-+        /* sdmmc_clk */
-+        <4 RK_PD5 1 &pcfg_pull_up_drv_level_12>;
++        <4 RK_PD5 1 &pcfg_pull_up_drv_level_15>;
 +};
 +
 +&sdmmc_cmd {
 +  rockchip,pins =
-+        /* sdmmc_cmd */
-+        <4 RK_PD4 1 &pcfg_pull_up_drv_level_12>;
-+};
-+
++        <4 RK_PD4 1 &pcfg_pull_up_drv_level_15>;
+ };
++*/
++/*
 +&cluster0_opp_table {
 +  /delete-node/ opp-408000000;
- };
++};
++*/
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-@@ -157,7 +157,7 @@
+@@ -84,6 +84,7 @@
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "combophy_avdd0v85";
+ 		regulator-boot-on;
++    regulator-always-on;
+ 		regulator-min-microvolt = <850000>;
+ 		regulator-max-microvolt = <850000>;
+ 		vin-supply = <&vdd_0v85_s0>;
+@@ -157,7 +158,7 @@
      dmic: dmic {
          status = "okay";
          compatible = "simple-audio-card";
@@ -166,7 +207,18 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  
          simple-audio-card,dai-link@0 {
              format = "pdm";
-@@ -234,10 +234,6 @@
+@@ -185,8 +186,8 @@
+ 		pinctrl-0 = <&uart9m2_rtsn>, <&bt_reset_gpio>, <&bt_wake_gpio>, <&bt_wake_host_irq>;
+ 		pinctrl-1 = <&uart9_gpios>;
+ 		BT,power_gpio    = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
+-		//BT,wake_gpio     = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
+-		//BT,wake_host_irq = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
++		BT,wake_gpio     = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
++		BT,wake_host_irq = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
+ 		status = "okay";
+ 	};
+ 
+@@ -234,10 +235,6 @@
  };
  
  &dp0_sound {
@@ -177,7 +229,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
    status = "okay";
  };
  
-@@ -496,7 +492,7 @@
+@@ -496,7 +493,7 @@
  		interrupts = <RK_PC4 IRQ_TYPE_LEVEL_LOW>;
  		pinctrl-names = "default";
  		pinctrl-0 = <&usbc0_int>;
@@ -186,7 +238,78 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		status = "okay";
  
  		ports {
-@@ -699,7 +695,8 @@
+@@ -584,38 +581,38 @@
+ 		status = "disabled";
+ 	};
+ 
+-    sc8886: sc8886@6b {
+-        status = "okay";
+-        compatible = "southchip,sc8886";
+-        reg = <0x6b>;
+-        ti,usb-charger-detection = <&usbc0>;
+-
+-        interrupt-parent = <&gpio0>;
+-        interrupts = <RK_PD5 IRQ_TYPE_LEVEL_LOW>;
+-        otg-mode-en-gpios = <&gpio4 RK_PA6 GPIO_ACTIVE_HIGH>;
+-        pinctrl-names = "default";
+-        pinctrl-0 = <&charger_ok>;
+-        extcon = <&usbc0>;
+-        ti,battery = <&battery>;
+-        ti,charge-current = <2500000>;
+-        ti,max-input-voltage = <20000000>;
+-        ti,max-input-current = <5000000>;
+-        ti,max-charge-voltage = <13200000>;
+-        ti,input-current = <3000000>;
+-        ti,input-current-sdp = <3000000>;
+-        ti,input-current-dcp = <3000000>;
+-        ti,input-current-cdp = <3000000>;
+-        ti,minimum-sys-voltage = <9216000>;
+-        ti,otg-voltage = <5000000>;
+-        ti,otg-current = <3000000>;
+-        pd-charge-only = <0>;
+-        regulators {
+-            vbus5v0_typec: vbus5v0-typec {
+-            regulator-compatible = "otg-vbus";
+-            regulator-name = "vbus5v0_typec";
+-			};
+-        };
+-    };
++  sc8886: sc8886@6b {
++      status = "okay";
++      compatible = "southchip,sc8886";
++      reg = <0x6b>;
++      ti,usb-charger-detection = <&usbc0>;
++
++      interrupt-parent = <&gpio0>;
++      interrupts = <RK_PD5 IRQ_TYPE_LEVEL_LOW>;
++      otg-mode-en-gpios = <&gpio4 RK_PA6 GPIO_ACTIVE_HIGH>;
++      pinctrl-names = "default";
++      pinctrl-0 = <&charger_ok>;
++      extcon = <&usbc0>;
++      ti,battery = <&battery>;
++      ti,charge-current = <2500000>;
++      ti,max-input-voltage = <20000000>;
++      ti,max-input-current = <5000000>;
++      ti,max-charge-voltage = <13200000>;
++      ti,input-current = <3000000>;
++      ti,input-current-sdp = <3000000>;
++      ti,input-current-dcp = <3000000>;
++      ti,input-current-cdp = <3000000>;
++      ti,minimum-sys-voltage = <9216000>;
++      ti,otg-voltage = <5000000>;
++      ti,otg-current = <3000000>;
++      pd-charge-only = <0>;
++      regulators {
++          vbus5v0_typec: vbus5v0-typec {
++          regulator-compatible = "otg-vbus";
++          regulator-name = "vbus5v0_typec";
++		};
++      };
++  };
+ };
+ 
+ &i2c7 {
+@@ -699,7 +696,8 @@
  &pinctrl {
  	charger {
  		charger_ok: charger_ok {
@@ -196,7 +319,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		};
  	};
  
-@@ -816,13 +813,6 @@
+@@ -816,13 +814,6 @@
                rockchip,pins = <1 RK_PD3 RK_FUNC_GPIO &pcfg_pull_up>;
        };
    };
@@ -210,32 +333,136 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &pwm14 {
-@@ -898,17 +888,17 @@
+@@ -892,28 +883,24 @@
+ 	status = "okay";
+ };
  
- 
- &spi0 {
--	status = "disabled";
-+	status = "okay";
- 	assigned-clocks = <&cru CLK_SPI0>;
- 	assigned-clock-rates = <200000000>;
- 	pinctrl-names = "default";
- 	pinctrl-0 = <&spi0m2_cs0 &spi0m2_pins>;
- 	num-cs = <1>;
--    madev@0 {
+-&spi2 {
+-	status = "okay";
+-};
+-
++&spi3 {
++  status = "okay";
++  assigned-clocks = <&cru CLK_SPI3>;
++  assigned-clock-rates = <200000000>;
++  pinctrl-names = "default";
++  pinctrl-0 = <&spi3m1_cs0 &spi3m1_pins>;
++  num-cs = <1>;
 +  madev@0 {
- 		status = "okay";
- 		compatible = "microarray,microarray-fp";
- 		/*irq-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;*/
--        fingerprint,touch-int-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;
++    status = "okay";
++    compatible = "microarray,microarray-fp";
 +    fingerprint,touch-int-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;
- 		reg = <0>;
- 		spi-max-frequency = <6000000>;
- 		spi-cpha;
++    pinctrl-names = "default";
+ 
+-&spi0 {
+-	status = "disabled";
+-	assigned-clocks = <&cru CLK_SPI0>;
+-	assigned-clock-rates = <200000000>;
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&spi0m2_cs0 &spi0m2_pins>;
+-	num-cs = <1>;
+-    madev@0 {
+-		status = "okay";
+-		compatible = "microarray,microarray-fp";
+-		/*irq-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;*/
+-        fingerprint,touch-int-gpio = <&gpio3 RK_PB0 IRQ_TYPE_EDGE_RISING>;
+-		reg = <0>;
+-		spi-max-frequency = <6000000>;
+-		spi-cpha;
+-		spi-cpol;
+-	};
++    reg = <0>;
++    spi-max-frequency = <6000000>;
++    spi-cpha;
++    spi-cpol;
++  };
+ };
+ 
+ &tsadc {
+@@ -930,23 +917,25 @@
+ 	rockchip,typec-vbus-det;
+ };
+ 
++/*
+ &u2phy2_host {
+-	//phy-supply = <&vcc5v0_host_en>;
++	phy-supply = <&vcc5v0_host_en>;
+ };
+ 
+ &u2phy3_host {
+-	//phy-supply = <&vcc5v0_host_en>;
++	phy-supply = <&vcc5v0_host_en>;
+ };
+-
++*/
+ &usbdp_phy0 {
+ 	orientation-switch;
+ 	svid = <0xff01>;
+ 	sbu1-dc-gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
+ 	sbu2-dc-gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
++//  keep-dp-normal;
++/*
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&sbu1_dc &sbu2_dc>;
+-  keep-dp-normal;
+-
++*/
+ 	port {
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+@@ -983,8 +972,6 @@
+ 	status = "disabled";
+ };
+ 
+-
+-
+ &vdpu {
+ 	status = "okay";
+ };
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
-@@ -219,6 +219,7 @@
+@@ -6,7 +6,21 @@
+ 
+ #include <dt-bindings/gpio/gpio.h>
+ #include <dt-bindings/pinctrl/rockchip.h>
+-
++/*
++&pinctrl {
++  rk860x {
++    vdd_cpu_big0_pins: vdd-cpu-big0-pins {
++      rockchip,pins = <0 RK_PA3 0 &pcfg_pull_none>;
++    };
++    vdd_cpu_big1_pins: vdd-cpu-big1-pins {
++      rockchip,pins = <0 RK_PD6 0 &pcfg_pull_none>;
++    };
++    vdd_npu_pins: vdd-npu-pins {
++      rockchip,pins = <0 RK_PC1 0 &pcfg_pull_none>;
++    };
++  };
++};
++*/
+ &i2c0 {
+ 	status = "okay";
+ 	pinctrl-names = "default";
+@@ -25,7 +39,6 @@
+ 		regulator-always-on;
+ 		regulator-state-mem {
+ 			regulator-off-in-suspend;
+-      regulator-suspend-microvolt = <550000>;
+ 		};
+ 	};
+ 
+@@ -43,7 +56,6 @@
+ 		regulator-always-on;
+ 		regulator-state-mem {
+ 			regulator-off-in-suspend;
+-      regulator-suspend-microvolt = <550000>;
+ 		};
+ 	};
+ };
+@@ -219,6 +231,7 @@
  				regulator-max-microvolt = <950000>;
  				regulator-ramp-delay = <12500>;
  				regulator-name = "vdd_gpu_s0";
@@ -243,34 +470,16 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dts
  				regulator-state-mem {
  					regulator-off-in-suspend;
  				};
-@@ -239,12 +240,13 @@
- 			vdd_log_s0: DCDC_REG3 {
- 				regulator-always-on;
- 				regulator-boot-on;
--				regulator-min-microvolt = <750000>;
-+				regulator-min-microvolt = <675000>;
- 				regulator-max-microvolt = <750000>;
+@@ -244,7 +257,7 @@
  				regulator-ramp-delay = <12500>;
  				regulator-name = "vdd_log_s0";
  				regulator-state-mem {
 -					regulator-on-in-suspend;
 +					regulator-off-in-suspend;
-+          regulator-suspend-microvolt = <750000>;
  				};
  			};
  
-@@ -264,8 +266,8 @@
- 			vdd_ddr_s0: DCDC_REG5 {
- 				regulator-always-on;
- 				regulator-boot-on;
--				regulator-min-microvolt = <850000>;
--				regulator-max-microvolt = <850000>;
-+				regulator-min-microvolt = <725000>;
-+				regulator-max-microvolt = <900000>;
- 				regulator-ramp-delay = <12500>;
- 				regulator-name = "vdd_ddr_s0";
- 				regulator-state-mem {
-@@ -290,8 +292,7 @@
+@@ -290,8 +303,7 @@
  				regulator-max-microvolt = <2000000>;
  				regulator-name = "vdd_2v0_pldo_s3";
  				regulator-state-mem {
@@ -280,7 +489,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dts
  				};
  			};
  
-@@ -303,6 +304,7 @@
+@@ -303,6 +315,7 @@
  				regulator-name = "vcc_3v3_s3";
  				regulator-state-mem {
  					regulator-on-in-suspend;
@@ -288,7 +497,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dts
  				};
  			};
  
-@@ -323,7 +325,7 @@
+@@ -323,7 +336,7 @@
  				regulator-name = "vcc_1v8_s3";
  				regulator-state-mem {
  					regulator-on-in-suspend;
@@ -297,7 +506,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dts
  				};
  			};
  
-@@ -346,7 +348,7 @@
+@@ -346,7 +359,7 @@
  				regulator-name = "vcc_1v8_s0";
  				regulator-state-mem {
  					regulator-off-in-suspend;

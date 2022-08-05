@@ -4005,7 +4005,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +#endif
 +
 +enum fix_touch_info {
-+	FIX_HX_RX_NUM = 64,
++	FIX_HX_RX_NUM = 60,
 +	FIX_HX_TX_NUM = 40,
 +	FIX_HX_BT_NUM = 0,
 +	FIX_HX_MAX_PT = 10,

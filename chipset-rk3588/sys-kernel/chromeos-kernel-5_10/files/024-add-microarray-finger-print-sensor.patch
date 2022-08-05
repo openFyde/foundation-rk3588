@@ -126,9 +126,8 @@ Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
-@@ -0,0 +1,882 @@
+@@ -0,0 +1,881 @@
 +/* Copyright (C) MicroArray
-+    oALOGD("start");
 + * MicroArray Fprint Driver Code for REE enviroment
 + * madev.c
 + * Date: 2017-3-15

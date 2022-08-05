@@ -1553,3 +1553,74 @@ Index: kernel-rockchip/sound/soc/generic/simple-card-utils.c
  		gpio_name	= "Headphone detection";
  		mask		= SND_JACK_HEADPHONE;
  	} else {
+Index: kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/drm_mode_object.c
++++ kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
+@@ -41,9 +41,9 @@ int __drm_mode_object_add(struct drm_dev
+ 			  void (*obj_free_cb)(struct kref *kref))
+ {
+ 	int ret;
+-
++#if 0
+ 	WARN_ON(!dev->driver->load && dev->registered && !obj_free_cb);
+-
++#endif
+ 	mutex_lock(&dev->mode_config.idr_mutex);
+ 	ret = idr_alloc(&dev->mode_config.object_idr, register_obj ? obj : NULL,
+ 			1, 0, GFP_KERNEL);
+@@ -235,7 +235,7 @@ void drm_object_attach_property(struct d
+ 	int count = obj->properties->count;
+ 	struct drm_device *dev = property->dev;
+ 
+-
++#if 0
+ 	if (obj->type == DRM_MODE_OBJECT_CONNECTOR) {
+ 		struct drm_connector *connector = obj_to_connector(obj);
+ 
+@@ -244,6 +244,7 @@ void drm_object_attach_property(struct d
+ 	} else {
+ 		WARN_ON(!dev->driver->load && dev->registered);
+ 	}
++#endif
+ 
+ 	if (count == DRM_OBJECT_MAX_PROPERTY) {
+ 		WARN(1, "Failed to attach object property (type: 0x%x). Please "
+Index: kernel-rockchip/kernel/rcu/tree_plugin.h
+===================================================================
+--- kernel-rockchip.orig/kernel/rcu/tree_plugin.h
++++ kernel-rockchip/kernel/rcu/tree_plugin.h
+@@ -294,7 +294,9 @@ void rcu_note_context_switch(bool preemp
+ 
+ 	trace_rcu_utilization(TPS("Start context switch"));
+ 	lockdep_assert_irqs_disabled();
++#if 0
+ 	WARN_ON_ONCE(!preempt && rcu_preempt_depth() > 0);
++#endif
+ 	if (rcu_preempt_depth() > 0 &&
+ 	    !t->rcu_read_unlock_special.b.blocked) {
+ 
+Index: kernel-rockchip/security/chromiumos/lsm.c
+===================================================================
+--- kernel-rockchip.orig/security/chromiumos/lsm.c
++++ kernel-rockchip/security/chromiumos/lsm.c
+@@ -172,11 +172,18 @@ static int chromiumos_security_inode_fol
+ 	policy = chromiumos_get_inode_security_policy(
+ 		dentry, inode,
+ 		CHROMIUMOS_SYMLINK_TRAVERSAL);
+-
++#if 0
+ 	WARN(policy == CHROMIUMOS_INODE_POLICY_BLOCK,
+ 	     "Blocked symlink traversal for path %x:%x:%s (see https://goo.gl/8xICW6 for context and rationale)\n",
+ 	     MAJOR(dentry->d_sb->s_dev), MINOR(dentry->d_sb->s_dev),
+ 	     dentry_path(dentry, accessed_path, PATH_MAX));
++#else
++  if (policy == CHROMIUMOS_INODE_POLICY_BLOCK)
++    pr_warn("Blocked symlink traversal for path %x:%x:%s (see https://goo.gl/8xICW6 for context and rationale)\n",
++           MAJOR(dentry->d_sb->s_dev), MINOR(dentry->d_sb->s_dev),
++           dentry_path(dentry, accessed_path, PATH_MAX));
++
++#endif
+ 
+ 	return policy == CHROMIUMOS_INODE_POLICY_BLOCK ? -EACCES : 0;
+ }

@@ -7345,7 +7345,7 @@ Index: kernel-rockchip/drivers/net/usb/Makefile
  obj-$(CONFIG_USB_NET_CDC_NCM)	+= cdc_ncm.o
  obj-$(CONFIG_USB_NET_HUAWEI_CDC_NCM)	+= huawei_cdc_ncm.o
  obj-$(CONFIG_USB_VL600)		+= lg-vl600.o
-+obj-$(CONFIG_USB_NET_QMI_WWAN)  += qmi_wwan_q.o
++obj-$(USB_NET_QMI_WWAN_QUECTEL)  += qmi_wwan_q.o
  obj-$(CONFIG_USB_NET_QMI_WWAN)	+= qmi_wwan.o
  obj-$(CONFIG_USB_NET_CDC_MBIM)	+= cdc_mbim.o
  obj-$(CONFIG_USB_NET_CH9200)	+= ch9200.o
@@ -7359,7 +7359,7 @@ Index: kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,136 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Haoyu pi3dpx1207c RTC driver
@@ -7381,14 +7381,16 @@ Index: kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
 +extern void redriver_unreg_notifier(struct notifier_block *nb);
 +
 +struct pi3dpx_config {
-+        uint8_t full_dp_config[9];
++    uint8_t full_dp_config[9];
 +		uint8_t no_dp_config[9];
 +		uint8_t usb_dp_config[9];
 +};
 +
 +struct pi3dpx_priv {
-+        struct i2c_client       *client;
++    struct i2c_client       *client;
 +		struct notifier_block nb;
++    unsigned long typec_state;
++    unsigned int flip;
 +};
 +
 +struct pi3dpx_config redriver_config[2] = {
@@ -7407,25 +7409,20 @@ Index: kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
 +};
 +static int pi3dpx_i2c_write(struct pi3dpx_priv *priv,int bytes, void *src)
 +{
-+        struct i2c_client *i2c = priv->client;
-+        struct i2c_msg msg;
-+        int ret;
-+        if (bytes != PI3DPX_BYTES_NUM)
-+                return -EINVAL;
-+        msg.addr = i2c->addr;
-+        msg.flags = 0;
-+        msg.len = bytes;
-+        msg.buf = (u8*)src;
++   struct i2c_client *i2c = priv->client;
++   struct i2c_msg msg;
++   int ret;
++   if (bytes != PI3DPX_BYTES_NUM)
++           return -EINVAL;
++   msg.addr = i2c->addr;
++   msg.flags = 0;
++   msg.len = bytes;
++   msg.buf = (u8*)src;
 +
-+        ret = i2c_transfer(i2c->adapter, &msg, 1);
-+        if (ret == 1)
-+                ret = 0;
-+        else if (ret >= 0)
-+                ret = -EIO;
-+
-+        return 0;
-+
-+
++   ret = i2c_transfer(i2c->adapter, &msg, 1);
++   if (ret != 1)
++     dev_err(&i2c->dev, "i2c trasfer error:%d", ret);
++   return 0;
 +}
 +
 +static int pi3dpx_notifier_call(struct notifier_block *nb,
@@ -7433,46 +7430,42 @@ Index: kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
 +{
 +
 +	unsigned int *flip = (unsigned int*)v;
-+    struct pi3dpx_priv *priv =
++  struct pi3dpx_priv *priv =
 +                container_of(nb, struct pi3dpx_priv, nb);
-+	switch (val) {
-+		case TYPEC_DP_STATE_E:
-+			if (*flip) {
-+
-+				pi3dpx_i2c_write(priv,9,&redriver_config[1].full_dp_config);
-+			} else {
-+				pi3dpx_i2c_write(priv,9,&redriver_config[0].full_dp_config);
-+			}
-+			break;
-+	case TYPEC_DP_STATE_D:
-+			if (*flip) {
-+				pr_err("nihuan redriver flip\n");
-+				pi3dpx_i2c_write(priv,9,&redriver_config[1].usb_dp_config);
-+			} else {
-+				pr_err("nihuan redriver no flip\n");
-+				pi3dpx_i2c_write(priv,9,&redriver_config[0].usb_dp_config);
-+			}
-+		break;
-+	}
-+
++  if ((val == priv->typec_state) && (*flip == priv->flip))
 +    return NOTIFY_OK;
++  priv->typec_state = val;
++  priv->flip = *flip;
++  pr_info("typec state:%ul, flip:%d", priv->typec_state, priv->flip);
++	switch (priv->typec_state) {
++		case TYPEC_DP_STATE_E:
++    case TYPEC_DP_STATE_C:
++			pi3dpx_i2c_write(priv, 9, &redriver_config[priv->flip].full_dp_config);
++			break;
++	  case TYPEC_DP_STATE_D:
++			pi3dpx_i2c_write(priv, 9, &redriver_config[priv->flip].usb_dp_config);
++		  break;
++    default:
++      pi3dpx_i2c_write(priv, 9, &redriver_config[priv->flip].no_dp_config);
++	}
++  return NOTIFY_OK;
 +}
 +
 +static int pi3dpx1207c_probe(struct i2c_client *i2c,
 +			 const struct i2c_device_id *id)
 +{
-+		int ret;
-+        struct pi3dpx_priv *priv;
++  	int ret;
++    struct pi3dpx_priv *priv;
 +
-+        priv = devm_kzalloc(&i2c->dev,
-+                                sizeof(struct pi3dpx_priv), GFP_KERNEL);
-+        if (priv == NULL)
-+                return -ENOMEM;
++    priv = devm_kzalloc(&i2c->dev,
++                            sizeof(struct pi3dpx_priv), GFP_KERNEL);
++    if (priv == NULL)
++       return -ENOMEM;
 +
-+        i2c_set_clientdata(i2c, priv);
-+		priv->client = i2c;
-+        priv->nb.notifier_call = pi3dpx_notifier_call;
-+        ret = redriver_reg_notifier(&priv->nb);
++    i2c_set_clientdata(i2c, priv);
++    priv->client = i2c;
++    priv->nb.notifier_call = pi3dpx_notifier_call;
++    ret = redriver_reg_notifier(&priv->nb);
 +
 +	return 0;
 +}
@@ -10020,7 +10013,7 @@ Index: kernel-rockchip/drivers/net/usb/qmi_wwan_q.c
 +#endif
 +
 +static struct usb_driver qmi_wwan_driver = {
-+	.name		      = "qmi_wwan_q",
++	.name		      = "qmi_wwan",
 +	.id_table	      = products,
 +	.probe		      = qmi_wwan_probe,
 +#if defined(QUECTEL_WWAN_QMAP)
@@ -10206,3 +10199,21 @@ Index: kernel-rockchip/drivers/gpu/drm/panel/Kconfig
 +    Say Y here if you want to enable support for FydeTab 1600x2600 LCD panel.
 +
  endmenu
+Index: kernel-rockchip/drivers/net/usb/Kconfig
+===================================================================
+--- kernel-rockchip.orig/drivers/net/usb/Kconfig
++++ kernel-rockchip/drivers/net/usb/Kconfig
+@@ -543,6 +543,13 @@ config USB_NET_QMI_WWAN
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called qmi_wwan.
+ 
++config USB_NET_QMI_WWAN_QUECTEL
++  tristate "QMI WWAN driver for Quectel which is Qualcomm MSM based 3G and LTE modems"
++  depends on USB_USBNET
++  select USB_WDM
++  help
++    Support Quectel Modem which conflict with original QMI WWAN driver
++
+ config USB_HSO
+ 	tristate "Option USB High Speed Mobile Devices"
+ 	depends on USB && RFKILL && TTY
