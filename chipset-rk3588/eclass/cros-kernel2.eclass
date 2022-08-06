@@ -1851,6 +1851,7 @@ kmake() {
 	set -- \
 		LD="${linker}" \
 		OBJCOPY="${OBJCOPY}" \
+		REAL_STRIP="${STRIP}" \
 		STRIP="${STRIP}" \
 		CC="${CC} ${linker_arg}" \
 		CC_COMPAT="${CC_COMPAT}" \
