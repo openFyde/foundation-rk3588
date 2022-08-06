@@ -1,10 +1,13 @@
-diff --git a/seccomp/arm/gpu_device.policy b/seccomp/arm/gpu_device.policy
-index d140c9dd..f5a040eb 100644
---- a/seccomp/arm/gpu_device.policy
-+++ b/seccomp/arm/gpu_device.policy
-@@ -97,3 +97,5 @@ clock_gettime64: 1
- sched_setscheduler: 1
+diff --git a/seccomp/arm/gpu_common.policy b/seccomp/arm/gpu_common.policy
+index 33c36483..0026a602 100644
+--- a/seccomp/arm/gpu_common.policy
++++ b/seccomp/arm/gpu_common.policy
+@@ -99,6 +99,8 @@ sched_setscheduler: 1
  sched_setaffinity: 1
  kcmp: 1
-+
+ 
 +pread64:1
++
+ # Rules for Vulkan loader / layers
+ access: 1
+ getgid32: 1

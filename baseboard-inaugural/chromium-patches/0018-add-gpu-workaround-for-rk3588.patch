@@ -8,7 +8,7 @@ Index: src/gpu/config/gpu_driver_bug_list.json
        ]
 +    },
 +    {
-+      "id": 386,
++      "id": 394,
 +      "description": "The Mali-Lxx driver does not guarantee flush ordering",
 +      "cr_bugs": [678508],
 +      "gl_vendor": "ARM",
