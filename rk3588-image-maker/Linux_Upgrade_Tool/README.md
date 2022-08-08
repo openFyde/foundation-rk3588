@@ -6,4 +6,4 @@
 2. Press and hold the `recovery` button on the board.
 3. Connect your computer with an OTG (type-c to type-a) cable.
 4. Release `recovery` key.
-4. run `sudo ./upgrade_tool uf xxx.img`.
+5. run `sudo ./upgrade_tool uf xxx.img`.

@@ -7,13 +7,13 @@
 2. Map the image partitions to Image.
 
 ```
-  .map_chromiumos_image.sh <path to chromiumos_test_image.bin>
+  ./map_chromiumos_image.sh <path to chromiumos_test_image.bin>
 ```
 
 3. Create update image
 
 ```
-  .rk3588-mkupdate.sh
+  sudo ./rk3588-mkupdate.sh
 ```
 
 4. Get you update.img at this directory. (not Image/update.img)
