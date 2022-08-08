@@ -1,6 +1,6 @@
-### Step-by-Step flash ChromiumOS Image by upgrade_tool
+### Step-by-Step flash RK3588 update image by upgrade tool
 
-[upgrade_tool](https://opensource.rock-chips.com/wiki_Upgradetool) is a Rockchip update.img flash tool under Linux.
+[Upgrade tool](https://opensource.rock-chips.com/wiki_Upgradetool) is a Rockchip update.img flash tool under Linux.
 
 1. Make sure the board is <b>not</b> connected to power.
 2. Press and hold the `recovery` button on the board.

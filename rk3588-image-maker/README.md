@@ -19,3 +19,7 @@
 4. Get you update.img at this directory. (not Image/update.img)
 
 5. Flash update.img by [upgrade tool](./Linux_Upgrade_Tool)
+
+```
+  sudo ./upgrade_tool uf ./update.img
+```
