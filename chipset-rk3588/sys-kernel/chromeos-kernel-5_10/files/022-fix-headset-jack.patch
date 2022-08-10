@@ -97,7 +97,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
    		};
    		vcc_headset_mic: vcc-headset-mic {
    			rockchip,pins = <1 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
-@@ -428,18 +418,15 @@
+@@ -428,18 +418,17 @@
  };
  
  &sdmmc {
@@ -117,15 +117,17 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +  no-sdio;
 +  no-mmc;
 +  cap-sd-highspeed;
++  cap-mmc-highspeed;
++  clock-frequency = <100000000>;
 +  disable-wp;
 +  sd-uhs-sdr104;
 +  cd-gpios = <&gpio0 RK_PA4 0>;
-+  card-detect-delay = <200>;
++  card-detect-delay = <800>;
 +  vmmc-supply = <&vcc_3v3_sd_s0>;
  	status = "okay";
  };
  
-@@ -538,25 +525,52 @@
+@@ -538,25 +527,45 @@
  };
  
  &vp0 {
@@ -143,14 +145,12 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +  rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER1 | 1 << ROCKCHIP_VOP2_ESMART1)>;
    rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER1>;
  };
-+/*1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0 |*/
  
  &vp2 {
    cursor-win-id=<ROCKCHIP_VOP2_ESMART2>;
 -  rockchip,plane-mask = <( 1 << ROCKCHIP_VOP2_CLUSTER2 | 1 << ROCKCHIP_VOP2_ESMART2 |
 -        1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
 +  rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER2 | 1 << ROCKCHIP_VOP2_ESMART2)>;
-+/*        1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;*/
    rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER2>;
  };
  
@@ -160,30 +160,25 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +  cursor-win-id=<ROCKCHIP_VOP2_ESMART3>;
 +  rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
 +  rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER3>;
-+};
+ };
 +
 +/*
 +&sdmmc_bus4 {
 +	rockchip,pins =
-+        <4 RK_PD0 1 &pcfg_pull_up_drv_level_15>,
-+        <4 RK_PD1 1 &pcfg_pull_up_drv_level_15>,
-+        <4 RK_PD2 1 &pcfg_pull_up_drv_level_15>,
-+        <4 RK_PD3 1 &pcfg_pull_up_drv_level_15>;
++        <4 RK_PD0 1 &pcfg_pull_up_drv_level_12>,
++        <4 RK_PD1 1 &pcfg_pull_up_drv_level_12>,
++        <4 RK_PD2 1 &pcfg_pull_up_drv_level_12>,
++        <4 RK_PD3 1 &pcfg_pull_up_drv_level_12>;
 +};
 +
 +&sdmmc_clk {
 +   rockchip,pins =
-+        <4 RK_PD5 1 &pcfg_pull_up_drv_level_15>;
++        <4 RK_PD5 1 &pcfg_pull_up_drv_level_12>;
 +};
 +
 +&sdmmc_cmd {
 +  rockchip,pins =
-+        <4 RK_PD4 1 &pcfg_pull_up_drv_level_15>;
- };
-+*/
-+/*
-+&cluster0_opp_table {
-+  /delete-node/ opp-408000000;
++        <4 RK_PD4 1 &pcfg_pull_up_drv_level_12>;
 +};
 +*/
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
@@ -194,7 +189,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		compatible = "regulator-fixed";
  		regulator-name = "combophy_avdd0v85";
  		regulator-boot-on;
-+    regulator-always-on;
++  //  regulator-always-on;
  		regulator-min-microvolt = <850000>;
  		regulator-max-microvolt = <850000>;
  		vin-supply = <&vdd_0v85_s0>;

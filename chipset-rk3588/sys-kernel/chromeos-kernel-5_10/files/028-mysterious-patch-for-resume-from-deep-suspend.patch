@@ -107,3 +107,47 @@ Index: kernel-rockchip/drivers/regulator/core.c
  		if (best_c_rdev_done)
  			set_bit(best_c_rdev, &c_rdev_done);
  
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
++++ kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
+@@ -168,14 +168,14 @@ int kbase_devfreq_opp_helper(struct dev_
+ 					       new_freq, true, is_set_clk);
+ 		ret = regulator_set_voltage(mem_reg, new_supply_mem->u_volt,
+ 					    INT_MAX);
+-		if (ret) {
+-			dev_err(dev, "failed to set volt %lu uV for mem reg\n",
+-				new_supply_mem->u_volt);
++		if (ret < 0) {
++			dev_err(dev, "failed to set bigger volt %lu uV for mem reg, ret:%d\n",
++				new_supply_mem->u_volt,  ret);
+ 			goto restore_voltage;
+ 		}
+ 		ret = regulator_set_voltage(vdd_reg, new_supply_vdd->u_volt,
+ 					    INT_MAX);
+-		if (ret) {
++		if (ret < 0) {
+ 			dev_err(dev, "failed to set volt %lu uV for vdd reg\n",
+ 				new_supply_vdd->u_volt);
+ 			goto restore_voltage;
+@@ -196,16 +196,16 @@ int kbase_devfreq_opp_helper(struct dev_
+ 		}
+ 		ret = regulator_set_voltage(vdd_reg, new_supply_vdd->u_volt,
+ 					    INT_MAX);
+-		if (ret) {
++		if (ret < 0) {
+ 			dev_err(dev, "failed to set volt %lu uV for vdd reg\n",
+ 				new_supply_vdd->u_volt);
+ 			goto restore_freq;
+ 		}
+ 		ret = regulator_set_voltage(mem_reg, new_supply_mem->u_volt,
+ 					    INT_MAX);
+-		if (ret) {
+-			dev_err(dev, "failed to set volt %lu uV for mem reg\n",
+-				new_supply_mem->u_volt);
++		if (ret < 0) {
++			dev_err(dev, "failed to set volt %lu uV for mem reg, ret:%d\n",
++				new_supply_mem->u_volt, ret);
+ 			goto restore_freq;
+ 		}
+ 	}
