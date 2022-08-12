@@ -224,6 +224,15 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
    status = "okay";
  };
  
+@@ -393,7 +390,7 @@
+ 				vactive = <2560>;
+ 				hfront-porch = <60>;
+ 				hsync-len = <20>;
+-				hback-porch = <40>;
++				hback-porch = <20>;
+ 				vfront-porch = <112>;
+ 				vsync-len = <4>;
+ 				vback-porch = <18>;
 @@ -496,7 +493,7 @@
  		interrupts = <RK_PC4 IRQ_TYPE_LEVEL_LOW>;
  		pinctrl-names = "default";
@@ -395,8 +404,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  	svid = <0xff01>;
  	sbu1-dc-gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
  	sbu2-dc-gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
-+//  keep-dp-normal;
 +/*
++  keep-dp-normal;
  	pinctrl-names = "default";
  	pinctrl-0 = <&sbu1_dc &sbu2_dc>;
 -  keep-dp-normal;
