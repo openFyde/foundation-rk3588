@@ -21,7 +21,6 @@ This repository contains the following packages:
 
 | Packages                                       | Description                                     | Reference                                                                                                                                      |
 |------------------------------------------------|-------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
-| chromeos-base/autoexpand-user-partition        | Auto expand stateful partition on first boot    |                                                                                                                                                |
 | chromeos-base/chromeos-base                    | ChromeOS specific system setup                  | [chromiumos-overlay](https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/main/chromeos-base/chromeos-base)   |
 | chromeos-base/chromeos-bsp-baseboard-inaugural | Config files for inaugural                      |                                                                                                                                                |
 | chromeos-base/chromeos-chrome                  | Open-source version of Google Chrome web browse | [chromiumos-overlay](https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/main/chromeos-base/chromeos-chrome) |

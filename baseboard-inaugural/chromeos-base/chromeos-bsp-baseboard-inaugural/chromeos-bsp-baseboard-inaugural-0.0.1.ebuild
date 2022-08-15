@@ -15,7 +15,6 @@ IUSE=""
 
 RDEPEND="
   sys-boot/rk3588-uboot-script
-  chromeos-base/autoexpand-user-partition
   media-libs/rockchip-mpp
   "
 
