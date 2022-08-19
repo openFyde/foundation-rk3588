@@ -1,4 +1,3 @@
 chromeos-base/tty::chromiumos
 media-sound/adhd::chromiumos
-chromeos-base/chromeos-base::chromiumos
 chromeos-base/crosvm::chromiumos

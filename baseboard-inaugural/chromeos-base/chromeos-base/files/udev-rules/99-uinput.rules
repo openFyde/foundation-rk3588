@@ -1,2 +1,0 @@
-# Make the /dev/uinput device only accessible by the uinput group.
-SUBSYSTEM=="misc", KERNEL=="uinput", OWNER="root", GROUP="uinput", MODE="0660"
