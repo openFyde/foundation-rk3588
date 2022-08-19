@@ -1,7 +1,7 @@
-diff --git a/src/server/cras_alsa_jack.c b/src/server/cras_alsa_jack.c
+diff --git a/cras/src/server/cras_alsa_jack.c b/cras/src/server/cras_alsa_jack.c
 index d8028b65..d2ce6382 100644
---- a/src/server/cras_alsa_jack.c
-+++ b/src/server/cras_alsa_jack.c
+--- a/cras/src/server/cras_alsa_jack.c
++++ b/cras/src/server/cras_alsa_jack.c
 @@ -884,6 +884,7 @@ static int find_jack_controls(struct cras_alsa_jack_list *jack_list)
  	};
  	static const char *const input_jack_base_names[] = {

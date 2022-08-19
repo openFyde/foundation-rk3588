@@ -14,3 +14,17 @@ filter_unsupported_gcc_flags() {
                 flags=()
         done
 }
+
+chipset_rk3588_stack_bashrc() {
+  local cfg cfgd
+
+  cfgd="/mnt/host/source/src/overlays/chipset-rk3588/${CATEGORY}/${PN}"
+  for cfg in ${PN} ${P} ${PF} ; do
+    cfg="${cfgd}/${cfg}.bashrc"
+    [[ -f ${cfg} ]] && . "${cfg}"
+  done
+
+  export CHIPSET_RK3588_BASHRC_FILESDIR="${cfgd}/files"
+}
+
+chipset_rk3588_stack_bashrc

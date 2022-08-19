@@ -1,5 +1,5 @@
 diff --git a/src/android/camera_device.cpp b/src/android/camera_device.cpp
-index 00d48471..2412ce91 100644
+index 00d48471..2e7e7cf1 100644
 --- a/src/android/camera_device.cpp
 +++ b/src/android/camera_device.cpp
 @@ -354,7 +354,9 @@ int CameraDevice::initialize(const CameraConfigData *cameraConfigData)
@@ -7,9 +7,9 @@ index 00d48471..2412ce91 100644
  	 * metadata.
  	 */
 -	if (properties.contains(properties::Rotation)) {
-+  if (cameraConfigData && cameraConfigData->rotation != -1) {
-+    orientation_ = cameraConfigData->rotation;
-+  } else if (properties.contains(properties::Rotation)) {
++	if (cameraConfigData && cameraConfigData->rotation != -1) {
++		orientation_ = cameraConfigData->rotation;
++	} else if (properties.contains(properties::Rotation)) {
  		int rotation = properties.get(properties::Rotation);
  		orientation_ = (360 - rotation) % 360;
  		if (cameraConfigData && cameraConfigData->rotation != -1 &&
