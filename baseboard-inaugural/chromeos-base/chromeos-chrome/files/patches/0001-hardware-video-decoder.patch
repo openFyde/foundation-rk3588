@@ -62,15 +62,17 @@ Index: src/content/gpu/gpu_sandbox_hook_linux.cc
  #else
  static const char kLibGlesPath[] = "/usr/lib/libGLESv2.so.2";
  static const char kLibEglPath[] = "/usr/lib/libEGL.so.1";
-@@ -97,6 +98,7 @@ static const char kLibTegraPath[] = "/us
+@@ -97,7 +98,9 @@ static const char kLibTegraPath[] = "/us
  static const char kLibV4l2Path[] = "/usr/lib/libv4l2.so";
  static const char kLibV4lEncPluginPath[] =
      "/usr/lib/libv4l/plugins/libv4l-encplugin.so";
 +static const char kLibRkMppPath[] = "/usr/lib/librockchip_mpp.so.1";
  #endif
++static const char kDeviceTreeCompatible[]="/proc/device-tree/compatible";
  
  constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
-@@ -127,6 +129,11 @@ void AddV4L2GpuPermissions(
+ 
+@@ -127,6 +130,11 @@ void AddV4L2GpuPermissions(
            BrokerFilePermission::ReadWrite(mediaDevicePath.str()));
      }
    }
@@ -82,15 +84,16 @@ Index: src/content/gpu/gpu_sandbox_hook_linux.cc
  
    // Image processor used on ARM platforms.
    static const char kDevImageProc0Path[] = "/dev/image-proc0";
-@@ -279,6 +286,7 @@ void AddArmGpuPermissions(std::vector<Br
+@@ -279,6 +287,8 @@ void AddArmGpuPermissions(std::vector<Br
    permissions->push_back(BrokerFilePermission::ReadOnly(kLdSoCache));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibGlesPath));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibEglPath));
 +  permissions->push_back(BrokerFilePermission::ReadOnly(kLibRkMppPath));
++  permissions->push_back(BrokerFilePermission::ReadOnly(kDeviceTreeCompatible));
  
    AddArmMaliGpuPermissions(permissions);
  }
-@@ -472,11 +480,18 @@ bool IsAcceleratedVideoEnabled(
+@@ -472,11 +482,18 @@ bool IsAcceleratedVideoEnabled(
  void LoadV4L2Libraries(
      const sandbox::policy::SandboxSeccompBPF::Options& options) {
    if (IsAcceleratedVideoEnabled(options) && UseLibV4L2()) {
