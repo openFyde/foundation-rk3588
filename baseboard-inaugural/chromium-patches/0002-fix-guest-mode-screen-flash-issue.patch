@@ -1,1 +1,12 @@
-../chromeos-base/chromeos-chrome/files/patches/0002-fix-guest-mode-screen-flash-issue.patch
+Index: src/chrome/browser/ash/login/chrome_restart_request.cc
+===================================================================
+--- src.orig/chrome/browser/ash/login/chrome_restart_request.cc
++++ src/chrome/browser/ash/login/chrome_restart_request.cc
+@@ -160,6 +160,7 @@ void DeriveCommandLine(const GURL& start
+     ::switches::kDisableWebRtcHWDecoding,
+     ::switches::kDisableWebRtcHWEncoding,
+     ::switches::kOzonePlatform,
++    ::switches::kDisableExplicitDmaFences,
+     switches::kAshClearFastInkBuffer,
+     switches::kAshEnablePaletteOnAllDisplays,
+     switches::kAshEnableTabletMode,
