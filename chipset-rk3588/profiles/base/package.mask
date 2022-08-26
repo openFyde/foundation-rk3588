@@ -1,2 +1,3 @@
 sys-kernel/chromeos-kernel-5_10::chromiumos
 media-libs/libv4lplugins::chromiumos
+media-libs/libv4l::chromiumos
