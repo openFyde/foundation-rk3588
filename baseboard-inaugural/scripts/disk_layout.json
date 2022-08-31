@@ -26,6 +26,9 @@
       {
         "num": 3,
         # caculate: size = fs_size / 64  + 200 (M)
+        # There are two reasons for 200M size:
+        # 1. We store verity hash and a boot cache in this partition too.
+        # 2. We intentionally keep the filesystem size low to catch bloat.
         "fs_size":"2484 MiB",
         "size":"2724 MiB"
       }
