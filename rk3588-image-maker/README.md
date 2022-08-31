@@ -21,5 +21,6 @@
 5. Flash update.img by [upgrade tool](./Linux_Upgrade_Tool)
 
 ```
-  sudo ./upgrade_tool uf ./update.img
+  cd Linux_Upgrade_Tool
+  sudo ./upgrade_tool uf ../update.img
 ```
