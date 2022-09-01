@@ -3,7 +3,7 @@
 
 EAPI=7
 
-EGIT_REPO_URI="https://github.com/rockchip-linux/mpp.git"
+EGIT_REPO_URI="https://gitee.com/openFyde/rockchip-linux-mpp.git"
 EGIT_COMMIT="3198035973ed76fdff8c4871ddd6e20aa539dbe9"
 
 inherit cmake-utils git-r3 udev

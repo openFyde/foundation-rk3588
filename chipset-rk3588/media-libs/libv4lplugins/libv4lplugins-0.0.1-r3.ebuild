@@ -3,7 +3,7 @@
 
 EAPI="7"
 
-EGIT_REPO_URI="https://github.com/JeffyCN/libv4l-rkmpp.git"
+EGIT_REPO_URI="https://gitee.com/openFyde/JeffyCN-libv4l-rkmpp.git"
 EGIT_COMMIT="fe977181a5ab53bb350706cdc259ba6ccd4528da"
 
 inherit autotools git-r3 eutils flag-o-matic meson
