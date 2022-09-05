@@ -97,7 +97,21 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
    		};
    		vcc_headset_mic: vcc-headset-mic {
    			rockchip,pins = <1 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
-@@ -428,18 +418,17 @@
+@@ -348,6 +338,13 @@
+ 	status = "okay";
+ };
+ 
++&av1d {
++  status = "okay";
++};
++
++&av1d_mmu {
++  status = "okay";
++};
+ &rga3_1_mmu {
+ 	status = "okay";
+ };
+@@ -428,18 +425,17 @@
  };
  
  &sdmmc {
@@ -118,16 +132,16 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +  no-mmc;
 +  cap-sd-highspeed;
 +  cap-mmc-highspeed;
-+  clock-frequency = <100000000>;
++ // clock-frequency = <100000000>;
 +  disable-wp;
-+  sd-uhs-sdr104;
++ // sd-uhs-sdr104;
 +  cd-gpios = <&gpio0 RK_PA4 0>;
 +  card-detect-delay = <800>;
 +  vmmc-supply = <&vcc_3v3_sd_s0>;
  	status = "okay";
  };
  
-@@ -538,25 +527,45 @@
+@@ -538,25 +534,45 @@
  };
  
  &vp0 {
@@ -160,16 +174,16 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +  cursor-win-id=<ROCKCHIP_VOP2_ESMART3>;
 +  rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
 +  rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER3>;
- };
++};
 +
-+/*
++
 +&sdmmc_bus4 {
 +	rockchip,pins =
 +        <4 RK_PD0 1 &pcfg_pull_up_drv_level_12>,
 +        <4 RK_PD1 1 &pcfg_pull_up_drv_level_12>,
 +        <4 RK_PD2 1 &pcfg_pull_up_drv_level_12>,
 +        <4 RK_PD3 1 &pcfg_pull_up_drv_level_12>;
-+};
+ };
 +
 +&sdmmc_clk {
 +   rockchip,pins =
@@ -180,7 +194,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +  rockchip,pins =
 +        <4 RK_PD4 1 &pcfg_pull_up_drv_level_12>;
 +};
-+*/
++
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
