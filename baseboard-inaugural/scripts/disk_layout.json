@@ -51,6 +51,11 @@
         "num": 3,
         "fs_size":"2484 MiB",
         "size":"2724 MiB"
+      },
+      {
+        "num": 1,
+        "fs_size":"1024 MiB",
+        "size":"1224 MiB"
       }
     ],
     "recovery":[
