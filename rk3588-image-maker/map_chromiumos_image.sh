@@ -27,6 +27,7 @@ fi
 mount_loopdev() {
   local img=$1
   sudo losetup $loopdev $img || die "mount error."
+  sleep 1
   sudo partx -d $loopdev 2>&1 >/dev/null || true
   sudo partx -a $loopdev 2>&1 >/dev/null || die "Error mount patitions of $loopdev"
   echo $loopdev
