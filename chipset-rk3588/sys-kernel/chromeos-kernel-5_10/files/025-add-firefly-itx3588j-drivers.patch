@@ -2600,7 +2600,7 @@ Index: kernel-rockchip/drivers/media/i2c/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/media/i2c/Kconfig
 +++ kernel-rockchip/drivers/media/i2c/Kconfig
-@@ -1212,6 +1212,13 @@ config VIDEO_JX_K17
+@@ -1302,6 +1302,13 @@ config VIDEO_JX_K17
  	  To compile this driver as a module, choose M here: the
  	  module will be called jx_k17.
  
@@ -2618,13 +2618,14 @@ Index: kernel-rockchip/drivers/media/i2c/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/media/i2c/Makefile
 +++ kernel-rockchip/drivers/media/i2c/Makefile
-@@ -190,5 +190,6 @@ obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-c
+@@ -207,6 +207,7 @@ obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-c
  obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
  
  obj-$(CONFIG_SDR_MAX2175) += max2175.o
 +obj-$(CONFIG_VIDEO_XC7160) += xc7160.o
  
  obj-$(CONFIG_VIDEO_OTP_EEPROM)	+= otp_eeprom.o
+ obj-$(CONFIG_VIDEO_PREISP_DUMMY_SENSOR) += preisp-dummy.o
 Index: kernel-rockchip/drivers/media/i2c/xc7160.c
 ===================================================================
 --- /dev/null
@@ -11298,7 +11299,7 @@ Index: kernel-rockchip/drivers/gpio/gpio-pca953x.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpio/gpio-pca953x.c
 +++ kernel-rockchip/drivers/gpio/gpio-pca953x.c
-@@ -954,6 +954,11 @@ static int pca953x_probe(struct i2c_clie
+@@ -949,6 +949,11 @@ static int pca953x_probe(struct i2c_clie
  	u32 invert = 0;
  	struct regulator *reg;
  	const struct regmap_config *regmap_config;
@@ -11310,7 +11311,7 @@ Index: kernel-rockchip/drivers/gpio/gpio-pca953x.c
  
  	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
  	if (chip == NULL)
-@@ -965,6 +970,11 @@ static int pca953x_probe(struct i2c_clie
+@@ -960,6 +965,11 @@ static int pca953x_probe(struct i2c_clie
  		chip->gpio_start = pdata->gpio_base;
  		invert = pdata->invert;
  		chip->names = pdata->names;
@@ -11322,7 +11323,7 @@ Index: kernel-rockchip/drivers/gpio/gpio-pca953x.c
  	} else {
  		struct gpio_desc *reset_gpio;
  
-@@ -1130,7 +1140,20 @@ static int pca953x_regcache_sync(struct
+@@ -1125,7 +1135,20 @@ static int pca953x_regcache_sync(struct
  		dev_err(dev, "Failed to sync GPIO out registers: %d\n", ret);
  		return ret;
  	}
@@ -11344,7 +11345,7 @@ Index: kernel-rockchip/drivers/gpio/gpio-pca953x.c
  #ifdef CONFIG_GPIO_PCA953X_IRQ
  	if (chip->driver_data & PCA_PCAL) {
  		ret = regcache_sync_region(chip->regmap, PCAL953X_IN_LATCH,
-@@ -1154,10 +1177,44 @@ static int pca953x_regcache_sync(struct
+@@ -1149,10 +1172,44 @@ static int pca953x_regcache_sync(struct
  	return 0;
  }
  
@@ -11389,7 +11390,7 @@ Index: kernel-rockchip/drivers/gpio/gpio-pca953x.c
  	regcache_cache_only(chip->regmap, true);
  
  	if (atomic_read(&chip->wakeup_path))
-@@ -1186,12 +1243,32 @@ static int pca953x_resume(struct device
+@@ -1181,12 +1238,32 @@ static int pca953x_resume(struct device
  	ret = pca953x_regcache_sync(dev);
  	if (ret)
  		return ret;
@@ -11427,7 +11428,7 @@ Index: kernel-rockchip/drivers/gpio/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpio/Kconfig
 +++ kernel-rockchip/drivers/gpio/Kconfig
-@@ -989,6 +989,12 @@ config GPIO_PCA953X
+@@ -1004,6 +1004,12 @@ config GPIO_PCA953X
  
  	  40 bits:      pca9505, pca9698
  
@@ -11444,7 +11445,7 @@ Index: kernel-rockchip/sound/soc/rockchip/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/sound/soc/rockchip/Kconfig
 +++ kernel-rockchip/sound/soc/rockchip/Kconfig
-@@ -76,6 +76,13 @@ config SND_SOC_ROCKCHIP_MULTICODECS
+@@ -90,6 +90,13 @@ config SND_SOC_ROCKCHIP_MULTICODECS
  	  Say Y or M here if you want to add support for SoC audio on Rockchip
  	  boards using multicodecs, such as RK3308 boards.
  
@@ -11462,7 +11463,7 @@ Index: kernel-rockchip/sound/soc/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/sound/soc/rockchip/Makefile
 +++ kernel-rockchip/sound/soc/rockchip/Makefile
-@@ -23,6 +23,7 @@ obj-$(CONFIG_SND_SOC_ROCKCHIP_VAD) += sn
+@@ -27,6 +27,7 @@ obj-$(CONFIG_SND_SOC_ROCKCHIP_VAD) += sn
  snd-soc-rockchip-hdmi-objs := rockchip_hdmi.o
  snd-soc-rockchip-max98090-objs := rockchip_max98090.o
  snd-soc-rockchip-multicodecs-objs := rockchip_multicodecs.o
@@ -11470,7 +11471,7 @@ Index: kernel-rockchip/sound/soc/rockchip/Makefile
  snd-soc-rockchip-rt5645-objs := rockchip_rt5645.o
  snd-soc-rk3288-hdmi-analog-objs := rk3288_hdmi_analog.o
  snd-soc-rk3399-gru-sound-objs := rk3399_gru_sound.o
-@@ -30,6 +31,7 @@ snd-soc-rk3399-gru-sound-objs := rk3399_
+@@ -34,6 +35,7 @@ snd-soc-rk3399-gru-sound-objs := rk3399_
  obj-$(CONFIG_SND_SOC_ROCKCHIP_HDMI) += snd-soc-rockchip-hdmi.o
  obj-$(CONFIG_SND_SOC_ROCKCHIP_MAX98090) += snd-soc-rockchip-max98090.o
  obj-$(CONFIG_SND_SOC_ROCKCHIP_MULTICODECS) += snd-soc-rockchip-multicodecs.o
@@ -12388,21 +12389,21 @@ Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/Kconfig
  	  includes 4.10 and other versions, if it is N, only 4.10 core working.
  
 +config STMMAC_FIREFLY_QUIRK
-+  bool "fix firefly itx3588 led"
-+  depends on STMMAC_ETH
-+  help
-+    Say y if you have firefly itx3588 ethernet.
++	bool "fix firefly itx3588 led"
++	depends on STMMAC_ETH
++	help
++	 Say y if you have firefly itx3588 ethernet.
 +
- config STMMAC_PTP
- 	bool "PTP feature for STMMAC"
- 	default STMMAC_ETH if !ROCKCHIP_MINI_KERNEL
+ config STMMAC_PLATFORM
+ 	tristate "STMMAC Platform bus support"
+ 	depends on STMMAC_ETH
 Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
 +++ kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
-@@ -46,6 +46,11 @@
- #include "dwxgmac2.h"
- #include "hwif.h"
+@@ -54,6 +54,11 @@
+ #define STMMAC_HWTS_ACTIVE	(PTP_TCR_TSENA | PTP_TCR_TSCFUPDT | \
+ 				 PTP_TCR_TSCTRLSSR)
  
 +#ifdef CONFIG_STMMAC_FIREFLY_QUIRK
 +#define RTL_8211F_CG_PHY_ID  0x001cc916
@@ -12412,7 +12413,7 @@ Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
  #define	STMMAC_ALIGN(x)		ALIGN(ALIGN(x, SMP_CACHE_BYTES), 16)
  #define	TSO_MAX_BUFF_SIZE	(SZ_16K - 1)
  
-@@ -4887,6 +4892,27 @@ int stmmac_reinit_ringparam(struct net_d
+@@ -4964,6 +4969,27 @@ int stmmac_reinit_ringparam(struct net_d
  	return ret;
  }
  
@@ -12440,7 +12441,7 @@ Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
  /**
   * stmmac_dvr_probe
   * @device: device pointer
-@@ -5123,6 +5149,14 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5204,6 +5230,14 @@ int stmmac_dvr_probe(struct device *devi
  		if (ret < 0)
  			goto error_serdes_powerup;
  	}
@@ -12459,7 +12460,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -131,3 +131,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-e
+@@ -152,3 +152,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-e
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-rk806-single-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb

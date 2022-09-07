@@ -15,7 +15,7 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_drv.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/drm_drv.c
 +++ kernel-rockchip/drivers/gpu/drm/drm_drv.c
-@@ -1023,6 +1023,8 @@ out:
+@@ -1026,6 +1026,8 @@ out:
  	return err;
  }
  
@@ -24,7 +24,7 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_drv.c
  static const struct file_operations drm_stub_fops = {
  	.owner = THIS_MODULE,
  	.open = drm_stub_open,
-@@ -1053,6 +1055,12 @@ static int __init drm_core_init(void)
+@@ -1056,6 +1058,12 @@ static int __init drm_core_init(void)
  
  	drm_debugfs_root = debugfs_create_dir("dri", NULL);
  

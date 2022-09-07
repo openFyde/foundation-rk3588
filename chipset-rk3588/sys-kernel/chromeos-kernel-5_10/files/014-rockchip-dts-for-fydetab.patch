@@ -2062,7 +2062,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -91,6 +91,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-nv
+@@ -109,6 +109,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-nv
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-ipc-6x-linux.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-linux.dtb
@@ -2070,28 +2070,6 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-linux-ipc.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb2-lp4-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb2-lp4-v10-edp.dtb
-Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-+++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
-@@ -640,7 +640,7 @@ static const struct vop2_dsc_data rk3588
- 	 .pd_id = VOP2_PD_DSC_8K,
- 	 .max_slice_num = 8,
- 	 .max_linebuf_depth = 11,
--	 .min_bits_per_pixel = 9,
-+	 .min_bits_per_pixel = 8,
- 	 .dsc_txp_clk_src_name = "dsc_8k_txp_clk_src",
- 	 .dsc_txp_clk_name = "dsc_8k_txp_clk",
- 	 .dsc_pxl_clk_name = "dsc_8k_pxl_clk",
-@@ -653,7 +653,7 @@ static const struct vop2_dsc_data rk3588
- 	 .pd_id = VOP2_PD_DSC_4K,
- 	 .max_slice_num = 2,
- 	 .max_linebuf_depth = 11,
--	 .min_bits_per_pixel = 9,
-+	 .min_bits_per_pixel = 8,
- 	 .dsc_txp_clk_src_name = "dsc_4k_txp_clk_src",
- 	 .dsc_txp_clk_name = "dsc_4k_txp_clk",
- 	 .dsc_pxl_clk_name = "dsc_4k_pxl_clk",
 Index: kernel-rockchip/drivers/gpu/drm/panel/panel-fydetab.c
 ===================================================================
 --- /dev/null
@@ -7262,11 +7240,11 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -6024,7 +6024,14 @@ static int vop2_calc_dsc_clk(struct drm_
- 	 * bits_per_pixel = [8-12];
- 	 * As only support 1/2/4 div, so we set dsc_cds = crtc_clock / 8;
+@@ -6161,7 +6161,14 @@ static int vop2_calc_dsc_clk(struct drm_
+ 	 * so when txp_clk is equal to v_pixclk, we set dsc_cds = crtc_clock / 4,
+ 	 * otherwise dsc_cds = crtc_clock / 8;
  	 */
--	vcstate->dsc_cds_clk_rate = v_pixclk / 8;
+-	vcstate->dsc_cds_clk_rate = v_pixclk / (vcstate->dsc_txp_clk_rate == v_pixclk ? 4 : 8);
 +#ifdef CONFIG_DRM_PANEL_FYDETAB
 +  if (output_if_is_mipi(vcstate->output_if))
 +	  vcstate->dsc_cds_clk_rate = v_pixclk / (vcstate->dsc_txp_clk_rate == v_pixclk ? 4 : 8);
@@ -7278,7 +7256,7 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  
  	return 0;
  }
-@@ -6131,7 +6138,13 @@ static void vop2_crtc_enable_dsc(struct
+@@ -6268,7 +6275,13 @@ static void vop2_crtc_enable_dsc(struct
  	bool mipi_ds_mode = false;
  	uint32_t *reg_base = vop2->regs;
  	u32 offset = 0;
@@ -7293,11 +7271,12 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	if (!vop2->data->nr_dscs) {
  		DRM_WARN("Unsupported DSC\n");
  
-@@ -6203,7 +6216,14 @@ static void vop2_crtc_enable_dsc(struct
- 		VOP_MODULE_SET(vop2, dsc, dsc_init_dly_num, dly_num);
- 
- 		dsc_hsync = hsync_len / 2;
--		dsc_htotal = htotal / (1 << dsc_cds_clk->div_val);
+@@ -6359,8 +6372,14 @@ static void vop2_crtc_enable_dsc(struct
+ 		 * dsc_htotal = htotal * (1 << dclk_core->div_val) /
+ 				((1 << dsc_txp_clk->div_val) * (1 << dsc_cds_clk->div_val))
+ 		*/
+-		dsc_htotal = htotal * (1 << dclk_core->div_val) /
+-				((1 << dsc_txp_clk->div_val) * (1 << dsc_cds_clk->div_val));
 +#ifdef CONFIG_DRM_PANEL_FYDETAB
 +    if (output_if_is_mipi(vcstate->output_if))
 +      dsc_htotal = htotal * (1 << dsc_cds_clk->div_val) * (1 << dsc_txp_clk->div_val) / (1 << dclk_core->div_val);
@@ -10110,7 +10089,7 @@ Index: kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
  	ret = udphy_clk_init(udphy, dev);
  	if (ret)
  		return ret;
-@@ -1062,6 +1085,10 @@ static int usbdp_typec_mux_set(struct ty
+@@ -1068,6 +1091,10 @@ static int usbdp_typec_mux_set(struct ty
  	struct rockchip_udphy *udphy = typec_mux_get_drvdata(mux);
  	const struct rockchip_udphy_cfg *cfg = udphy->cfgs;
  	u8 mode;
@@ -10121,7 +10100,7 @@ Index: kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
  
  	mutex_lock(&udphy->mutex);
  
-@@ -1354,7 +1381,6 @@ static int rk3588_udphy_init(struct rock
+@@ -1383,7 +1410,6 @@ static int rk3588_udphy_init(struct rock
  		dev_err(udphy->dev, "refclk set error %d\n", ret);
  		goto assert_apb;
  	}
@@ -10186,7 +10165,7 @@ Index: kernel-rockchip/drivers/gpu/drm/panel/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/panel/Kconfig
 +++ kernel-rockchip/drivers/gpu/drm/panel/Kconfig
-@@ -499,4 +499,12 @@ config DRM_PANEL_XINPENG_XPP055C272
+@@ -500,4 +500,12 @@ config DRM_PANEL_XINPENG_XPP055C272
  	  Say Y here if you want to enable support for the Xinpeng
  	  XPP055C272 controller for 720x1280 LCD panels with MIPI/RGB/SPI
  	  system interfaces.
@@ -10203,7 +10182,7 @@ Index: kernel-rockchip/drivers/net/usb/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/usb/Kconfig
 +++ kernel-rockchip/drivers/net/usb/Kconfig
-@@ -543,6 +543,13 @@ config USB_NET_QMI_WWAN
+@@ -548,6 +548,13 @@ config USB_NET_QMI_WWAN
  	  To compile this driver as a module, choose M here: the
  	  module will be called qmi_wwan.
  

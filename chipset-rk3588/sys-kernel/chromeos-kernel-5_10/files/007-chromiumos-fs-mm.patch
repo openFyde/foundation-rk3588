@@ -1137,7 +1137,7 @@ Index: kernel-rockchip/fs/Makefile
 ===================================================================
 --- kernel-rockchip.orig/fs/Makefile
 +++ kernel-rockchip/fs/Makefile
-@@ -89,6 +89,7 @@ obj-$(CONFIG_ISO9660_FS)	+= isofs/
+@@ -91,6 +91,7 @@ obj-$(CONFIG_ISO9660_FS)	+= isofs/
  obj-$(CONFIG_HFSPLUS_FS)	+= hfsplus/ # Before hfs to find wrapped HFS+
  obj-$(CONFIG_HFS_FS)		+= hfs/
  obj-$(CONFIG_ECRYPT_FS)		+= ecryptfs/
@@ -5301,7 +5301,7 @@ Index: kernel-rockchip/mm/vmscan.c
  static LIST_HEAD(shrinker_list);
  static DECLARE_RWSEM(shrinker_rwsem);
  
-@@ -2289,6 +2311,28 @@ enum scan_balance {
+@@ -2299,6 +2321,28 @@ enum scan_balance {
  };
  
  /*
@@ -5330,7 +5330,7 @@ Index: kernel-rockchip/mm/vmscan.c
   * Determine how aggressively the anon and file LRU lists should be
   * scanned.  The relative value of each set of LRU lists is determined
   * by looking at the fraction of the pages scanned we did rotate back
-@@ -2329,6 +2373,15 @@ static void get_scan_count(struct lruvec
+@@ -2339,6 +2383,15 @@ static void get_scan_count(struct lruvec
  		goto out;
  	}
  
@@ -9906,7 +9906,7 @@ Index: kernel-rockchip/kernel/sysctl.c
 ===================================================================
 --- kernel-rockchip.orig/kernel/sysctl.c
 +++ kernel-rockchip/kernel/sysctl.c
-@@ -3036,6 +3036,15 @@ static struct ctl_table vm_table[] = {
+@@ -3069,6 +3069,15 @@ static struct ctl_table vm_table[] = {
  		.mode		= 0644,
  		.proc_handler	= mmap_min_addr_handler,
  	},
@@ -9922,7 +9922,7 @@ Index: kernel-rockchip/kernel/sysctl.c
  #endif
  #ifdef CONFIG_NUMA
  	{
-@@ -3107,6 +3116,13 @@ static struct ctl_table vm_table[] = {
+@@ -3140,6 +3149,13 @@ static struct ctl_table vm_table[] = {
  		.mode		= 0644,
  		.proc_handler	= proc_doulongvec_minmax,
  	},
@@ -9982,9 +9982,9 @@ Index: kernel-rockchip/mm/Kconfig
  config ARCH_SUPPORTS_MEMORY_FAILURE
  	bool
  
-@@ -904,4 +932,77 @@ config ARCH_HAS_HUGEPD
- config MAPPING_DIRTY_HELPERS
-         bool
+@@ -914,4 +942,77 @@ config MAPPING_DIRTY_HELPERS
+ 
+ source "mm/damon/Kconfig"
  
 +config KMAP_LOCAL
 +	bool
@@ -10070,8 +10070,8 @@ Index: kernel-rockchip/mm/Makefile
  obj-$(CONFIG_FRAME_VECTOR) += frame_vector.o
 +obj-$(CONFIG_LOW_MEM_NOTIFY) += low-mem-notify.o
  obj-$(CONFIG_DEBUG_PAGE_REF) += debug_page_ref.o
+ obj-$(CONFIG_DAMON) += damon/
  obj-$(CONFIG_HARDENED_USERCOPY) += usercopy.o
- obj-$(CONFIG_PERCPU_STATS) += percpu-stats.o
 Index: kernel-rockchip/mm/low-mem-notify.c
 ===================================================================
 --- /dev/null
@@ -10479,7 +10479,7 @@ Index: kernel-rockchip/mm/util.c
 ===================================================================
 --- kernel-rockchip.orig/mm/util.c
 +++ kernel-rockchip/mm/util.c
-@@ -738,6 +738,7 @@ int sysctl_overcommit_memory __read_most
+@@ -744,6 +744,7 @@ int sysctl_overcommit_memory __read_most
  int sysctl_overcommit_ratio __read_mostly = 50;
  unsigned long sysctl_overcommit_kbytes __read_mostly;
  int sysctl_max_map_count __read_mostly = DEFAULT_MAX_MAP_COUNT;
@@ -10979,7 +10979,7 @@ Index: kernel-rockchip/mm/page_alloc.c
  #include <trace/hooks/mm.h>
  
  #include <asm/sections.h>
-@@ -4669,6 +4670,7 @@ should_reclaim_retry(gfp_t gfp_mask, uns
+@@ -4681,6 +4682,7 @@ should_reclaim_retry(gfp_t gfp_mask, uns
  	 * several times in the row.
  	 */
  	if (*no_progress_loops > MAX_RECLAIM_RETRIES) {
@@ -10987,7 +10987,7 @@ Index: kernel-rockchip/mm/page_alloc.c
  		/* Before OOM, exhaust highatomic_reserve */
  		return unreserve_highatomic_pageblock(ac, true);
  	}
-@@ -5102,6 +5104,8 @@ __alloc_pages_nodemask(gfp_t gfp_mask, u
+@@ -5113,6 +5115,8 @@ __alloc_pages_nodemask(gfp_t gfp_mask, u
  	if (!prepare_alloc_pages(gfp_mask, order, preferred_nid, nodemask, &ac, &alloc_mask, &alloc_flags))
  		return NULL;
  

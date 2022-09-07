@@ -2,7 +2,7 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 ===================================================================
 --- kernel-rockchip.orig/sound/soc/rockchip/rockchip_multicodecs.c
 +++ kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
-@@ -185,7 +185,7 @@ static void mc_keys_poll(struct input_de
+@@ -158,7 +158,7 @@ static void mc_keys_poll(struct input_de
  		}
  	}
  
@@ -11,7 +11,7 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
  		keycode = 0;
  
  	if (mc_data->last_key && mc_data->last_key != keycode)
-@@ -553,8 +553,18 @@ static int wait_locked_card(struct devic
+@@ -564,8 +564,18 @@ static int wait_locked_card(struct devic
  	return ret;
  }
  
@@ -553,15 +553,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/power/supply/bq25700_charger.c
 +++ kernel-rockchip/drivers/power/supply/bq25700_charger.c
-@@ -47,6 +47,7 @@ module_param_named(dbg_level, dbg_enable
- #define MAX_CHARGEVOLTAGE		16800000
- #define MAX_CHARGECURRETNT		8128000
- #define MAX_OTGVOLTAGE			20800000
-+#define MIN_OTGVOLTAGE      4280000
- #define MAX_OTGCURRENT			6350000
- 
- enum bq25700_fields {
-@@ -198,6 +199,14 @@ struct bq25700_device {
+@@ -199,6 +199,14 @@ struct bq25700_device {
  	int				pd_charge_only;
  	unsigned int			bc_event;
  	bool				usb_bc;
@@ -576,27 +568,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  };
  
  static const struct reg_field bq25700_reg_fields[] = {
-@@ -501,12 +510,18 @@ struct bq25700_range {
- 	u32 step;
- };
- 
-+static const struct bq25700_range sc8886_otg_range = {
-+       .min = 1280000,
-+       .max = 20800000,
-+       .step = 128000,
-+};
-+
- struct bq25700_lookup {
- 	const u32 *tbl;
- 	u32 size;
- };
- 
--static const union {
-+static union {
- 	struct bq25700_range  rt;
- 	struct bq25700_lookup lt;
- } bq25700_tables[] = {
-@@ -597,6 +612,14 @@ static void bq25700_disable_charge(struc
+@@ -604,6 +612,14 @@ static void bq25700_disable_charge(struc
  
  static struct bq25700_device *bq25700_charger;
  
@@ -611,39 +583,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  static int bq25700_field_read(struct bq25700_device *charger,
  			      enum bq25700_fields field_id)
  {
-@@ -935,12 +958,25 @@ static int bq25700_fw_read_u32_props(str
- 			dev_err(charger->dev, "ti,input-current is error\n");
- 			return -ENODEV;
- 		}
--		if ((props[i].tbl_id == TBL_OTGVOL) &&
--		    (property > MAX_OTGVOLTAGE)) {
--			dev_err(charger->dev, "ti,ti,otg-voltage is error\n");
--			return -ENODEV;
--		}
--		if ((props[i].tbl_id == TBL_OTGVOL) &&
-+    if (props[i].tbl_id == TBL_OTGVOL) {
-+            if (of_device_is_compatible(charger->dev->of_node,
-+                                        "southchip,sc8886")) {
-+                    pr_info("[xxxx] %s %d\n", __func__, __LINE__);
-+                    bq25700_tables[TBL_OTGVOL].rt = sc8886_otg_range;
-+
-+                    if (property < MIN_OTGVOLTAGE) {
-+                            dev_err(charger->dev,
-+                                    "ti,otg-voltage is error");
-+                            return -ENODEV;
-+                    }
-+            }
-+
-+            if (property > MAX_OTGVOLTAGE) {
-+                    dev_err(charger->dev, "ti,otg-voltage is error\n");
-+                    return -ENODEV;
-+            };
-+    };
-+		if ((props[i].tbl_id == TBL_OTGCUR) &&
- 		    (property > MAX_OTGCURRENT)) {
- 			dev_err(charger->dev, "ti,otg-current is error\n");
- 			return -ENODEV;
-@@ -968,7 +1004,7 @@ static int bq25700_hw_init(struct bq2570
+@@ -988,7 +1005,7 @@ static int bq25700_hw_init(struct bq2570
  		{CHARGE_CURRENT,	 charger->init_data.ichg},
  		{MAX_CHARGE_VOLTAGE,	 charger->init_data.max_chg_vol},
  		{MIN_SYS_VOTAGE,	 charger->init_data.sys_min_voltage},
@@ -652,7 +592,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  		{OTG_CURRENT,	 charger->init_data.otg_current},
  	};
  
-@@ -1220,8 +1256,8 @@ static int bq25700_power_supply_init(str
+@@ -1240,8 +1257,8 @@ static int bq25700_power_supply_init(str
  {
  	struct power_supply_config psy_cfg = { .drv_data = charger, };
  
@@ -663,7 +603,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  	psy_cfg.of_node = charger->dev->of_node;
  
  	charger->supply_charger =
-@@ -1265,6 +1301,7 @@ static int bq2570x_pd_notifier_call(stru
+@@ -1285,6 +1302,7 @@ static int bq2570x_pd_notifier_call(stru
  	if (prop.intval == 0) {
  		queue_delayed_work(bq->usb_charger_wq, &bq->discnt_work,
  				   msecs_to_jiffies(10));
@@ -671,7 +611,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  		return NOTIFY_OK;
  	}
  
-@@ -1293,6 +1330,8 @@ static int bq2570x_pd_notifier_call(stru
+@@ -1313,6 +1331,8 @@ static int bq2570x_pd_notifier_call(stru
  		bq25700_get_chip_state(bq, &state);
  		bq->state = state;
  		power_supply_changed(bq->supply_charger);
@@ -680,7 +620,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  	}
  	return NOTIFY_OK;
  }
-@@ -1316,6 +1355,7 @@ static irqreturn_t bq25700_irq_handler_t
+@@ -1336,6 +1356,7 @@ static irqreturn_t bq25700_irq_handler_t
  		charger->typec0_status = USB_STATUS_NONE;
  		charger->typec1_status = USB_STATUS_NONE;
  	}
@@ -688,7 +628,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  	irq_set_irq_type(irq, irq_flag | IRQF_ONESHOT);
  
  	return IRQ_HANDLED;
-@@ -1487,11 +1527,15 @@ static int bq25700_charger_evt_notifier1
+@@ -1507,11 +1528,15 @@ static int bq25700_charger_evt_notifier1
  
  static void bq25700_set_otg_vbus(struct bq25700_device *charger, bool enable)
  {
@@ -706,7 +646,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  }
  
  static void bq25700_host_evt_worker(struct work_struct *work)
-@@ -1752,7 +1796,8 @@ static int bq25700_otg_vbus_enable(struc
+@@ -1772,7 +1797,8 @@ static int bq25700_otg_vbus_enable(struc
  {
  	struct bq25700_device *charger = rdev_get_drvdata(dev);
  
@@ -716,7 +656,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  
  	return 0;
  }
-@@ -1761,7 +1806,8 @@ static int bq25700_otg_vbus_disable(stru
+@@ -1781,7 +1807,8 @@ static int bq25700_otg_vbus_disable(stru
  {
  	struct bq25700_device *charger = rdev_get_drvdata(dev);
  
@@ -726,7 +666,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  
  	return 0;
  }
-@@ -1779,10 +1825,17 @@ static int bq25700_otg_vbus_is_enabled(s
+@@ -1799,10 +1826,17 @@ static int bq25700_otg_vbus_is_enabled(s
  	return val && gpio_status ? 1 : 0;
  }
  
@@ -744,7 +684,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  };
  
  static const struct regulator_desc bq25700_otg_vbus_desc = {
-@@ -1928,20 +1981,21 @@ static int bq25700_parse_dt(struct bq257
+@@ -1948,20 +1982,21 @@ static int bq25700_parse_dt(struct bq257
  	return 0;
  }
  
@@ -770,7 +710,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  	charger = devm_kzalloc(&client->dev, sizeof(*charger), GFP_KERNEL);
  	if (!charger)
  		return -EINVAL;
-@@ -1949,51 +2003,26 @@ static int bq25700_probe(struct i2c_clie
+@@ -1969,51 +2004,26 @@ static int bq25700_probe(struct i2c_clie
  	charger->client = client;
  	charger->dev = dev;
  
@@ -838,7 +778,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  	i2c_set_clientdata(client, charger);
  
  	/*read chip id. Confirm whether to support the chip*/
-@@ -2013,20 +2042,26 @@ static int bq25700_probe(struct i2c_clie
+@@ -2033,20 +2043,26 @@ static int bq25700_probe(struct i2c_clie
  	} else {
  		return -ENODEV;
  	}
@@ -872,7 +812,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  
  	ret = bq25700_hw_init(charger);
  	if (ret < 0) {
-@@ -2109,12 +2144,24 @@ static const struct i2c_device_id bq2570
+@@ -2129,12 +2145,24 @@ static const struct i2c_device_id bq2570
  };
  MODULE_DEVICE_TABLE(i2c, bq25700_i2c_ids);
  
@@ -901,7 +841,7 @@ Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
  	{ },
  };
  MODULE_DEVICE_TABLE(of, bq25700_of_match);
-@@ -2124,6 +2171,15 @@ static const struct of_device_id bq25700
+@@ -2144,6 +2172,15 @@ static const struct of_device_id bq25700
  };
  #endif
  
@@ -941,7 +881,7 @@ Index: kernel-rockchip/drivers/cpufreq/Kconfig
  	  program shall be able to set the CPU dynamically without having
  	  to enable the userspace governor manually.
  
-@@ -141,7 +141,7 @@ config CPU_FREQ_GOV_USERSPACE
+@@ -152,7 +152,7 @@ config CPU_FREQ_GOV_USERSPACE
  	help
  	  Enable this cpufreq governor when you either want to set the
  	  CPU frequency manually or when a userspace program shall
@@ -950,7 +890,7 @@ Index: kernel-rockchip/drivers/cpufreq/Kconfig
  	  <http://www.lartmaker.nl/>.
  
  	  To compile this driver as a module, choose M here: the
-@@ -156,11 +156,11 @@ config CPU_FREQ_GOV_ONDEMAND
+@@ -167,11 +167,11 @@ config CPU_FREQ_GOV_ONDEMAND
  	select CPU_FREQ_GOV_COMMON
  	help
  	  'ondemand' - This driver adds a dynamic cpufreq policy governor.
@@ -964,7 +904,7 @@ Index: kernel-rockchip/drivers/cpufreq/Kconfig
  
  	  To compile this driver as a module, choose M here: the
  	  module will be called cpufreq_ondemand.
-@@ -210,6 +210,17 @@ config CPU_FREQ_GOV_SCHEDUTIL
+@@ -242,6 +242,17 @@ config CPU_FREQ_GOV_INTERACTIVE
  
  	  If in doubt, say N.
  
@@ -986,8 +926,8 @@ Index: kernel-rockchip/drivers/cpufreq/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/cpufreq/Makefile
 +++ kernel-rockchip/drivers/cpufreq/Makefile
-@@ -16,6 +16,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_ONDEMAND)	+= c
- obj-$(CONFIG_CPU_FREQ_GOV_CONSERVATIVE)	+= cpufreq_conservative.o
+@@ -17,6 +17,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_CONSERVATIVE)
+ obj-$(CONFIG_CPU_FREQ_GOV_INTERACTIVE)	+= cpufreq_interactive.o
  obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
  obj-$(CONFIG_CPU_FREQ_GOV_ATTR_SET)	+= cpufreq_governor_attr_set.o
 +obj-$(CONFIG_CPU_BOOST)     += cpu-boost.o

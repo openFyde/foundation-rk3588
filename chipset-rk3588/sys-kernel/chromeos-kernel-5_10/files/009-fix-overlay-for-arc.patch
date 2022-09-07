@@ -46,7 +46,7 @@ Index: kernel-rockchip/security/selinux/hooks.c
  	/*
  	 * IMPORTANT: Double-check logic in this function when adding a new
  	 * SECURITY_FS_USE_* definition!
-@@ -3420,7 +3445,15 @@ static int selinux_inode_getsecurity(str
+@@ -3427,7 +3452,15 @@ static int selinux_inode_getsecurity(str
  	 * and lack of permission just means that we fall back to the
  	 * in-core context value, not a denial.
  	 */
@@ -63,7 +63,7 @@ Index: kernel-rockchip/security/selinux/hooks.c
  	if (has_cap_mac_admin(false))
  		error = security_sid_to_context_force(&selinux_state,
  						      isec->sid, &context,
-@@ -3443,11 +3476,26 @@ out_nofree:
+@@ -3450,11 +3483,26 @@ out_nofree:
  static int selinux_inode_setsecurity(struct inode *inode, const char *name,
  				     const void *value, size_t size, int flags)
  {

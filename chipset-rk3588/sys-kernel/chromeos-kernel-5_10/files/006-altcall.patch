@@ -519,7 +519,7 @@ Index: kernel-rockchip/security/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/security/Kconfig
 +++ kernel-rockchip/security/Kconfig
-@@ -238,6 +238,7 @@ source "security/loadpin/Kconfig"
+@@ -241,6 +241,7 @@ source "security/loadpin/Kconfig"
  source "security/yama/Kconfig"
  source "security/safesetid/Kconfig"
  source "security/lockdown/Kconfig"
@@ -527,7 +527,7 @@ Index: kernel-rockchip/security/Kconfig
  
  source "security/integrity/Kconfig"
  
-@@ -291,5 +292,14 @@ config LSM
+@@ -294,5 +295,14 @@ config LSM
  
  source "security/Kconfig.hardening"
  
@@ -603,7 +603,7 @@ Index: kernel-rockchip/security/selinux/hooks.c
 ===================================================================
 --- kernel-rockchip.orig/security/selinux/hooks.c
 +++ kernel-rockchip/security/selinux/hooks.c
-@@ -2007,19 +2007,22 @@ static inline u32 open_file_to_av(struct
+@@ -2015,19 +2015,22 @@ static inline u32 open_file_to_av(struct
  
  /* Hook functions begin here. */
  
@@ -632,7 +632,7 @@ Index: kernel-rockchip/security/selinux/hooks.c
  	int rc;
  
  	if (mysid != fromsid) {
-@@ -2030,24 +2033,27 @@ static int selinux_binder_transaction(co
+@@ -2038,24 +2041,27 @@ static int selinux_binder_transaction(co
  			return rc;
  	}
  
@@ -783,7 +783,7 @@ Index: kernel-rockchip/include/linux/syscalls.h
 ===================================================================
 --- kernel-rockchip.orig/include/linux/syscalls.h
 +++ kernel-rockchip/include/linux/syscalls.h
-@@ -1371,4 +1371,25 @@ int __sys_getsockopt(int fd, int level,
+@@ -1372,4 +1372,25 @@ int __sys_getsockopt(int fd, int level,
  		int __user *optlen);
  int __sys_setsockopt(int fd, int level, int optname, char __user *optval,
  		int optlen);
@@ -4425,7 +4425,7 @@ Index: kernel-rockchip/kernel/sys.c
  /*
   * Unprivileged users may change the real gid to the effective gid
   * or vice versa.  (BSD-style)
-@@ -2437,8 +2448,8 @@ static int prctl_set_vma(unsigned long o
+@@ -2430,8 +2441,8 @@ static int prctl_set_vma(unsigned long o
  
  #define PR_IO_FLUSHER (PF_MEMALLOC_NOIO | PF_LOCAL_THROTTLE)
  
@@ -4436,7 +4436,7 @@ Index: kernel-rockchip/kernel/sys.c
  {
  	struct task_struct *me = current;
  	unsigned char comm[sizeof(me->comm)];
-@@ -2521,6 +2532,12 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
+@@ -2514,6 +2525,12 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
  	case PR_SET_SECCOMP:
  		error = prctl_set_seccomp(arg2, (char __user *)arg3);
  		break;
@@ -4449,7 +4449,7 @@ Index: kernel-rockchip/kernel/sys.c
  	case PR_GET_TSC:
  		error = GET_TSC_CTL(arg2);
  		break;
-@@ -2708,8 +2725,14 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
+@@ -2701,8 +2718,14 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
  	return error;
  }
  
@@ -4466,7 +4466,7 @@ Index: kernel-rockchip/kernel/sys.c
  {
  	int err = 0;
  	int cpu = raw_smp_processor_id();
-@@ -2721,6 +2744,12 @@ SYSCALL_DEFINE3(getcpu, unsigned __user
+@@ -2714,6 +2737,12 @@ SYSCALL_DEFINE3(getcpu, unsigned __user
  	return err ? -EFAULT : 0;
  }
  
@@ -4632,7 +4632,7 @@ Index: kernel-rockchip/security/security.c
  {
  	return call_int_hook(binder_transfer_file, 0, from, to, file);
  }
-@@ -1133,6 +1133,7 @@ int security_path_chown(const struct pat
+@@ -1146,6 +1146,7 @@ int security_path_chown(const struct pat
  		return 0;
  	return call_int_hook(path_chown, 0, path, uid, gid);
  }
@@ -4644,7 +4644,7 @@ Index: kernel-rockchip/kernel/events/core.c
 ===================================================================
 --- kernel-rockchip.orig/kernel/events/core.c
 +++ kernel-rockchip/kernel/events/core.c
-@@ -11670,9 +11670,8 @@ again:
+@@ -11695,9 +11695,8 @@ again:
   * @cpu:		target cpu
   * @group_fd:		group leader event fd
   */
@@ -4656,7 +4656,7 @@ Index: kernel-rockchip/kernel/events/core.c
  {
  	struct perf_event *group_leader = NULL, *output_event = NULL;
  	struct perf_event *event, *sibling;
-@@ -12119,6 +12118,13 @@ err_fd:
+@@ -12144,6 +12143,13 @@ err_fd:
  	return err;
  }
  
@@ -4772,7 +4772,7 @@ Index: kernel-rockchip/drivers/android/binder.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/android/binder.c
 +++ kernel-rockchip/drivers/android/binder.c
-@@ -2869,7 +2869,7 @@ static void binder_transaction(struct bi
+@@ -2877,7 +2877,7 @@ static void binder_transaction(struct bi
  		size_t added_size;
  		int max_retries = 100;
  
@@ -4785,7 +4785,7 @@ Index: kernel-rockchip/include/trace/hooks/syscall_check.h
 ===================================================================
 --- kernel-rockchip.orig/include/trace/hooks/syscall_check.h
 +++ kernel-rockchip/include/trace/hooks/syscall_check.h
-@@ -25,7 +25,6 @@ DECLARE_HOOK(android_vh_check_file_open,
+@@ -32,7 +32,6 @@ DECLARE_HOOK(android_vh_check_file_open,
  DECLARE_HOOK(android_vh_check_bpf_syscall,
  	TP_PROTO(int cmd, const union bpf_attr *attr, unsigned int size),
  	TP_ARGS(cmd, attr, size));

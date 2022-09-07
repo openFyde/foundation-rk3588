@@ -14,7 +14,7 @@ Index: kernel-rockchip/include/net/sock.h
 ===================================================================
 --- kernel-rockchip.orig/include/net/sock.h
 +++ kernel-rockchip/include/net/sock.h
-@@ -2656,6 +2656,8 @@ bool sk_ns_capable(const struct sock *sk
+@@ -2669,6 +2669,8 @@ bool sk_ns_capable(const struct sock *sk
  		   struct user_namespace *user_ns, int cap);
  bool sk_capable(const struct sock *sk, int cap);
  bool sk_net_capable(const struct sock *sk, int cap);
@@ -35,7 +35,7 @@ Index: kernel-rockchip/net/core/sock.c
  
  #include <linux/uaccess.h>
  
-@@ -194,6 +195,40 @@ bool sk_net_capable(const struct sock *s
+@@ -193,6 +194,40 @@ bool sk_net_capable(const struct sock *s
  }
  EXPORT_SYMBOL(sk_net_capable);
  
@@ -76,7 +76,7 @@ Index: kernel-rockchip/net/core/sock.c
  /*
   * Each address family might have different locking rules, so we have
   * one slock key per address family and separate keys for internal and
-@@ -566,7 +601,7 @@ static int sock_bindtoindex_locked(struc
+@@ -565,7 +600,7 @@ static int sock_bindtoindex_locked(struc
  
  	/* Sorry... */
  	ret = -EPERM;

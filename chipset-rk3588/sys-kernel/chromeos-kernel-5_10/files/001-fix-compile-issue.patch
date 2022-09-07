@@ -2,7 +2,7 @@ Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 +++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-@@ -276,7 +276,7 @@ endif
+@@ -356,7 +356,7 @@ endif
  endif
  
  ARCH ?= arm64
@@ -15,9 +15,9 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
-@@ -6,7 +6,7 @@
+@@ -12,7 +12,7 @@
+ 	};
  
- / {
  	chosen: chosen {
 -		bootargs = "earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 irqchip.gicv3_pseudo_nmi=0 root=PARTUUID=614e0000-0000 rw rootwait";
 +		bootargs = "earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 irqchip.gicv3_pseudo_nmi=0 rootwait";
@@ -46,7 +46,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
  		rockchip,cpu = <&i2s6_8ch>;
  		rockchip,codec = <&hdmi1>;
  		rockchip,jack-det;
-@@ -1146,21 +1146,25 @@
+@@ -1194,21 +1194,25 @@
  
  /* vp0 & vp1 splice for 8K output */
  &vp0 {
@@ -82,7 +82,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
-@@ -631,7 +631,7 @@
+@@ -667,7 +667,7 @@
  };
  
  &route_dsi0 {
@@ -95,7 +95,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dt
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
-@@ -30,3 +30,7 @@
+@@ -44,3 +44,7 @@
  		regulator-suspend-microvolt = <3300000>;
  	};
  };
