@@ -1,17 +1,17 @@
-diff --git a/drivers/input/touchscreen/focaltech_touch/focaltech_core.c b/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
-index c8318c0ce8c0..8bd3b762b226 100644
---- a/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
-+++ b/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
+Index: kernel-rockchip/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
+===================================================================
+--- kernel-rockchip.orig/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
++++ kernel-rockchip/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
 @@ -1781,3 +1781,4 @@ module_exit(fts_ts_exit);
  MODULE_AUTHOR("FocalTech Driver Team");
  MODULE_DESCRIPTION("FocalTech Touchscreen Driver");
  MODULE_LICENSE("GPL v2");
 +MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
-diff --git a/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi b/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
-index 9f768118ddf0..353c993e3407 100644
---- a/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
-+++ b/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
-@@ -1459,6 +1459,12 @@ nand@0 {
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
+@@ -1459,6 +1459,12 @@
  
  &pinctrl {
  
