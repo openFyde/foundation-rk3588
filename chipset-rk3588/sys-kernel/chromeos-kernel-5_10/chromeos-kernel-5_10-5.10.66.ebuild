@@ -5,12 +5,12 @@ EAPI=7
 # CROS_WORKON_REPO is internal git url example: http://git.xxxx/repo
 CROS_WORKON_REPO="git@gitlab.fydeos.xyz:openfyde/projects"
 # CROS_WORKON_COMMIT is internel kernel commit
-CROS_WORKON_COMMIT="4ec513a01dcbcf4fae40bc97c27e1e081528cb2b"
+CROS_WORKON_COMMIT="1bf87a2057663c19464b7957438fd9f5567e07ab"
 # CROS_WORKON_REPO + CROS_WORKON_PROJECT will be the whole url for rockchip kernel example: http://git/xxxx/repo/rk-kernel
 CROS_WORKON_PROJECT="rk-kernel"
 # clone the kernel resource to ~/trunk/src/third_party/kernel/v5.10-rockchip to speed up the compiling.
 CROS_WORKON_LOCALNAME="kernel/v5.10-rockchip"
-CROS_WORKON_EGIT_BRANCH="r96-dev"
+CROS_WORKON_EGIT_BRANCH="rk3588_v1.0.2_20220820"
 CROS_WORKON_INCREMENTAL_BUILD="1"
 CROS_WORKON_MANUAL_UPREV=1
 #ECLASS_DEBUG_OUTPUT="on"
