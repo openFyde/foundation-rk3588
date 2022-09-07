@@ -2,13 +2,17 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dt
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
-@@ -34,3 +34,7 @@
+@@ -48,3 +48,11 @@
  &vop {
    disable-win-move;
  };
 +
 +&gt1x {
 +  gtp_ics_slot_report;
++};
++
++&cluster0_opp_table {
++  rockchip,pvtm-temp-prop = <244 500>;
 +};
 Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
 ===================================================================
