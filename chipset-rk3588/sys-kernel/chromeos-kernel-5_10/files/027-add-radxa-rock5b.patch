@@ -1569,12 +1569,14 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
  	mutex_lock(&dev->mode_config.idr_mutex);
  	ret = idr_alloc(&dev->mode_config.object_idr, register_obj ? obj : NULL,
  			1, 0, GFP_KERNEL);
-@@ -235,7 +235,7 @@ void drm_object_attach_property(struct d
+@@ -233,9 +233,9 @@ void drm_object_attach_property(struct d
+ 				uint64_t init_val)
+ {
  	int count = obj->properties->count;
++#if 0
  	struct drm_device *dev = property->dev;
  
 -
-+#if 0
  	if (obj->type == DRM_MODE_OBJECT_CONNECTOR) {
  		struct drm_connector *connector = obj_to_connector(obj);
  

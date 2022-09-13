@@ -3795,7 +3795,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +/*Enable this if testing suspend/resume
 + *on nitrogen8m
 + */
-+/*#define HX_CONFIG_DRM_PANEL*/
++#define HX_CONFIG_DRM_PANEL
 +
 +/*=============================================*/
 +
@@ -18885,3 +18885,165 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.h
 +
 +#endif
 +
+Index: kernel-rockchip/drivers/gpu/drm/drm_panel.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/drm_panel.c
++++ kernel-rockchip/drivers/gpu/drm/drm_panel.c
+@@ -61,6 +61,7 @@ void drm_panel_init(struct drm_panel *pa
+ 	panel->dev = dev;
+ 	panel->funcs = funcs;
+ 	panel->connector_type = connector_type;
++  BLOCKING_INIT_NOTIFIER_HEAD(&panel->nh);
+ }
+ EXPORT_SYMBOL(drm_panel_init);
+ 
+@@ -151,6 +152,10 @@ EXPORT_SYMBOL(drm_panel_unprepare);
+ int drm_panel_enable(struct drm_panel *panel)
+ {
+ 	int ret;
++  const int state = DRM_PANEL_BLANK_UNBLANK;
++  struct drm_panel_notifier dpn = {
++		.data = &state;
++  };
+ 
+ 	if (!panel)
+ 		return -EINVAL;
+@@ -166,6 +171,9 @@ int drm_panel_enable(struct drm_panel *p
+ 		DRM_DEV_INFO(panel->dev, "failed to enable backlight: %d\n",
+ 			     ret);
+ 
++  ret = drm_panel_notifier_call_chain(panel, DRM_PANEL_EVENT_BLANK, &dpn);
++  if (ret < 0)
++		DRM_DEV_INFO(panel->dev, "failed to notifier call chain panel enable: %d\n", ret);
+ 	return 0;
+ }
+ EXPORT_SYMBOL(drm_panel_enable);
+@@ -183,10 +191,18 @@ EXPORT_SYMBOL(drm_panel_enable);
+ int drm_panel_disable(struct drm_panel *panel)
+ {
+ 	int ret;
++  const int state = DRM_PANEL_BLANK_POWERDOWN;
++	struct drm_panel_notifier dpn = {
++		.data = &state;
++  };
+ 
+ 	if (!panel)
+ 		return -EINVAL;
+ 
++  ret = drm_panel_notifier_call_chain(panel, DRM_PANEL_EARLY_EVENT_BLANK, &dpn);
++	if (ret < 0)
++		DRM_DEV_INFO(panel->dev, "failed to notifier call chain panel disable: %d\n", ret);
++
+ 	ret = backlight_disable(panel->backlight);
+ 	if (ret < 0)
+ 		DRM_DEV_INFO(panel->dev, "failed to disable backlight: %d\n",
+@@ -344,6 +360,27 @@ int drm_panel_of_backlight(struct drm_pa
+ EXPORT_SYMBOL(drm_panel_of_backlight);
+ #endif
+ 
++int drm_panel_notifier_register(struct drm_panel *panel,
++	struct notifier_block *nb)
++{
++	return blocking_notifier_chain_register(&panel->nh, nb);
++}
++EXPORT_SYMBOL(drm_panel_notifier_register);
++
++int drm_panel_notifier_unregister(struct drm_panel *panel,
++	struct notifier_block *nb)
++{
++	return blocking_notifier_chain_unregister(&panel->nh, nb);
++}
++EXPORT_SYMBOL(drm_panel_notifier_unregister);
++
++int drm_panel_notifier_call_chain(struct drm_panel *panel,
++	unsigned long val, void *v)
++{
++	return blocking_notifier_call_chain(&panel->nh, val, v);
++}
++EXPORT_SYMBOL(drm_panel_notifier_call_chain);
++
+ MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
+ MODULE_DESCRIPTION("DRM panel infrastructure");
+ MODULE_LICENSE("GPL and additional rights");
+Index: kernel-rockchip/include/drm/drm_connector.h
+===================================================================
+--- kernel-rockchip.orig/include/drm/drm_connector.h
++++ kernel-rockchip/include/drm/drm_connector.h
+@@ -40,6 +40,7 @@ struct drm_encoder;
+ struct drm_property;
+ struct drm_property_blob;
+ struct drm_printer;
++struct drm_panel;
+ struct edid;
+ struct i2c_adapter;
+ 
+@@ -1559,6 +1560,12 @@ struct drm_connector {
+ 
+ 	/** @hdr_sink_metadata: HDR Metadata Information read from sink */
+ 	struct hdr_sink_metadata hdr_sink_metadata;
++  /**
++  * @panel:
++  *
++  * Can find the panel which connected to drm_connector.
++  */
++  struct drm_panel *panel;
+ };
+ 
+ #define obj_to_connector(x) container_of(x, struct drm_connector, base)
+Index: kernel-rockchip/include/drm/drm_panel.h
+===================================================================
+--- kernel-rockchip.orig/include/drm/drm_panel.h
++++ kernel-rockchip/include/drm/drm_panel.h
+@@ -28,6 +28,24 @@
+ #include <linux/errno.h>
+ #include <linux/list.h>
+ 
++#include <linux/notifier.h>
++
++/* A hardware display blank change occurred */
++#define DRM_PANEL_EVENT_BLANK		0x01
++/* A hardware display blank early change occurred */
++#define DRM_PANEL_EARLY_EVENT_BLANK	0x02
++
++enum {
++	/* panel: power on */
++	DRM_PANEL_BLANK_UNBLANK,
++	/* panel: power off */
++	DRM_PANEL_BLANK_POWERDOWN,
++};
++
++struct drm_panel_notifier {
++	void *data;
++};
++
+ struct backlight_device;
+ struct device_node;
+ struct drm_connector;
+@@ -171,6 +189,13 @@ struct drm_panel {
+ 	 * Panel entry in registry.
+ 	 */
+ 	struct list_head list;
++
++	/**
++	 * @nh:
++	 *
++	 * panel notifier list head
++	 */
++  struct blocking_notifier_head nh;
+ };
+ 
+ void drm_panel_init(struct drm_panel *panel, struct device *dev,
+@@ -188,6 +213,13 @@ int drm_panel_disable(struct drm_panel *
+ 
+ int drm_panel_get_modes(struct drm_panel *panel, struct drm_connector *connector);
+ 
++int drm_panel_notifier_register(struct drm_panel *panel,
++	struct notifier_block *nb);
++int drm_panel_notifier_unregister(struct drm_panel *panel,
++	struct notifier_block *nb);
++int drm_panel_notifier_call_chain(struct drm_panel *panel,
++	unsigned long val, void *v);
++
+ #if defined(CONFIG_OF) && defined(CONFIG_DRM_PANEL)
+ struct drm_panel *of_drm_find_panel(const struct device_node *np);
+ int of_drm_get_panel_orientation(const struct device_node *np,

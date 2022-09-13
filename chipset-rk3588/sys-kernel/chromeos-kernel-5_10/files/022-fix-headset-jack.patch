@@ -2,16 +2,16 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 ===================================================================
 --- kernel-rockchip.orig/sound/soc/rockchip/rockchip_multicodecs.c
 +++ kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
-@@ -158,7 +158,7 @@ static void mc_keys_poll(struct input_de
- 		}
- 	}
+@@ -261,7 +261,7 @@ static irqreturn_t headset_det_irq_threa
+ {
+ 	struct multicodecs_data *mc_data = (struct multicodecs_data *)data;
  
--	if (abs(mc_data->keyup_voltage - value) < closest)
-+	if (abs(mc_data->keyup_voltage - value) < closest || (value > 300))
- 		keycode = 0;
+-	queue_delayed_work(system_power_efficient_wq, &mc_data->handler, msecs_to_jiffies(200));
++	mod_delayed_work(system_power_efficient_wq, &mc_data->handler, msecs_to_jiffies(500));
  
- 	if (mc_data->last_key && mc_data->last_key != keycode)
-@@ -564,8 +564,18 @@ static int wait_locked_card(struct devic
+ 	return IRQ_HANDLED;
+ };
+@@ -564,8 +564,32 @@ static int wait_locked_card(struct devic
  	return ret;
  }
  
@@ -24,9 +24,23 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 +    gpiod_set_value_cansleep(mc_data->hp_ctl_gpio,0);
 +}
 +
++static int rk_test_startup(struct snd_pcm_substream *substream)
++{
++  struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
++  struct multicodecs_data *mc_data = snd_soc_card_get_drvdata(rtd->card);
++
++  /*fix double startup process when headphone is plugged in.*/
++  if (extcon_get_state(mc_data->extcon, EXTCON_JACK_HEADPHONE)) {
++    if (gpiod_get_value_cansleep(mc_data->hp_ctl_gpio))
++      return -ENOTSUPP;
++  }
++  return 0;
++}
++
  static struct snd_soc_ops rk_ops = {
  	.hw_params = rk_multicodecs_hw_params,
 +  .shutdown = rk_test_shutdown,
++  .startup = rk_test_startup,
  };
  
  static int rk_multicodecs_probe(struct platform_device *pdev)

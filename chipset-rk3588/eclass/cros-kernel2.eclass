@@ -1,5 +1,8 @@
 # Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
 # Distributed under the terms of the GNU General Public License v2
+#
+# Shellcheck doesn't understand our CONFIG_FRAMGMENTS expansion.
+# shellcheck disable=SC2034
 
 # Check for EAPI 4+
 case "${EAPI:-0}" in
@@ -17,7 +20,6 @@ HOMEPAGE="http://www.chromium.org/"
 LICENSE="GPL-2"
 SLOT="0"
 
-BDEPEND="sys-apps/debianutils"
 DEPEND="sys-kernel/linux-firmware
 	factory_netboot_ramfs? ( chromeos-base/chromeos-initramfs[factory_netboot_ramfs] )
 	factory_shim_ramfs? ( chromeos-base/chromeos-initramfs[factory_shim_ramfs] )
@@ -26,6 +28,8 @@ DEPEND="sys-kernel/linux-firmware
 	builtin_fw_mali_g57? ( virtual/opengles )
 	builtin_fw_t210_bpmp? ( sys-kernel/tegra_bpmp-t210 )
 	builtin_fw_t210_nouveau? ( sys-kernel/nouveau-firmware )
+	builtin_fw_x86_adl_ucode? ( sys-boot/coreboot-private-files-baseboard-brya )
+	builtin_fw_x86_amd_ucode? ( sys-kernel/linux-firmware[linux_firmware_amd_ucode] )
 	builtin_fw_x86_aml_ucode? ( chromeos-base/aml-ucode-firmware-private )
 	builtin_fw_x86_apl_ucode? ( chromeos-base/apl-ucode-firmware-private )
 	builtin_fw_x86_bdw_ucode? ( chromeos-base/bdw-ucode-firmware-private )
@@ -33,6 +37,7 @@ DEPEND="sys-kernel/linux-firmware
 	builtin_fw_x86_byt_ucode? ( chromeos-base/byt-ucode-firmware-private )
 	builtin_fw_x86_cml_ucode? ( chromeos-base/cml-ucode-firmware-private )
 	builtin_fw_x86_glk_ucode? ( chromeos-base/glk-ucode-firmware-private )
+	builtin_fw_x86_intel_ucode? ( sys-firmware/intel-ucode-firmware )
 	builtin_fw_x86_jsl_ucode? ( chromeos-base/jsl-ucode-firmware-private )
 	builtin_fw_x86_kbl_ucode? ( chromeos-base/kbl-ucode-firmware-private )
 	builtin_fw_x86_skl_ucode? ( chromeos-base/skl-ucode-firmware-private )
@@ -40,13 +45,22 @@ DEPEND="sys-kernel/linux-firmware
 	builtin_fw_x86_whl_ucode? ( chromeos-base/whl-ucode-firmware-private )
 "
 
-WIRELESS_VERSIONS=( 4.2 )
-WIRELESS_SUFFIXES=( ${WIRELESS_VERSIONS[@]/.} )
+CHROMEOS_KERNEL_FAMILY_VALUES=(
+	arcvm
+	chromeos
+	manatee
+	termina
+)
+
+CHROMEOS_KERNEL_FAMILY_FLAGS=(
+	"${CHROMEOS_KERNEL_FAMILY_VALUES[@]/#/chromeos_kernel_family_}"
+)
 
 IUSE="
 	apply_patches
 	-asan
 	buildtest
+	${CHROMEOS_KERNEL_FAMILY_FLAGS[*]}
 	+clang
 	-compilation_database
 	-device_tree
@@ -55,6 +69,7 @@ IUSE="
 	fit_compression_kernel_lzma
 	firmware_install
 	frozen_gcc
+	hibernate
 	-kernel_sources
 	kernel_warning_level_1
 	kernel_warning_level_2
@@ -62,7 +77,6 @@ IUSE="
 	+lld
 	+llvm_ias
 	nfc
-	${WIRELESS_SUFFIXES[@]/#/-wireless}
 	-wifi_testbed_ap
 	-boot_dts_device_tree
 	-nowerror
@@ -77,8 +91,10 @@ IUSE="
 	-criu
 	-docker
 	-lxc
+	sparse
 "
 REQUIRED_USE="
+	^^ ( ${CHROMEOS_KERNEL_FAMILY_FLAGS[*]} )
 	compilation_database? ( clang )
 	?? ( fit_compression_kernel_lz4 fit_compression_kernel_lzma )
 	frozen_gcc? ( !clang )
@@ -87,8 +103,7 @@ REQUIRED_USE="
 "
 STRIP_MASK="
 	/lib/modules/*/kernel/*
-	/usr/lib/debug/boot/vmlinux
-	/usr/lib/debug/lib/modules/*
+	/usr/lib/debug/*
 	/usr/src/*
 "
 
@@ -104,10 +119,10 @@ KERNEL_VERSION="${KERNEL_VERSION/_/.}"
 
 # Specifying AutoFDO profiles in SRC_URI and let ebuild fetch it for us.
 # Prefer the frozen version of afdo profiles if set.
-AFDO_VERSION=${AFDO_FROZEN_PROFILE_VERSION:-$AFDO_PROFILE_VERSION}
+AFDO_VERSION=${AFDO_FROZEN_PROFILE_VERSION:-${AFDO_PROFILE_VERSION}}
 if [[ -n "${AFDO_VERSION}" ]]; then
 	# Set AFDO_LOCATION if not already set.
-	: ${AFDO_LOCATION:="gs://chromeos-prebuilt/afdo-job/cwp/kernel/${KERNEL_VERSION}"}
+	: "${AFDO_LOCATION:="gs://chromeos-prebuilt/afdo-job/cwp/kernel/${KERNEL_VERSION}"}"
 	AFDO_GCOV="${PN}-${AFDO_VERSION}.gcov"
 	AFDO_GCOV_COMPBINARY="${AFDO_GCOV}.compbinary.afdo"
 	SRC_URI+="
@@ -132,8 +147,8 @@ MULTILIB_STRICT_EXEMPT+="|modules"
 
 # Build out-of-tree and incremental by default, but allow an ebuild inheriting
 # this eclass to explicitly build in-tree.
-: ${CROS_WORKON_OUTOFTREE_BUILD:=1}
-: ${CROS_WORKON_INCREMENTAL_BUILD:=1}
+: "${CROS_WORKON_OUTOFTREE_BUILD:=1}"
+: "${CROS_WORKON_INCREMENTAL_BUILD:=1}"
 
 # Config fragments selected by USE flags. _config fragments are mandatory,
 # _config_disable fragments are optional and will be appended to kernel config
@@ -142,6 +157,28 @@ MULTILIB_STRICT_EXEMPT+="|modules"
 # applied later (needs to be done later since these values
 # aren't reliable when used in a global context like this):
 #   %ROOT% => ${SYSROOT}
+#
+# A NOTE about config fragments and when they should be used...
+#
+# In general config fragments should be avoided.
+# - They tend to get crufty and obsolete as the kernel moves forward and
+#   nothing validates that they still make sense.
+# - It's non-obvious when someone is working with the kernel that extra
+#   configs were turned on with a fragment.
+#
+# Fragments should really only be for:
+# - Debug options that a developer might turn on when building the kernel
+#   themselves.
+# - Debug options that a builder might turn on for producing a debug build
+#   with extra testing (options that we don't want enabled for production).
+# - Options enabling risky features that are only enabled for non-production
+#   boards that otherwise share the same kernel as production boards.
+# - Options needed for building the recovery image kernel. This kernel shares
+#   the same kernel config as the normal kernel but needs a few extra kernel
+#   options that we _don't_ want turned on for the normal kernel.
+#
+# If a feature is safe for production it should simply be turned on in the main
+# kernel config even if only a subset of boards need that feature turned on.
 
 CONFIG_FRAGMENTS=(
 	acpi_ac
@@ -174,6 +211,7 @@ CONFIG_FRAGMENTS=(
 	failslab
 	fbconsole
 	goldfish
+	hibernate
 	highmem
 	hypervisor_guest
 	i2cdev
@@ -193,6 +231,7 @@ CONFIG_FRAGMENTS=(
 	kvm_invept_global
 	kvm_host
 	kvm_nested
+	kvm_virt_suspend_time
 	lockdebug
 	lockstat
 	lpss_uart
@@ -203,6 +242,7 @@ CONFIG_FRAGMENTS=(
 	nfc
 	nfs
 	nowerror
+	pageowner
 	pca954x
 	pcserial
 	plan9
@@ -425,6 +465,11 @@ CONFIG_GOLDFISH_PIPE=y
 CONFIG_KEYBOARD_GOLDFISH_EVENTS=y
 "
 
+hibernate_desc="Enable hibernation (aka suspend-to-disk)"
+hibernate_config="
+CONFIG_HIBERNATION=y
+"
+
 highmem_desc="highmem"
 highmem_config="
 CONFIG_HIGHMEM64G=y
@@ -436,6 +481,10 @@ CONFIG_HYPERVISOR_GUEST=y
 CONFIG_PARAVIRT=y
 CONFIG_KVM_GUEST=y
 CONFIG_VIRTIO_VSOCKETS=m
+CONFIG_VIRTIO_IOMMU=m
+CONFIG_ACPI_VIOT=y
+CONFIG_PCI_COIOMMU=y
+CONFIG_COIOMMU=y
 "
 
 i2cdev_desc="I2C device interface"
@@ -473,6 +522,7 @@ CONFIG_TEST_KASAN=m
 CONFIG_SLUB_DEBUG=y
 CONFIG_SLUB_DEBUG_ON=y
 CONFIG_FRAME_WARN=0
+CONFIG_FORTIFY_SOURCE=n
 CONFIG_LOCALVERSION=\"-kasan\"
 "
 
@@ -488,6 +538,7 @@ kcsan_desc="Enable KCSAN"
 kcsan_config="
 CONFIG_KCSAN=y
 CONFIG_KCSAN_REPORT_RACE_UNKNOWN_ORIGIN=n
+CONFIG_FRAME_WARN=0
 "
 
 kernel_compress_xz_desc="Compresss kernel image with XZ"
@@ -525,7 +576,7 @@ CONFIG_MAGIC_SYSRQ_DEFAULT_ENABLE=1
 CONFIG_DEBUG_INFO_DWARF4=y
 """
 # kgdb over serial port depends on CONFIG_HW_CONSOLE which depends on CONFIG_VT
-REQUIRED_USE="${REQUIRED_USE} kgdb? ( vtconsole )"
+REQUIRED_USE+=" kgdb? ( vtconsole )"
 
 kmemleak_desc="Enable kmemleak"
 kmemleak_config="
@@ -569,6 +620,12 @@ CONFIG_NFC_PN533=m
 CONFIG_NFC_PN544=m
 CONFIG_NFC_PN544_I2C=m
 CONFIG_NFC_SHDLC=y
+"
+
+pageowner_desc="Enable pageowner kernel memory tracking"
+pageowner_config="
+CONFIG_PAGE_OWNER=y
+CONFIG_DEBUG_KERNEL=y
 "
 
 pvrdebug_desc="PowerVR Rogue debugging"
@@ -682,6 +739,11 @@ CONFIG_KVM=y
 CONFIG_KVM_AMD=y
 CONFIG_KVM_INTEL=y
 CONFIG_KVM_MMIO=y
+"
+
+kvm_virt_suspend_time_desc="Support KVM virtual suspend time injection"
+kvm_virt_suspend_time_config="
+CONFIG_KVM_VIRT_SUSPEND_TIMING=y
 "
 
 # TODO(benchan): Remove the 'mbim' use flag and unconditionally enable the
@@ -859,6 +921,7 @@ ubsan_config="
 CONFIG_UBSAN=y
 CONFIG_UBSAN_SANITIZE_ALL=y
 CONFIG_TEST_UBSAN=m
+CONFIG_FORTIFY_SOURCE=n
 "
 
 usb_gadget_desc="USB gadget support with ConfigFS/FunctionFS"
@@ -1129,11 +1192,13 @@ CONFIG_DEBUG_KOBJECT_RELEASE=y
 FIRMWARE_BINARIES=(
 	builtin_fw_amdgpu
 	builtin_fw_amdgpu_carrizo
+	builtin_fw_amdgpu_gc_10_3_7
 	builtin_fw_amdgpu_green_sardine
 	builtin_fw_amdgpu_picasso
 	builtin_fw_amdgpu_raven2
 	builtin_fw_amdgpu_renoir
 	builtin_fw_amdgpu_stoney
+	builtin_fw_amdgpu_yellow_carp
 	builtin_fw_guc_adl
 	builtin_fw_guc_g9
 	builtin_fw_guc_jsl
@@ -1148,6 +1213,8 @@ FIRMWARE_BINARIES=(
 	builtin_fw_t210_nouveau
 	builtin_fw_t210_xusb
 	builtin_fw_vega12
+	builtin_fw_x86_adl_ucode
+	builtin_fw_x86_amd_ucode
 	builtin_fw_x86_aml_ucode
 	builtin_fw_x86_apl_ucode
 	builtin_fw_x86_bdw_ucode
@@ -1155,6 +1222,7 @@ FIRMWARE_BINARIES=(
 	builtin_fw_x86_byt_ucode
 	builtin_fw_x86_cml_ucode
 	builtin_fw_x86_glk_ucode
+	builtin_fw_x86_intel_ucode
 	builtin_fw_x86_jsl_ucode
 	builtin_fw_x86_kbl_ucode
 	builtin_fw_x86_skl_ucode
@@ -1174,6 +1242,22 @@ builtin_fw_amdgpu_carrizo_files=(
 	amdgpu/carrizo_sdma1.bin
 	amdgpu/carrizo_uvd.bin
 	amdgpu/carrizo_vce.bin
+)
+
+builtin_fw_amdgpu_gc_10_3_7_desc="Firmware for AMD GC 10.3.7"
+builtin_fw_amdgpu_gc_10_3_7_files=(
+	amdgpu/dcn_3_1_6_dmcub.bin
+	amdgpu/gc_10_3_7_ce.bin
+	amdgpu/gc_10_3_7_me.bin
+	amdgpu/gc_10_3_7_mec2.bin
+	amdgpu/gc_10_3_7_mec.bin
+	amdgpu/gc_10_3_7_pfp.bin
+	amdgpu/gc_10_3_7_rlc.bin
+	amdgpu/psp_13_0_8_asd.bin
+	amdgpu/psp_13_0_8_ta.bin
+	amdgpu/psp_13_0_8_toc.bin
+	amdgpu/sdma_5_2_7.bin
+	amdgpu/yellow_carp_vcn.bin
 )
 
 builtin_fw_amdgpu_green_sardine_desc="Firmware for AMD Green Sardine"
@@ -1249,6 +1333,22 @@ builtin_fw_amdgpu_stoney_files=(
 	amdgpu/stoney_sdma.bin
 	amdgpu/stoney_uvd.bin
 	amdgpu/stoney_vce.bin
+)
+
+builtin_fw_amdgpu_yellow_carp_desc="Firmware for AMD Yellow Carp"
+builtin_fw_amdgpu_yellow_carp_files=(
+	amdgpu/yellow_carp_asd.bin
+	amdgpu/yellow_carp_ce.bin
+	amdgpu/yellow_carp_dmcub.bin
+	amdgpu/yellow_carp_me.bin
+	amdgpu/yellow_carp_mec2.bin
+	amdgpu/yellow_carp_mec.bin
+	amdgpu/yellow_carp_pfp.bin
+	amdgpu/yellow_carp_rlc.bin
+	amdgpu/yellow_carp_sdma.bin
+	amdgpu/yellow_carp_ta.bin
+	amdgpu/yellow_carp_toc.bin
+	amdgpu/yellow_carp_vcn.bin
 )
 
 builtin_fw_amdgpu_desc="Firmware for AMD GPU (Deprecated)"
@@ -1356,6 +1456,161 @@ builtin_fw_vega12_files=(
 	amdgpu/vega12_vce.bin
 )
 
+builtin_fw_x86_amd_ucode_desc="AMD ucode for all chips"
+builtin_fw_x86_amd_ucode_files=(
+	amd-ucode/microcode_amd.bin
+	amd-ucode/microcode_amd_fam15h.bin
+	amd-ucode/microcode_amd_fam16h.bin
+	amd-ucode/microcode_amd_fam17h.bin
+	amd-ucode/microcode_amd_fam19h.bin
+)
+
+builtin_fw_x86_intel_ucode_desc="Intel ucode for all chips"
+builtin_fw_x86_intel_ucode_files=(
+	intel-ucode/06-03-02
+	intel-ucode/06-05-00
+	intel-ucode/06-05-01
+	intel-ucode/06-05-02
+	intel-ucode/06-05-03
+	intel-ucode/06-06-00
+	intel-ucode/06-06-05
+	intel-ucode/06-06-0a
+	intel-ucode/06-06-0d
+	intel-ucode/06-07-01
+	intel-ucode/06-07-02
+	intel-ucode/06-07-03
+	intel-ucode/06-08-01
+	intel-ucode/06-08-03
+	intel-ucode/06-08-06
+	intel-ucode/06-08-0a
+	intel-ucode/06-09-05
+	intel-ucode/06-0a-00
+	intel-ucode/06-0a-01
+	intel-ucode/06-0b-01
+	intel-ucode/06-0b-04
+	intel-ucode/06-0d-06
+	intel-ucode/06-0e-08
+	intel-ucode/06-0e-0c
+	intel-ucode/06-0f-02
+	intel-ucode/06-0f-06
+	intel-ucode/06-0f-07
+	intel-ucode/06-0f-0a
+	intel-ucode/06-0f-0b
+	intel-ucode/06-0f-0d
+	intel-ucode/06-16-01
+	intel-ucode/06-17-06
+	intel-ucode/06-17-07
+	intel-ucode/06-17-0a
+	intel-ucode/06-1a-04
+	intel-ucode/06-1a-05
+	intel-ucode/06-1c-02
+	intel-ucode/06-1c-0a
+	intel-ucode/06-1d-01
+	intel-ucode/06-1e-05
+	intel-ucode/06-25-02
+	intel-ucode/06-25-05
+	intel-ucode/06-26-01
+	intel-ucode/06-2a-07
+	intel-ucode/06-2c-02
+	intel-ucode/06-2d-06
+	intel-ucode/06-2d-07
+	intel-ucode/06-2e-06
+	intel-ucode/06-2f-02
+	intel-ucode/06-37-08
+	intel-ucode/06-37-09
+	intel-ucode/06-3a-09
+	intel-ucode/06-3c-03
+	intel-ucode/06-3d-04
+	intel-ucode/06-3e-04
+	intel-ucode/06-3e-06
+	intel-ucode/06-3e-07
+	intel-ucode/06-3f-02
+	intel-ucode/06-3f-04
+	intel-ucode/06-45-01
+	intel-ucode/06-46-01
+	intel-ucode/06-47-01
+	intel-ucode/06-4c-03
+	intel-ucode/06-4c-04
+	intel-ucode/06-4d-08
+	intel-ucode/06-4e-03
+	intel-ucode/06-55-03
+	intel-ucode/06-55-04
+	intel-ucode/06-55-05
+	intel-ucode/06-55-06
+	intel-ucode/06-55-07
+	intel-ucode/06-55-0b
+	intel-ucode/06-56-02
+	intel-ucode/06-56-03
+	intel-ucode/06-56-04
+	intel-ucode/06-56-05
+	intel-ucode/06-5c-02
+	intel-ucode/06-5c-09
+	intel-ucode/06-5c-0a
+	intel-ucode/06-5e-03
+	intel-ucode/06-5f-01
+	intel-ucode/06-66-03
+	intel-ucode/06-6a-05
+	intel-ucode/06-6a-06
+	intel-ucode/06-7a-01
+	intel-ucode/06-7a-08
+	intel-ucode/06-7e-05
+	intel-ucode/06-86-04
+	intel-ucode/06-86-05
+	intel-ucode/06-8a-01
+	intel-ucode/06-8c-01
+	intel-ucode/06-8c-02
+	intel-ucode/06-8d-01
+	intel-ucode/06-8e-09
+	intel-ucode/06-8e-0a
+	intel-ucode/06-8e-0b
+	intel-ucode/06-8e-0c
+	intel-ucode/06-96-01
+	intel-ucode/06-9c-00
+	intel-ucode/06-9e-09
+	intel-ucode/06-9e-0a
+	intel-ucode/06-9e-0b
+	intel-ucode/06-9e-0c
+	intel-ucode/06-9e-0d
+	intel-ucode/06-a5-02
+	intel-ucode/06-a5-03
+	intel-ucode/06-a5-05
+	intel-ucode/06-a6-00
+	intel-ucode/06-a6-01
+	intel-ucode/06-a7-01
+	intel-ucode/0f-00-07
+	intel-ucode/0f-00-0a
+	intel-ucode/0f-01-02
+	intel-ucode/0f-02-04
+	intel-ucode/0f-02-05
+	intel-ucode/0f-02-06
+	intel-ucode/0f-02-07
+	intel-ucode/0f-02-09
+	intel-ucode/0f-03-02
+	intel-ucode/0f-03-03
+	intel-ucode/0f-03-04
+	intel-ucode/0f-04-01
+	intel-ucode/0f-04-03
+	intel-ucode/0f-04-04
+	intel-ucode/0f-04-07
+	intel-ucode/0f-04-08
+	intel-ucode/0f-04-09
+	intel-ucode/0f-04-0a
+	intel-ucode/0f-06-02
+	intel-ucode/0f-06-04
+	intel-ucode/0f-06-05
+	intel-ucode/0f-06-08
+)
+
+builtin_fw_x86_adl_ucode_desc="Intel ucode for ADL"
+builtin_fw_x86_adl_ucode_files=(
+	intel-ucode/06-97-01
+	intel-ucode/06-9a-00
+	intel-ucode/06-9a-01
+	intel-ucode/06-9a-02
+	intel-ucode/06-9a-03
+	intel-ucode/06-9a-04
+)
+
 builtin_fw_x86_aml_ucode_desc="Intel ucode for AML"
 builtin_fw_x86_aml_ucode_files=(
 	intel-ucode/06-8e-09
@@ -1430,9 +1685,14 @@ CONFIG_EXTRA_FIRMWARE_DIR=\"%ROOT%/lib/firmware\"
 "
 
 # Add all config and firmware fragments as off by default
-IUSE="${IUSE} ${CONFIG_FRAGMENTS[@]} ${FIRMWARE_BINARIES[@]}"
-REQUIRED_USE="${REQUIRED_USE}
-	?? ( factory_netboot_ramfs factory_shim_ramfs minios_ramfs recovery_ramfs )
+IUSE="${IUSE} ${CONFIG_FRAGMENTS[*]} ${FIRMWARE_BINARIES[*]}"
+REQUIRED_USE+="
+	?? (
+		factory_netboot_ramfs
+		factory_shim_ramfs
+		minios_ramfs
+		recovery_ramfs
+	)
 	factory_netboot_ramfs? ( i2cdev )
 	factory_shim_ramfs? ( i2cdev )
 	recovery_ramfs? ( i2cdev )
@@ -1441,12 +1701,26 @@ REQUIRED_USE="${REQUIRED_USE}
 	recovery_ramfs? ( || ( tpm tpm2 ) )
 "
 
+# Get the CHROMEOS_KERNEL_FAMILY from the use flags(chromeos_kernel_family_*).
+_get_kernel_family() {
+	local i
+	for i in "${!CHROMEOS_KERNEL_FAMILY_FLAGS[@]}"; do
+		if use "${CHROMEOS_KERNEL_FAMILY_FLAGS[${i}]}"; then
+			echo "${CHROMEOS_KERNEL_FAMILY_VALUES[${i}]}"
+			return
+		fi
+	done
+
+	die "chromeos kernel family use flag not defined!"
+}
+
 # If an overlay has eclass overrides, but doesn't actually override this
 # eclass, we'll have ECLASSDIR pointing to the active overlay's
 # eclass/ dir, but this eclass is still in the main chromiumos tree.  So
 # add a check to locate the cros-kernel/ regardless of what's going on.
 ECLASSDIR_LOCAL=${BASH_SOURCE[0]%/*}
 eclass_dir() {
+	# shellcheck disable=SC2154
 	local d="${ECLASSDIR}/cros-kernel"
 	if [[ ! -d ${d} ]] ; then
 		d="/mnt/host/source/src/third_party/chromiumos-overlay/eclass/cros-kernel"
@@ -1490,8 +1764,8 @@ kernelrelease() {
 # test-flags-CC tests each flag individually and returns the
 # supported flags, which is not what we need here.
 cc_option() {
-	local t="$(test-flags-CC $1)"
-	[[ "${t}" == "$1" ]]
+	local t="$(test-flags-CC "$@")"
+	[[ "${t}" == "$*" ]]
 }
 
 # @FUNCTION: install_kernel_sources
@@ -1514,7 +1788,7 @@ install_kernel_sources() {
 	dodir "${dest_source_dir}"
 	local f
 	for f in "${S}"/*; do
-		[[ "$f" == "${S}/build" ]] && continue
+		[[ "${f}" == "${S}/build" ]] && continue
 		cp -pPR "${f}" "${D}/${dest_source_dir}" ||
 			die "Failed to copy kernel source tree"
 	done
@@ -1541,6 +1815,7 @@ get_build_cfg() {
 # - "chromiumos-<arch>" if CHROMEOS_KERNEL_SPLITCONFIG is not defined
 get_build_arch() {
 	if [[ "${ARCH}" == "arm"  ||  "${ARCH}" == "arm64" ]]; then
+		# shellcheck disable=SC2154
 		case "${CHROMEOS_KERNEL_SPLITCONFIG}" in
 			*exynos*)
 				echo "exynos5"
@@ -1696,7 +1971,7 @@ _cros-kernel2_get_compat() {
 		result+="\"${s}\","
 	done
 
-	printf "${result%,}"
+	printf "%s" "${result%,}"
 }
 
 # @FUNCTION: _cros-kernel2_emit_its_script
@@ -1750,7 +2025,7 @@ _cros-kernel2_emit_its_script() {
 		fi
 		cat >> "${its_out}" <<-EOF || die
 			fdt@${iter} {
-				description = "$(basename ${dtb})";
+				description = "$(basename "${dtb}")";
 				data = /incbin/("${dtb}");
 				type = "flat_dt";
 				arch = "${kernel_arch}";
@@ -1788,17 +2063,6 @@ _cros-kernel2_emit_its_script() {
 }
 
 kmake() {
-	local wifi_version
-	local v
-	for v in ${WIRELESS_VERSIONS[@]}; do
-		if use wireless${v/.} ; then
-			[ -n "${wifi_version}" ] &&
-				die "Wireless ${v} AND ${wifi_version} both set"
-			wifi_version=${v}
-			set -- "$@" WIFIVERSION="-${v}"
-		fi
-	done
-
 	# Allow override of kernel arch.
 	local kernel_arch=${CHROMEOS_KERNEL_ARCH:-$(tc-arch-kernel)}
 
@@ -1806,6 +2070,7 @@ kmake() {
 	local cross=${CHOST}
 	local cross_compat
 	local CC_COMPAT
+	local LD_COMPAT
 	case ${ARCH}:${kernel_arch} in
 		x86:x86_64)
 			cross="x86_64-cros-linux-gnu"
@@ -1815,6 +2080,7 @@ kmake() {
 			if use vdso32; then
 				cross_compat="armv7a-cros-linux-gnueabihf-"
 				CC_COMPAT="armv7a-cros-linux-gnueabihf-clang"
+				LD_COMPAT="ld.lld"
 			fi
 			;;
 	esac
@@ -1825,14 +2091,16 @@ kmake() {
 	fi
 
 	if [[ "${CHOST}" != "${cross}" ]]; then
-		unset CC CXX LD STRIP OBJCOPY
+		unset CC CXX LD STRIP OBJCOPY NM AR
 	fi
 
-	tc-export_build_env BUILD_{CC,CXX}
-	CHOST=${cross} tc-export CC CXX LD STRIP OBJCOPY
+	tc-export_build_env BUILD_{CC,CXX,PKG_CONFIG}
+	CHOST=${cross} tc-export CC CXX LD STRIP OBJCOPY NM AR
 	if use clang; then
 		STRIP=llvm-strip
 		OBJCOPY=llvm-objcopy
+		NM=llvm-nm
+		AR=llvm-ar
 		CHOST=${cross} clang-setup-env
 	fi
 	# Use ld.lld instead of ${cross}-ld.lld, ${cross}-ld.lld has userspace
@@ -1848,18 +2116,27 @@ kmake() {
 		linker_arg="-fuse-ld=bfd"
 	fi
 
+	# BUILD_CC, BUILD_CXX come from an eclass that shellcheck won't see.
+	# shellcheck disable=SC2154
 	set -- \
 		LD="${linker}" \
+		LD_COMPAT="${LD_COMPAT}" \
 		OBJCOPY="${OBJCOPY}" \
 		REAL_STRIP="${STRIP}" \
 		STRIP="${STRIP}" \
+		NM="${NM}" \
+		AR="${AR}" \
 		CC="${CC} ${linker_arg}" \
 		CC_COMPAT="${CC_COMPAT}" \
 		CXX="${CXX} ${linker_arg}" \
 		HOSTCC="${BUILD_CC}" \
 		HOSTCXX="${BUILD_CXX}" \
+		HOSTPKG_CONFIG="${BUILD_PKG_CONFIG}" \
 		"$@"
 
+	# The kernel Makefile allows this optionally set from the environment,
+	# so we do too.
+	# shellcheck disable=SC2154,SC2153
 	local kcflags="${KCFLAGS}"
 	local afdo_filename afdo_option
 	if use clang; then
@@ -1891,9 +2168,9 @@ kmake() {
 			if use clang; then
 				kcflags+=" $(test-flags-CC -mretpoline)"
 			else
-				if cc_option "${indirect_branch_options_v1[*]}"; then
+				if cc_option "${indirect_branch_options_v1[@]}"; then
 					kcflags+=" ${indirect_branch_options_v1[*]}"
-				elif cc_option "${indirect_branch_options_v2[*]}"; then
+				elif cc_option "${indirect_branch_options_v2[@]}"; then
 					kcflags+=" ${indirect_branch_options_v2[*]}"
 				fi
 			fi
@@ -1938,6 +2215,11 @@ kmake() {
 		kernel_warning_level="W=${kernel_warning_level}"
 	fi
 
+	local sparse=""
+	if use sparse; then
+		sparse="C=1"
+	fi
+
 	ARCH=${kernel_arch} \
 		CROSS_COMPILE="${cross}-" \
 		CROSS_COMPILE_COMPAT="${cross_compat}" \
@@ -1946,6 +2228,7 @@ kmake() {
 		V="${VERBOSE:-0}" \
 		O="$(cros-workon_get_build_dir)" \
 		${kernel_warning_level} \
+		${sparse} \
 		"$@"
 }
 
@@ -1961,7 +2244,7 @@ cros-kernel2_src_unpack() {
 		die
 	fi
 
-	pushd "${WORKDIR}" > /dev/null
+	pushd "${WORKDIR}" >/dev/null || die
 	if use kernel_afdo; then
 		unpack "${AFDO_GCOV}.xz"
 
@@ -1976,7 +2259,7 @@ cros-kernel2_src_unpack() {
 				"${AFDO_GCOV}" || die
 		fi
 	fi
-	popd > /dev/null
+	popd >/dev/null || die
 }
 
 cros-kernel2_src_prepare() {
@@ -1989,6 +2272,11 @@ cros-kernel2_src_prepare() {
 		else
 			cros_use_gcc
 		fi
+	fi
+
+	# Allow use of GNU tools for configs not using llvm tools.
+	if ! use lld || ! use llvm_ias; then
+		cros_allow_gnu_build_tools
 	fi
 
 	if [[ ${CROS_WORKON_INCREMENTAL_BUILD} != "1" ]]; then
@@ -2011,6 +2299,11 @@ cros-kernel2_src_configure() {
 	local config
 	local cfgarch="$(get_build_arch)"
 	local build_cfg="$(get_build_cfg)"
+
+	if use frozen_gcc; then
+		unset LD_PRELOAD
+		export SANDBOX_ON=0
+	fi
 
 	if use buildtest; then
 		local kernel_arch=${CHROMEOS_KERNEL_ARCH:-$(tc-arch-kernel)}
@@ -2045,8 +2338,10 @@ cros-kernel2_src_configure() {
 		cp -f "${config}" "${build_cfg}" || die
 	else
 		if [ -e chromeos/scripts/prepareconfig ] ; then
-			chromeos/scripts/prepareconfig ${config} \
-				"${build_cfg}" || die
+			local kernel_family=$(_get_kernel_family)
+			einfo "Using family: ${kernel_family}"
+			CHROMEOS_KERNEL_FAMILY="${kernel_family}" chromeos/scripts/prepareconfig \
+				"${config}" "${build_cfg}" || die
 		else
 			config="$(eclass_dir)/${cfgarch}_defconfig"
 			ewarn "Can't prepareconfig, falling back to default " \
@@ -2056,7 +2351,7 @@ cros-kernel2_src_configure() {
 	fi
 
 	local fragment
-	for fragment in ${CONFIG_FRAGMENTS[@]}; do
+	for fragment in "${CONFIG_FRAGMENTS[@]}"; do
 		local config="${fragment}_config"
 		local status
 
@@ -2064,7 +2359,7 @@ cros-kernel2_src_configure() {
 			die "'${fragment}' listed in CONFIG_FRAGMENTS, but ${config} is not set up"
 		fi
 
-		if use ${fragment}; then
+		if use "${fragment}"; then
 			status="enabling"
 		else
 			config="${fragment}_config_disable"
@@ -2082,9 +2377,7 @@ cros-kernel2_src_configure() {
 			ewarn "${warning_msg}"
 		fi
 
-		echo "${!config}" | \
-			sed -e "s|%ROOT%|${SYSROOT}|g" \
-			>> "${build_cfg}" || die
+		echo "${!config//%ROOT%/${SYSROOT}}" >> "${build_cfg}" || die
 	done
 
 	local -a builtin_fw
@@ -2095,7 +2388,7 @@ cros-kernel2_src_configure() {
 			die "'${fragment}' listed in FIRMWARE_BINARIES, but ${files} is not set up"
 		fi
 
-		if use ${fragment}; then
+		if use "${fragment}"; then
 			local msg="${fragment}_desc"
 			elog "   - Embedding ${!msg} firmware"
 			builtin_fw+=( "${!files}" )
@@ -2153,7 +2446,7 @@ cros-kernel2_src_configure() {
 get_dtb_name() {
 	local dtb_dir=${1}
 	# Add sort to stabilize the dtb ordering.
-	find ${dtb_dir} -name "*.dtb" | LC_COLLATE=C sort
+	find "${dtb_dir}" -name "*.dtb" | LC_COLLATE=C sort
 }
 
 gen_compilation_database() {
@@ -2177,6 +2470,7 @@ gen_compilation_database() {
 	# Make relative include paths absolute.
 	sed -i -e "s:-I\./:-I${build_dir}/:g" "${db_chroot}" || die
 
+	# shellcheck disable=SC2154
 	local ext_chroot_path="${EXTERNAL_TRUNK_PATH}/chroot"
 	local in_chroot_path="$(readlink -f "${src_dir}")"
 	local ext_src_path="${EXTERNAL_TRUNK_PATH}/${in_chroot_path#/mnt/host/source/}"
@@ -2220,36 +2514,41 @@ directory (outside of the chroot) to compile_commands_no_chroot.json." \
 }
 
 _cros-kernel2_compile() {
-	local build_targets=()  # use make default target
+	local build_targets
 	local kernel_arch=${CHROMEOS_KERNEL_ARCH:-$(tc-arch-kernel)}
 	case ${kernel_arch} in
 		arm)
-			build_targets=(
-				$(usex device_tree 'zImage dtbs' uImage)
-				$(usex boot_dts_device_tree dtbs '')
-				$(cros_chkconfig_present MODULES && echo "modules")
-				$(use kgdb &&
-					sed -nE 's/^(scripts_gdb):.*$/\1/p' Makefile)
-			)
+			if use device_tree; then
+				build_targets=( "zImage" "dtbs" )
+			else
+				build_targets=( "uImage" )
+			fi
+			use boot_dts_device_tree && build_targets+=( "dtbs" )
 			;;
 		arm64)
 			build_targets=(
-				Image dtbs
-				$(cros_chkconfig_present MODULES && echo "modules")
-				$(use kgdb &&
-					sed -nE 's/^(scripts_gdb):.*$/\1/p' Makefile)
+				"Image" "dtbs"
 			)
 			;;
 		mips)
 			build_targets=(
 				vmlinuz.bin
-				$(usex device_tree 'dtbs' '')
-				$(cros_chkconfig_present MODULES && echo "modules")
-				$(use kgdb &&
-					sed -nE 's/^(scripts_gdb):.*$/\1/p' Makefile)
+			)
+			use device_tree && build_targets+=( "dtbs" )
+			;;
+		*)
+			build_targets=(
+				all
 			)
 			;;
 	esac
+
+	cros_chkconfig_present MODULES && build_targets+=( "modules" )
+
+	# Some older kernels don't have a scripts_gdb target, so we want this
+	# to be an empty array, not an array with an empty string in it.
+	# shellcheck disable=SC2207
+	use kgdb && build_targets+=( $(sed -nE 's/^(scripts_gdb):.*$/\1/p' Makefile) )
 
 	# If a .dts file is deleted from the source code it won't disappear
 	# from the output in the next incremental build.  Nuke all dtbs so we
@@ -2258,7 +2557,7 @@ _cros-kernel2_compile() {
 	local arch_dir="$(cros-workon_get_build_dir)/arch"
 	[[ -d "${arch_dir}" ]] && find "${arch_dir}" -name '*.dtb' -delete
 
-	kmake -k ${build_targets[@]}
+	kmake -k "${build_targets[@]}"
 
 	if use compilation_database; then
 		gen_compilation_database
@@ -2269,6 +2568,11 @@ cros-kernel2_src_compile() {
 	local old_config="$(cros-workon_get_build_dir)/cros-old-config"
 	local old_defconfig="$(cros-workon_get_build_dir)/cros-old-defconfig"
 	local build_cfg="$(get_build_cfg)"
+	# (b/206056057) Disable SANDBOX and LD_PRELOAD for frozen gcc.
+	if use frozen_gcc; then
+		unset LD_PRELOAD
+		export SANDBOX_ON=0
+	fi
 
 	# Some users of cros-kernel2 touch the config after
 	# cros-kernel2_src_configure finishes.  Detect that and remove
@@ -2387,6 +2691,10 @@ cros-kernel2_src_install() {
 
 		if use device_tree; then
 			local its_script="${kernel_dir}/its_script"
+			# get_dtb_name() produces a line-separated list, and we *want* to
+			# split on whitespace for _cros-kernel2_emit_its_script(). These
+			# are simple filenames, so this should be OK.
+			# shellcheck disable=SC2046
 			_cros-kernel2_emit_its_script "${its_script}" \
 				"${kernel_dir}" $(get_dtb_name "${dtb_dir}")
 			mkimage -D "-I dts -O dtb -p 2048" -f "${its_script}" \
@@ -2416,7 +2724,7 @@ cros-kernel2_src_install() {
 			arm64)
         einfo "install rockchip dtbs"
         insinto "${install_prefix}/boot"
-        newins "${boot_dir}/Image" "Image-${version}" 
+        newins "${boot_dir}/Image" "Image-${version}"
         ln -sf "Image-${version}" "${install_dir}/boot/Image" || die
         insinto "${install_prefix}/boot/rockchip"
         doins "${dtb_dir}"/rockchip/*.dtb || die
@@ -2424,13 +2732,13 @@ cros-kernel2_src_install() {
 		esac
 	fi
 	if use arm || use arm64 || use mips; then
-		pushd "$(dirname "${kernel_bin}")" > /dev/null
+		pushd "$(dirname "${kernel_bin}")" >/dev/null || die
 		case ${kernel_arch} in
 			arm)
-				ln -sf $(basename "${zimage_bin}") zImage || die
+				ln -sf "$(basename "${zimage_bin}")" zImage || die
 				;;
 		esac
-		popd > /dev/null
+		popd >/dev/null || die
 	fi
 	if [ ! -e "${install_dir}/boot/vmlinuz" ]; then
 		ln -sf "vmlinuz-${version}" "${install_dir}/boot/vmlinuz" || die
@@ -2444,14 +2752,21 @@ cros-kernel2_src_install() {
 
 	# Install uncompressed kernel for debugging purposes.
 	insinto "${install_prefix}/usr/lib/debug/boot"
-	doins "$(cros-workon_get_build_dir)/vmlinux"
+	newins "$(cros-workon_get_build_dir)/vmlinux" vmlinux.debug
 	if ! has ${EAPI} {4..6}; then
-		dostrip -x "${install_prefix}/usr/lib/debug/boot/vmlinux" \
+		dostrip -x "${install_prefix}/usr/lib/debug/boot/vmlinux.debug" \
 			"${install_prefix}/usr/src/"
 	fi
+	# Be nice to scripts expecting vmlinux.
+	ln -s vmlinux.debug "${install_dir}/usr/lib/debug/boot/vmlinux" || die
+
 	if use kgdb && [[ -d "$(cros-workon_get_build_dir)/scripts/gdb" ]]; then
 		insinto "${install_prefix}/usr/lib/debug/boot/"
-		doins "$(cros-workon_get_build_dir)/vmlinux-gdb.py"
+		doins "$(readlink -f \
+			"$(cros-workon_get_build_dir)/vmlinux-gdb.py")"
+		# Match vmlinux symlink to vmlinux.debug.
+		ln -s vmlinux-gdb.py \
+			"${install_dir}"/usr/lib/debug/boot/vmlinux.debug-gdb.py || die
 		mkdir "${install_dir}"/usr/lib/debug/boot/scripts || die
 		rsync -rKLp --chmod=a+r \
 			--include='*/' --include='*.py' --exclude='*' \
