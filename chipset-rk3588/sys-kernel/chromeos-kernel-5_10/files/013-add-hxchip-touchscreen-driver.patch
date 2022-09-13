@@ -190,7 +190,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
-@@ -0,0 +1,3509 @@
+@@ -0,0 +1,3511 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
 + *
@@ -3109,6 +3109,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 +
 +#if defined(HX_CONFIG_FB) || defined(HX_CONFIG_DRM) \
 +	|| defined(HX_CONFIG_DRM_PANEL)
++struct drm_panel gNotifier_dummy_panel;
 +static void himax_fb_register(struct work_struct *work)
 +{
 +	int ret = 0;
@@ -3525,14 +3526,15 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 +	cancel_delayed_work_sync(&ts->work_att);
 +	destroy_workqueue(ts->himax_att_wq);
 +#elif defined(HX_CONFIG_DRM_PANEL)
-+if (active_panel)
-+	if (drm_panel_notifier_unregister(active_panel,
-+		&ts->fb_notif))
-+		E("Error occurred while unregistering active_panel.\n");
-+else
-+	if (drm_panel_notifier_unregister(&gNotifier_dummy_panel,
-+		&ts->fb_notif))
-+		E("Error occurred while unregistering dummy_panel.\n");
++if (active_panel) {
++	  if (drm_panel_notifier_unregister(active_panel,
++		  &ts->fb_notif))
++		  E("Error occurred while unregistering active_panel.\n");
++  } else {
++	  if (drm_panel_notifier_unregister(&gNotifier_dummy_panel,
++		  &ts->fb_notif))
++		  E("Error occurred while unregistering dummy_panel.\n");
++  }
 +	cancel_delayed_work_sync(&ts->work_att);
 +	destroy_workqueue(ts->himax_att_wq);
 +#elif defined(HX_CONFIG_DRM)
@@ -3704,7 +3706,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
-@@ -0,0 +1,615 @@
+@@ -0,0 +1,616 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
 + *
@@ -3809,6 +3811,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +#undef HX_CONFIG_FB
 +#include <drm/drm_panel.h>
 +extern struct drm_panel gNotifier_dummy_panel;
++extern struct drm_panel *active_panel;
 +#elif defined(HX_CONFIG_FB)
 +#include <linux/notifier.h>
 +#include <linux/fb.h>
@@ -3887,7 +3890,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +#if defined(HX_CONFIG_FB)
 +int fb_notifier_callback(struct notifier_block *self,
 +	unsigned long event, void *data);
-+#elif defined(HX_CONFIG_DRM)
++#elif defined(HX_CONFIG_DRM) || defined(HX_CONFIG_DRM_PANEL)
 +int drm_notifier_callback(struct notifier_block *self,
 +	unsigned long event, void *data);
 +#endif
@@ -4194,7 +4197,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +	int suspend_resume_done;
 +	int bus_speed;
 +
-+#if defined(HX_CONFIG_FB) || defined(HX_CONFIG_DRM)
++#if defined(HX_CONFIG_FB) || defined(HX_CONFIG_DRM) || defined(HX_CONFIG_DRM_PANEL)
 +	struct notifier_block fb_notif;
 +	struct workqueue_struct *himax_att_wq;
 +	struct delayed_work work_att;
@@ -17426,7 +17429,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
-@@ -0,0 +1,1304 @@
+@@ -0,0 +1,1303 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for QCT platform
 + *
@@ -17541,7 +17544,6 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 +}
 +#if defined(HX_CONFIG_DRM_PANEL)
 +struct drm_panel *active_panel;
-+
 +int himax_ts_check_dt(struct device_node *np)
 +{
 +	int i = 0;
@@ -18873,7 +18875,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.h
 +#if defined(HX_CONFIG_FB)
 +extern int fb_notifier_callback(struct notifier_block *self,
 +		unsigned long event, void *data);
-+#elif defined(HX_CONFIG_DRM)
++#elif defined(HX_CONFIG_DRM) || defined(HX_CONFIG_DRM_PANEL)
 +extern int drm_notifier_callback(struct notifier_block *self,
 +		unsigned long event, void *data);
 +#endif
@@ -18901,9 +18903,9 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_panel.c
  int drm_panel_enable(struct drm_panel *panel)
  {
  	int ret;
-+  const int state = DRM_PANEL_BLANK_UNBLANK;
++  int state = DRM_PANEL_BLANK_UNBLANK;
 +  struct drm_panel_notifier dpn = {
-+		.data = &state;
++		.data = &state,
 +  };
  
  	if (!panel)
@@ -18922,9 +18924,9 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_panel.c
  int drm_panel_disable(struct drm_panel *panel)
  {
  	int ret;
-+  const int state = DRM_PANEL_BLANK_POWERDOWN;
++  int state = DRM_PANEL_BLANK_POWERDOWN;
 +	struct drm_panel_notifier dpn = {
-+		.data = &state;
++		.data = &state,
 +  };
  
  	if (!panel)
