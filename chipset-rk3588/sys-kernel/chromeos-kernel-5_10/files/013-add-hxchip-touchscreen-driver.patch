@@ -190,7 +190,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
-@@ -0,0 +1,3511 @@
+@@ -0,0 +1,3503 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
 + *
@@ -3409,12 +3409,6 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 +	}
 +
 +#if defined(HX_CONTAINER_SPEED_UP)
-+	ts->ts_int_workqueue =
-+			create_singlethread_workqueue("himax_ts_resume_wq");
-+	if (!ts->ts_int_workqueue) {
-+		E("create ts_resume workqueue failed\n");
-+		goto err_create_ts_resume_wq_failed;
-+	}
 +	INIT_DELAYED_WORK(&ts->ts_int_work, himax_resume_work_func);
 +#endif
 +
@@ -3443,7 +3437,6 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 +#endif
 +#if defined(HX_CONTAINER_SPEED_UP)
 +	cancel_delayed_work_sync(&ts->ts_int_work);
-+	destroy_workqueue(ts->ts_int_workqueue);
 +err_create_ts_resume_wq_failed:
 +#endif
 +	input_unregister_device(ts->input_dev);
@@ -3555,7 +3548,6 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 +#endif
 +#if defined(HX_CONTAINER_SPEED_UP)
 +	cancel_delayed_work_sync(&ts->ts_int_work);
-+	destroy_workqueue(ts->ts_int_workqueue);
 +#endif
 +
 +#if defined(HX_BOOT_UPGRADE) || defined(HX_ZERO_FLASH)
@@ -3706,7 +3698,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
-@@ -0,0 +1,616 @@
+@@ -0,0 +1,615 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
 + *
@@ -3786,7 +3778,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +/*system suspend-chipset power off,
 + *oncell chipset need to enable the definition
 + */
-+/*#define HX_RESUME_HW_RESET*/
++//#define HX_RESUME_HW_RESET
 +
 +/*for Himax auto-motive chipset
 + */
@@ -3832,11 +3824,11 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +/*#define HX_ALG_OVERLAY*/
 +/* used for 102d overlay */
 +#define HX_CODE_OVERLAY
-+/*Independent threads run the notification chain notification function resume*/
-+/*#define HX_CONTAINER_SPEED_UP*/
 +#else
 +#define HX_TP_PROC_GUEST_INFO
 +#endif
++/*Independent threads run the notification chain notification function resume*/
++#define HX_CONTAINER_SPEED_UP
 +
 +#if defined(HX_EXCP_RECOVERY) && defined(HX_ZERO_FLASH)
 +/* used for 102e/p zero flash */
@@ -4209,7 +4201,6 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +	struct delayed_work work_boot_upgrade;
 +
 +#if defined(HX_CONTAINER_SPEED_UP)
-+	struct workqueue_struct *ts_int_workqueue;
 +	struct delayed_work ts_int_work;
 +#endif
 +
@@ -17429,7 +17420,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
-@@ -0,0 +1,1303 @@
+@@ -0,0 +1,1307 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for QCT platform
 + *
@@ -18470,7 +18461,11 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 +		if (himax_chip_common_init())
 +			return -ECANCELED;
 +#endif
++#if defined(HX_CONTAINER_SPEED_UP)
++  schedule_delayed_work(&ts->ts_int_work, 0);
++#else
 +	himax_chip_common_resume(ts);
++#endif
 +	return 0;
 +}
 +

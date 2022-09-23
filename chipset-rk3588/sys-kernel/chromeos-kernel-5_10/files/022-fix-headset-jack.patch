@@ -261,7 +261,15 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  				vfront-porch = <112>;
  				vsync-len = <4>;
  				vback-porch = <18>;
-@@ -496,7 +493,7 @@
+@@ -468,6 +465,7 @@
+         himax,irq-gpio = <&gpio1 RK_PB5 GPIO_ACTIVE_HIGH>;
+         himax,rst-gpio = <&gpio1 RK_PB4 GPIO_ACTIVE_HIGH>;
+         report_type = <1>;
++        panel = <&dsi0_panel>;
+ 	};
+ };
+ 
+@@ -496,7 +494,7 @@
  		interrupts = <RK_PC4 IRQ_TYPE_LEVEL_LOW>;
  		pinctrl-names = "default";
  		pinctrl-0 = <&usbc0_int>;
@@ -270,7 +278,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		status = "okay";
  
  		ports {
-@@ -584,38 +581,38 @@
+@@ -584,38 +582,38 @@
  		status = "disabled";
  	};
  
@@ -341,7 +349,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &i2c7 {
-@@ -699,7 +696,8 @@
+@@ -699,7 +697,8 @@
  &pinctrl {
  	charger {
  		charger_ok: charger_ok {
@@ -351,7 +359,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		};
  	};
  
-@@ -816,13 +814,6 @@
+@@ -816,13 +815,6 @@
                rockchip,pins = <1 RK_PD3 RK_FUNC_GPIO &pcfg_pull_up>;
        };
    };
@@ -365,7 +373,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &pwm14 {
-@@ -892,28 +883,24 @@
+@@ -892,28 +884,24 @@
  	status = "okay";
  };
  
@@ -411,7 +419,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &tsadc {
-@@ -930,23 +917,25 @@
+@@ -930,23 +918,25 @@
  	rockchip,typec-vbus-det;
  };
  
@@ -442,7 +450,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  	port {
  		#address-cells = <1>;
  		#size-cells = <0>;
-@@ -983,8 +972,6 @@
+@@ -983,8 +973,6 @@
  	status = "disabled";
  };
  
