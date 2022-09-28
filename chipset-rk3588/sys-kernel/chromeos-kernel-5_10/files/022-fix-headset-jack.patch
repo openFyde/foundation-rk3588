@@ -373,7 +373,18 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &pwm14 {
-@@ -892,28 +884,24 @@
+@@ -871,6 +863,10 @@
+ 	status = "okay";
+ };
+ 
++&vepu {
++  status = "okay";
++};
++
+ &rockchip_suspend {
+ 	status = "okay";
+ 	rockchip,sleep-debug-en = <1>;
+@@ -892,28 +888,24 @@
  	status = "okay";
  };
  
@@ -419,7 +430,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &tsadc {
-@@ -930,23 +918,25 @@
+@@ -930,23 +922,25 @@
  	rockchip,typec-vbus-det;
  };
  
@@ -450,7 +461,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  	port {
  		#address-cells = <1>;
  		#size-cells = <0>;
-@@ -983,8 +973,6 @@
+@@ -983,8 +977,6 @@
  	status = "disabled";
  };
  

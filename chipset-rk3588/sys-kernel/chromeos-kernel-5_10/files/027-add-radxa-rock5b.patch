@@ -576,7 +576,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
-@@ -0,0 +1,954 @@
+@@ -0,0 +1,964 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
@@ -1530,7 +1530,17 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 +  };
 +};
 +
++&vdpu {
++  status = "okay";
++};
 +
++&vdpu_mmu {
++  status = "okay";
++};
++
++&vepu {
++  status = "okay";
++};
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile

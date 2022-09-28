@@ -363,7 +363,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,313 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
@@ -638,6 +638,10 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
 +
 +&vdpu_mmu {
 +	status = "okay";
++};
++
++&vepu {
++  status = "okay";
 +};
 +
 +&vop {
