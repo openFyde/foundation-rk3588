@@ -9991,7 +9991,7 @@ Index: kernel-rockchip/drivers/net/usb/qmi_wwan_q.c
 +#endif
 +
 +static struct usb_driver qmi_wwan_driver = {
-+	.name		      = "qmi_wwan",
++	.name		      = "qmi_wwan_q",
 +	.id_table	      = products,
 +	.probe		      = qmi_wwan_probe,
 +#if defined(QUECTEL_WWAN_QMAP)
