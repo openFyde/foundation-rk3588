@@ -2622,7 +2622,7 @@ Index: kernel-rockchip/drivers/media/i2c/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/media/i2c/Makefile
 +++ kernel-rockchip/drivers/media/i2c/Makefile
-@@ -207,6 +207,7 @@ obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-c
+@@ -215,6 +215,7 @@ obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-c
  obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
  
  obj-$(CONFIG_SDR_MAX2175) += max2175.o
@@ -11449,7 +11449,7 @@ Index: kernel-rockchip/sound/soc/rockchip/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/sound/soc/rockchip/Kconfig
 +++ kernel-rockchip/sound/soc/rockchip/Kconfig
-@@ -90,6 +90,13 @@ config SND_SOC_ROCKCHIP_MULTICODECS
+@@ -91,6 +91,13 @@ config SND_SOC_ROCKCHIP_MULTICODECS
  	  Say Y or M here if you want to add support for SoC audio on Rockchip
  	  boards using multicodecs, such as RK3308 boards.
  
@@ -12464,7 +12464,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -152,3 +152,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-e
+@@ -155,3 +155,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-e
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-rk806-single-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb

@@ -1,7 +1,7 @@
-diff --git a/drivers/spi/spi-rockchip.c b/drivers/spi/spi-rockchip.c
-index a1530bd0e092..2f66958ed525 100644
---- a/drivers/spi/spi-rockchip.c
-+++ b/drivers/spi/spi-rockchip.c
+Index: kernel-rockchip/drivers/spi/spi-rockchip.c
+===================================================================
+--- kernel-rockchip.orig/drivers/spi/spi-rockchip.c
++++ kernel-rockchip/drivers/spi/spi-rockchip.c
 @@ -6,6 +6,7 @@
  
  #include <linux/acpi.h>
@@ -10,9 +10,9 @@ index a1530bd0e092..2f66958ed525 100644
  #include <linux/dmaengine.h>
  #include <linux/interrupt.h>
  #include <linux/module.h>
-@@ -1030,8 +1031,10 @@ static int rockchip_spi_suspend(struct device *dev)
- 	if (ret < 0)
- 		return ret;
+@@ -1052,8 +1053,10 @@ static int rockchip_spi_runtime_suspend(
+ 	struct spi_controller *ctlr = dev_get_drvdata(dev);
+ 	struct rockchip_spi *rs = spi_controller_get_devdata(ctlr);
  
 -	clk_disable_unprepare(rs->spiclk);
 -	clk_disable_unprepare(rs->apb_pclk);
@@ -21,5 +21,5 @@ index a1530bd0e092..2f66958ed525 100644
 +  if (__clk_is_enabled(rs->apb_pclk))
 +	  clk_disable_unprepare(rs->apb_pclk);
  
- 	pinctrl_pm_select_sleep_state(dev);
- 
+ 	return 0;
+ }

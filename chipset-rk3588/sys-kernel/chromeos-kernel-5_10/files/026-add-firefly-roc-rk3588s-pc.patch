@@ -2,7 +2,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -153,3 +153,6 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-t
+@@ -156,3 +156,6 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-t
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-firefly-itx-3588j.dtb

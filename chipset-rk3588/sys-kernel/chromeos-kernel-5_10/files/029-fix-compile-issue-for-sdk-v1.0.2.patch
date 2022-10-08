@@ -7,20 +7,3 @@ Index: kernel-rockchip/drivers/input/touchscreen/focaltech_touch/focaltech_core.
  MODULE_DESCRIPTION("FocalTech Touchscreen Driver");
  MODULE_LICENSE("GPL v2");
 +MODULE_IMPORT_NS(VFS_internal_I_am_really_a_filesystem_and_am_NOT_a_driver);
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
-===================================================================
---- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-evb.dtsi
-@@ -1459,6 +1459,12 @@
- 
- &pinctrl {
- 
-+	headphone {
-+		hp_det: hp-det {
-+			rockchip,pins = <0 RK_PC7 RK_FUNC_GPIO &pcfg_pull_up>;
-+		};
-+	};
-+
- 	mxc6655xa {
- 		mxc6655xa_irq_gpio: mxc6655xa_irq_gpio {
- 			rockchip,pins = <3 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;

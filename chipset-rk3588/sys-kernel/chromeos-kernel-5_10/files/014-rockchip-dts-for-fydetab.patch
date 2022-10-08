@@ -2062,7 +2062,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -109,6 +109,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-nv
+@@ -112,6 +112,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-nv
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-ipc-6x-linux.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-linux.dtb
@@ -7240,7 +7240,7 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -6161,7 +6161,14 @@ static int vop2_calc_dsc_clk(struct drm_
+@@ -6184,7 +6184,14 @@ static int vop2_calc_dsc_clk(struct drm_
  	 * so when txp_clk is equal to v_pixclk, we set dsc_cds = crtc_clock / 4,
  	 * otherwise dsc_cds = crtc_clock / 8;
  	 */
@@ -7256,7 +7256,7 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  
  	return 0;
  }
-@@ -6268,7 +6275,13 @@ static void vop2_crtc_enable_dsc(struct
+@@ -6291,7 +6298,13 @@ static void vop2_crtc_enable_dsc(struct
  	bool mipi_ds_mode = false;
  	uint32_t *reg_base = vop2->regs;
  	u32 offset = 0;
@@ -7271,7 +7271,7 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	if (!vop2->data->nr_dscs) {
  		DRM_WARN("Unsupported DSC\n");
  
-@@ -6359,8 +6372,14 @@ static void vop2_crtc_enable_dsc(struct
+@@ -6382,8 +6395,14 @@ static void vop2_crtc_enable_dsc(struct
  		 * dsc_htotal = htotal * (1 << dclk_core->div_val) /
  				((1 << dsc_txp_clk->div_val) * (1 << dsc_cds_clk->div_val))
  		*/
@@ -7292,9 +7292,9 @@ Index: kernel-rockchip/drivers/misc/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/misc/Kconfig
 +++ kernel-rockchip/drivers/misc/Kconfig
-@@ -481,6 +481,12 @@ config HISI_HIKEY_USB
- 	  switching between the dual-role USB-C port and the USB-A host ports
- 	  using only one USB controller.
+@@ -5,6 +5,12 @@
+ 
+ menu "Misc devices"
  
 +config JW_IO
 +  tristate "JW IO INIT"
@@ -7309,12 +7309,11 @@ Index: kernel-rockchip/drivers/misc/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/misc/Makefile
 +++ kernel-rockchip/drivers/misc/Makefile
-@@ -58,4 +58,6 @@ obj-$(CONFIG_UACCE)		+= uacce/
+@@ -59,3 +59,5 @@ obj-$(CONFIG_UACCE)		+= uacce/
  obj-$(CONFIG_XILINX_SDFEC)	+= xilinx_sdfec.o
  obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
  obj-$(CONFIG_UID_SYS_STATS)	+= uid_sys_stats.o
 +obj-$(CONFIG_JW_IO)     += jw_io_core.o
- obj-$(CONFIG_RK803)		+= rk803.o
 +obj-y   += redriver/
 Index: kernel-rockchip/drivers/net/usb/Makefile
 ===================================================================
@@ -10165,7 +10164,7 @@ Index: kernel-rockchip/drivers/gpu/drm/panel/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/panel/Kconfig
 +++ kernel-rockchip/drivers/gpu/drm/panel/Kconfig
-@@ -500,4 +500,12 @@ config DRM_PANEL_XINPENG_XPP055C272
+@@ -507,4 +507,12 @@ config DRM_PANEL_XINPENG_XPP055C272
  	  Say Y here if you want to enable support for the Xinpeng
  	  XPP055C272 controller for 720x1280 LCD panels with MIPI/RGB/SPI
  	  system interfaces.
