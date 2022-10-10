@@ -1,3 +1,15 @@
+diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+index 9e9ec74cd131..fd9ff056796e 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+@@ -428,6 +428,7 @@ &sdmmc {
+   max-frequency = <150000000>;
+   no-sdio;
+   no-mmc;
++  bus-width = <4>;
+   cap-sd-highspeed;
+   cap-mmc-highspeed;
+  // clock-frequency = <100000000>;
 diff --git a/drivers/soc/rockchip/Kconfig b/drivers/soc/rockchip/Kconfig
 index 0773f56a9dc4..0f21c132ea94 100644
 --- a/drivers/soc/rockchip/Kconfig
