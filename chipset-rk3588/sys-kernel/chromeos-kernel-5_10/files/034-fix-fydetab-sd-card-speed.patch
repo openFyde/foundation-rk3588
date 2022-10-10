@@ -1,0 +1,34 @@
+diff --git a/drivers/soc/rockchip/Kconfig b/drivers/soc/rockchip/Kconfig
+index 0773f56a9dc4..0f21c132ea94 100644
+--- a/drivers/soc/rockchip/Kconfig
++++ b/drivers/soc/rockchip/Kconfig
+@@ -268,4 +268,9 @@ config RK_MEMBLOCK_PROCFS
+ 	  Extend memblock procfs to show size of each memblock, and shows the
+ 	  result of total size by KiB format.
+ 
++config ROCKCHIP_FYDETAB_GRF
++	bool "initialize grf with specific values on FydeTab"
++	default n
++	help
++	  If unsure, say n.
+ endif
+diff --git a/drivers/soc/rockchip/grf.c b/drivers/soc/rockchip/grf.c
+index 97c276b6b416..f7ca16cbdf91 100644
+--- a/drivers/soc/rockchip/grf.c
++++ b/drivers/soc/rockchip/grf.c
+@@ -229,10 +229,15 @@ static const struct rockchip_grf_info rk3399_grf __initconst = {
+ 	.num_values = ARRAY_SIZE(rk3399_defaults),
+ };
+ 
++#define RK3588_SYS_GRF_SOC_CON6 	0x0318
+ #define RK3588_SYS_GRF_SOC_CON7		0x031c
+ 
+ static const struct rockchip_grf_value rk3588_sys_grf_defaults[] __initconst = {
+ 	{ "Connect EDP hpd to IO", RK3588_SYS_GRF_SOC_CON7, HIWORD_UPDATE(0x3, 0x3, 14) },
++#ifdef CONFIG_ROCKCHIP_FYDETAB_GRF
++	/* Without this, MiscroSD card won't work normally with bus width 4 */
++	{ "jtag switching", RK3588_SYS_GRF_SOC_CON6, HIWORD_UPDATE(0x0, 0x1, 14) },
++#endif
+ };
+ 
+ static const struct rockchip_grf_info rk3588_sys_grf __initconst = {
