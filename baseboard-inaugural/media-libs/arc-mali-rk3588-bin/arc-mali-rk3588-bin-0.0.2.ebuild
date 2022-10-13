@@ -22,10 +22,10 @@ src_unpack() {
 }
 
 src_install() {
-  into /opt/google/containers/android/vendor/lib/egl
-  dolib.so lib/libGLES_mali.so
-  into /opt/google/containers/android/vendor/lib64/egl
-  dolib.so lib64/libGLES_mali.so
+  insinto /opt/google/containers/android/vendor/lib/egl
+  doins lib/libGLES_mali.so
+  insinto /opt/google/containers/android/vendor/lib64/egl
+  doins lib64/libGLES_mali.so
   insinto /opt/google/containers/android/vendor/etc/init
   doins init/*
   insinto /opt/google/containers/android/vendor/etc/permissions
