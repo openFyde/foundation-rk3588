@@ -1,7 +1,7 @@
-Index: rockchip-mpp/osal/allocator/allocator_drm.c
-===================================================================
---- rockchip-mpp.orig/osal/allocator/allocator_drm.c
-+++ rockchip-mpp/osal/allocator/allocator_drm.c
+diff --git a/osal/allocator/allocator_drm.c b/osal/allocator/allocator_drm.c
+index c0bb9f256bfb..41eb831aa5ad 100644
+--- a/osal/allocator/allocator_drm.c
++++ b/osal/allocator/allocator_drm.c
 @@ -51,7 +51,7 @@ typedef struct {
      RK_U32  flags;
  } allocator_ctx_drm;
@@ -11,16 +11,3 @@ Index: rockchip-mpp/osal/allocator/allocator_drm.c
  
  static int drm_ioctl(int fd, int req, void *arg)
  {
-Index: rockchip-mpp/osal/mpp_runtime.cpp
-===================================================================
---- rockchip-mpp.orig/osal/mpp_runtime.cpp
-+++ rockchip-mpp/osal/mpp_runtime.cpp
-@@ -85,7 +85,7 @@ MppRuntimeService::MppRuntimeService()
- 
-     allocator_valid[MPP_BUFFER_TYPE_NORMAL] = 1;
-     allocator_valid[MPP_BUFFER_TYPE_ION] = !access("/dev/ion", F_OK | R_OK | W_OK);
--    allocator_valid[MPP_BUFFER_TYPE_DRM] = !access("/dev/dri/card0", F_OK | R_OK | W_OK);
-+    allocator_valid[MPP_BUFFER_TYPE_DRM] = !access("/dev/dri/renderD128", F_OK | R_OK | W_OK);
- 
-     if (!allocator_valid[MPP_BUFFER_TYPE_ION] && !allocator_valid[MPP_BUFFER_TYPE_DRM]) {
-         mpp_err("can NOT found any allocator\n");
