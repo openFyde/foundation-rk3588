@@ -1,0 +1,611 @@
+From d094431b695c80885ca80ecda8ca60cc27f72bd6 Mon Sep 17 00:00:00 2001
+From: Su Yue <glass@fydeos.io>
+Date: Mon, 21 Nov 2022 09:01:04 +0800
+Subject: [PATCH 1/2] mpi_api: add new api mpp_convert_mjpeg_to_nv12
+
+Signed-off-by: Su Yue <glass@fydeos.io>
+---
+ inc/rk_mpi.h |   5 +
+ mpp/mpi.cpp  | 559 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 564 insertions(+)
+
+diff --git a/inc/rk_mpi.h b/inc/rk_mpi.h
+index 2cce8973e22c..ce7cef11180e 100644
+--- a/inc/rk_mpi.h
++++ b/inc/rk_mpi.h
+@@ -267,6 +267,11 @@ MPP_RET mpp_check_support_format(MppCtxType type, MppCodingType coding);
+ void    mpp_show_support_format(void);
+ void    mpp_show_color_format(void);
+ 
++int mpp_convert_mjpeg_to_nv12(const uint8_t *sample, size_t sample_size,
++			      uint8_t *out_y, size_t y_size,
++			      uint8_t *out_uv, size_t uv_size,
++			      size_t input_width, size_t input_height,
++			      size_t output_width, size_t output_height);
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/mpp/mpi.cpp b/mpp/mpi.cpp
+index 9e86544ca2f1..1c2c9f509779 100644
+--- a/mpp/mpi.cpp
++++ b/mpp/mpi.cpp
+@@ -17,6 +17,14 @@
+ #define MODULE_TAG "mpi"
+ 
+ #include <string.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <assert.h>
++#include <stdio.h>
++#include <unistd.h>
++#include <fcntl.h>
++#include <errno.h>
+ 
+ #include "rk_mpi.h"
+ 
+@@ -28,6 +36,10 @@
+ #include "mpi_impl.h"
+ #include "mpp_info.h"
+ 
++#include "mpp_time.h"
++#include "mpp_common.h"
++#include "mpi_dec_utils.h"
++
+ RK_U32 mpi_debug = 0;
+ 
+ typedef struct {
+@@ -602,3 +614,550 @@ void mpp_show_color_format()
+                 info->format, info->format, info->name);
+     }
+ }
++
++
++typedef struct {
++    MppCtx          ctx;
++    MppApi          *mpi;
++    RK_U32          quiet;
++
++    /* end of stream flag when set quit the loop */
++    RK_U32          loop_end;
++
++    /* input and output */
++
++    MppBufferGroup  frm_grp;
++    MppPacket       packet;
++    MppFrame        frame;
++
++	/* Mjpeg only members */
++    MppBufferGroup  buf_grp;
++    MppBuffer mpp_buffer;
++    const uint8_t *input_data;
++	size_t input_size;
++	uint8_t *out_y;
++	size_t y_size;
++	uint8_t *out_uv;
++	size_t uv_size;
++
++    FILE            *fp_output;
++    RK_S32          frame_count;
++    RK_S32          frame_num;
++
++    RK_S64          first_pkt;
++    RK_S64          first_frm;
++
++    size_t          max_usage;
++    float           frame_rate;
++    RK_S64          elapsed_time;
++    RK_S64          delay;
++    FILE            *fp_verify;
++    FrmCrc          checkcrc;
++    MppFrameFormat format;
++} MpiDecLoopData;
++
++int mpp_frame_to_nv12(MppFrame frame, char *out_y, size_t y_size,
++			    char *out_uv, size_t uv_size)
++{
++    RK_U32 width    = 0;
++    RK_U32 height   = 0;
++    RK_U32 h_stride = 0;
++    RK_U32 v_stride = 0;
++    MppFrameFormat fmt  = MPP_FMT_YUV420SP;
++    MppBuffer buffer    = NULL;
++    RK_U8 *base = NULL;
++    int ret;
++
++    if (NULL == frame)
++        return -1;
++
++    width    = mpp_frame_get_width(frame);
++    height   = mpp_frame_get_height(frame);
++    h_stride = mpp_frame_get_hor_stride(frame);
++    v_stride = mpp_frame_get_ver_stride(frame);
++    fmt      = mpp_frame_get_fmt(frame);
++    buffer   = mpp_frame_get_buffer(frame);
++
++    if (NULL == buffer)
++        return -1;
++
++    base = (RK_U8 *)mpp_buffer_get_ptr(buffer);
++
++    switch (fmt) {
++    case MPP_FMT_YUV420SP_VU :
++    case MPP_FMT_YUV420SP : {
++#ifdef DEBUG
++	    mpp_log("mpp_frame_to_nv12 size %lu x %lu stride %lu x %lu\n", width, height,
++                h_stride, v_stride);
++#endif
++	    RK_U32 i;
++	    RK_U8 *base_y = base;
++	    RK_U8 *base_c = base + h_stride * v_stride;
++	    size_t ptr_diff;
++
++	    ptr_diff = 0;
++	    for (i = 0; i < height; i++, base_y += h_stride, ptr_diff += h_stride) {
++            /*
++		    if (ptr_diff >= y_size) {
++			    mpp_err("%ld cross boundary of y %ld\n", ptr_diff, y_size);
++			    ret = -1;
++			    goto out;
++		    }
++		    */
++		    //fwrite(base_y, 1, width, fp);
++		    memcpy(out_y + ptr_diff, base_y, width);
++	    }
++
++	    ptr_diff = 0;
++	    for (i = 0; i < height / 2; i++, base_c += h_stride, ptr_diff += h_stride) {
++            /*
++		    if (ptr_diff >= uv_size) {
++			    mpp_err("%ld corss boundary of uv %ld\n", ptr_diff, uv_size);
++			    ret = -1;
++			    goto out;
++		    }
++		    */
++		    //fwrite(base_c, 1, width, fp);
++		    memcpy(out_uv + ptr_diff, base_c, width);
++	    }
++	    ret = 0;
++    } break;
++    default : {
++	    mpp_err("not supported format %d\n", fmt);
++	    ret = -1;
++    } break;
++    }
++
++out:
++    return ret;
++}
++
++static int dec_advanced(MpiDecLoopData *data)
++{
++    MPP_RET ret = MPP_OK;
++    MppCtx ctx  = data->ctx;
++    MppApi *mpi = data->mpi;
++    MppPacket packet = NULL;
++    MppFrame  frame  = data->frame;
++    MppTask task = NULL;
++    RK_U32 quiet = data->quiet;
++
++    MppBuffer mpp_buffer = data->mpp_buffer;
++    const char *buf = (const char *)data->input_data;
++
++
++#if 0
++    FileBufSlot *slot = NULL;
++    ret = reader_index_read(cmd->reader, 0, &slot);
++    mpp_assert(ret == MPP_OK);
++    mpp_assert(slot);
++
++    mpp_packet_init_with_buffer(&packet, slot->buf);
++    write_file("/tmp/foo", slot->data, slot->size);
++#else
++    FileBufSlot _slot;
++    FileBufSlot *slot = &_slot;
++
++    slot->eos = 1;
++
++    // we do not check buf size here cause mpp_buffer was allocated in input size already
++    memcpy(mpp_buffer_get_ptr(mpp_buffer), buf, data->input_size);
++    mpp_packet_init_with_buffer(&packet, mpp_buffer);
++    //write_file("/tmp/bar11", mpp_buffer_get_ptr(mpp_buffer), data->input_size);
++#endif
++
++    // setup eos flag
++    if (slot->eos)
++        mpp_packet_set_eos(packet);
++
++    ret = mpi->poll(ctx, MPP_PORT_INPUT, MPP_POLL_BLOCK);
++    if (ret) {
++        mpp_err("%p mpp input poll failed\n", ctx);
++        return ret;
++    }
++
++    ret = mpi->dequeue(ctx, MPP_PORT_INPUT, &task);  /* input queue */
++    if (ret) {
++        mpp_err("%p mpp task input dequeue failed\n", ctx);
++        return ret;
++    }
++
++    mpp_assert(task);
++
++    mpp_task_meta_set_packet(task, KEY_INPUT_PACKET, packet);
++    mpp_task_meta_set_frame (task, KEY_OUTPUT_FRAME,  frame);
++
++    ret = mpi->enqueue(ctx, MPP_PORT_INPUT, task);  /* input queue */
++    if (ret) {
++        mpp_err("%p mpp task input enqueue failed\n", ctx);
++        return ret;
++    }
++
++    if (!data->first_pkt)
++        data->first_pkt = mpp_time();
++
++    /* poll and wait here */
++    ret = mpi->poll(ctx, MPP_PORT_OUTPUT, MPP_POLL_BLOCK);
++    if (ret) {
++        mpp_err("%p mpp output poll failed\n", ctx);
++        return ret;
++    }
++
++    ret = mpi->dequeue(ctx, MPP_PORT_OUTPUT, &task); /* output queue */
++    if (ret) {
++        mpp_err("%p mpp task output dequeue failed\n", ctx);
++        return ret;
++    }
++
++    mpp_assert(task);
++
++    if (task) {
++        MppFrame frame_out = NULL;
++
++        mpp_task_meta_get_frame(task, KEY_OUTPUT_FRAME, &frame_out);
++
++        if (frame) {
++            if (!data->first_frm)
++                data->first_frm = mpp_time();
++
++            /* write frame to file here */
++            if (data->out_y)
++		    mpp_frame_to_nv12(frame, (char *)data->out_y, data->y_size,
++                              (char *)data->out_uv, data->uv_size);
++
++#ifdef DEBUG
++            mpp_log("%p decoded frame %d\n", ctx, data->frame_count);
++#endif
++            data->frame_count++;
++
++            if (mpp_frame_get_eos(frame_out)) {
++                mpp_log_q(quiet, "%p found eos frame\n", ctx);
++            }
++        }
++
++        if (data->frame_num > 0) {
++            if (data->frame_count >= data->frame_num)
++                data->loop_end = 1;
++        } else if (data->frame_num == 0) {
++            if (slot->eos)
++                data->loop_end = 1;
++        }
++
++        /* output queue */
++        ret = mpi->enqueue(ctx, MPP_PORT_OUTPUT, task);
++        if (ret)
++            mpp_err("%p mpp task output enqueue failed\n", ctx);
++    }
++
++    /*
++     * The following input port task dequeue and enqueue is to make sure that
++     * the input packet can be released. We can directly deinit the input packet
++     * after frame output in most cases.
++     */
++    if (0) {
++        mpp_packet_deinit(&packet);
++    } else {
++        ret = mpi->dequeue(ctx, MPP_PORT_INPUT, &task);  /* input queue */
++        if (ret) {
++            mpp_err("%p mpp task input dequeue failed\n", ctx);
++            return ret;
++        }
++
++        mpp_assert(task);
++        if (task) {
++            MppPacket packet_out = NULL;
++
++            mpp_task_meta_get_packet(task, KEY_INPUT_PACKET, &packet_out);
++
++            if (!packet_out || packet_out != packet)
++                mpp_err_f("mismatch packet %p -> %p\n", packet, packet_out);
++
++            mpp_packet_deinit(&packet_out);
++
++            /* input empty task back to mpp to maintain task status */
++            ret = mpi->enqueue(ctx, MPP_PORT_INPUT, task);
++            if (ret)
++                mpp_err("%p mpp task input enqueue failed\n", ctx);
++        }
++    }
++
++    return ret;
++}
++
++void *thread_decode(void *arg)
++{
++    MpiDecLoopData *data = (MpiDecLoopData *)arg;
++    MppCtx ctx  = data->ctx;
++    MppApi *mpi = data->mpi;
++    RK_S64 t_s, t_e;
++
++    memset(&data->checkcrc, 0, sizeof(data->checkcrc));
++    data->checkcrc.luma.sum = mpp_malloc(RK_ULONG, 512);
++    data->checkcrc.chroma.sum = mpp_malloc(RK_ULONG, 512);
++
++    t_s = mpp_time();
++
++    /* NOTE: change output format before jpeg decoding */
++    if (MPP_FRAME_FMT_IS_YUV(data->format) || MPP_FRAME_FMT_IS_RGB(data->format)) {
++            MPP_RET ret = mpi->control(ctx, MPP_DEC_SET_OUTPUT_FORMAT, &data->format);
++            if (ret) {
++		    mpp_err("Failed to set output format %d\n", data->format);
++		    return NULL;
++            }
++
++
++	    while (!data->loop_end)
++		    dec_advanced(data);
++    }
++
++    t_e = mpp_time();
++    data->elapsed_time = t_e - t_s;
++    data->frame_count = data->frame_count;
++    data->frame_rate = (float)data->frame_count * 1000000 / data->elapsed_time;
++    data->delay = data->first_frm - data->first_pkt;
++
++#ifdef DEBUG
++    mpp_log("decode %d frames time %lld ms delay %3d ms fps %3.2f\n",
++            data->frame_count, (RK_S64)(data->elapsed_time / 1000),
++            (RK_S32)(data->delay / 1000), data->frame_rate);
++#endif
++    MPP_FREE(data->checkcrc.luma.sum);
++    MPP_FREE(data->checkcrc.chroma.sum);
++
++    return NULL;
++}
++
++int mpp_convert_mjpeg_to_nv12(const uint8_t *sample, size_t sample_size,
++                              uint8_t *out_y, size_t y_stride,
++                              uint8_t *out_uv, size_t uv_stride,
++                              size_t input_width, size_t input_height,
++                              size_t output_width, size_t output_height)
++{
++    // base flow context
++    MppCtx ctx          = NULL;
++    MppApi *mpi         = NULL;
++
++    // input / output
++    MppPacket packet    = NULL;
++    MppFrame  frame     = NULL;
++    MppBuffer mpp_buffer = NULL;
++
++    // paramter for resource malloc
++    RK_U32 width        = input_width;
++    RK_U32 height       = input_height;
++    MppCodingType type  = MPP_VIDEO_CodingMJPEG;
++
++    // config for runtime mode
++    MppDecCfg cfg       = NULL;
++    RK_U32 need_split   = 1;
++
++    // resources
++    MppBuffer frm_buf   = NULL;
++    pthread_t thd;
++    pthread_attr_t attr;
++    MpiDecLoopData data;
++    MPP_RET ret = MPP_OK;
++
++    // fydeos
++    size_t y_size = y_stride;
++    size_t uv_size = uv_stride;
++
++    memset(&data, 0, sizeof(data));
++    //pthread_attr_init(&attr);
++
++    RK_U32 hor_stride = MPP_ALIGN(y_stride, 16);
++    RK_U32 ver_stride = MPP_ALIGN(uv_stride, 16);
++
++    hor_stride = y_stride;
++    ver_stride = uv_stride;
++
++	ret = mpp_buffer_group_get_internal(&data.buf_grp, MPP_BUFFER_TYPE_ION);
++    if (ret) {
++        mpp_err("failed to get buffer group for input frame ret %d\n", ret);
++        goto MPP_TEST_OUT;
++    }
++
++    ret = mpp_buffer_group_get_internal(&data.frm_grp, MPP_BUFFER_TYPE_ION);
++    if (ret) {
++        mpp_err("failed to get buffer group for input frame ret %d\n", ret);
++        goto MPP_TEST_OUT;
++    }
++
++    ret = mpp_frame_init(&frame); /* output frame */
++    if (ret) {
++        mpp_err("mpp_frame_init failed\n");
++        goto MPP_TEST_OUT;
++    }
++
++    /*
++     * NOTE: For jpeg could have YUV420 and YUV422 the buffer should be
++     * larger for output. And the buffer dimension should align to 16.
++     * YUV420 buffer is 3/2 times of w*h.
++     * YUV422 buffer is 2 times of w*h.
++     * So create larger buffer with 2 times w*h.
++     */
++    ret = mpp_buffer_get(data.frm_grp, &frm_buf, hor_stride * ver_stride * 4);
++    if (ret) {
++        mpp_err("failed to get buffer for input frame ret %d\n", ret);
++        goto MPP_TEST_OUT;
++    }
++	mpp_frame_set_buffer(frame, frm_buf);
++
++	ret = mpp_buffer_get(data.buf_grp, &mpp_buffer, sample_size);
++    if (ret) {
++        mpp_err("failed to get buffer for mpp buffer ret %d\n", ret);
++        goto MPP_TEST_OUT;
++    }
++
++    // decoder demo
++    ret = mpp_create(&ctx, &mpi);
++    if (ret) {
++        mpp_err("mpp_create failed\n");
++        goto MPP_TEST_OUT;
++    }
++
++#ifdef DEBUG
++    mpp_log("%p mpi_dec_test decoder test start w %d h %d type %d\n",
++            ctx, width, height, type);
++    mpp_log("sample@%p size: %ld y@%p size: %ld   uv@%p size: %ld \n input %ld x %ld, output %ld x %ld\n",
++            sample, sample_size, out_y, y_size, out_uv, uv_size,
++            input_width, input_height, output_width, output_height);
++#endif
++
++    ret = mpp_init(ctx, MPP_CTX_DEC, type);
++    if (ret) {
++        mpp_err("%p mpp_init failed\n", ctx);
++        goto MPP_TEST_OUT;
++    }
++
++    mpp_dec_cfg_init(&cfg);
++
++    /* get default config from decoder context */
++    ret = mpi->control(ctx, MPP_DEC_GET_CFG, cfg);
++    if (ret) {
++        mpp_err("%p failed to get decoder cfg ret %d\n", ctx, ret);
++        goto MPP_TEST_OUT;
++    }
++
++    /*
++     * split_parse is to enable mpp internal frame spliter when the input
++     * packet is not aplited into frames.
++     */
++    ret = mpp_dec_cfg_set_u32(cfg, "base:split_parse", need_split);
++    if (ret) {
++        mpp_err("%p failed to set split_parse ret %d\n", ctx, ret);
++        goto MPP_TEST_OUT;
++    }
++
++    ret = mpi->control(ctx, MPP_DEC_SET_CFG, cfg);
++    if (ret) {
++        mpp_err("%p failed to set cfg %p ret %d\n", ctx, cfg, ret);
++        goto MPP_TEST_OUT;
++    }
++
++    data.ctx            = ctx;
++    data.mpi            = mpi;
++    data.loop_end       = 0;
++    data.packet         = packet;
++    data.frame          = frame;
++    data.mpp_buffer = mpp_buffer;
++    data.frame_count    = 0;
++    data.frame_num      = 1;
++    data.quiet          = 0;
++    data.input_data = sample;
++    data.input_size = sample_size;
++    data.format = MPP_FMT_YUV420SP;
++    data.out_y = out_y;
++    data.y_size = y_size;
++    data.out_uv = out_uv;
++    data.uv_size = uv_size;
++    data.fp_verify = NULL;
++
++    /*
++    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
++
++    ret = pthread_create(&thd, &attr, thread_decode, &data);
++    if (ret) {
++        mpp_err("failed to create thread for input ret %d\n", ret);
++        goto MPP_TEST_OUT;
++    }
++
++    if (cmd->frame_num < 0) {
++        // wait for input then quit decoding
++        mpp_log("*******************************************\n");
++        mpp_log("**** Press Enter to stop loop decoding ****\n");
++        mpp_log("*******************************************\n");
++
++        getc(stdin);
++        data.loop_end = 1;
++    }
++
++    pthread_join(thd, NULL);
++    */
++    //return 255;
++    thread_decode(&data);
++
++    ret = mpi->reset(ctx);
++    if (ret) {
++        mpp_err("%p mpi->reset failed\n", ctx);
++        goto MPP_TEST_OUT;
++    }
++
++MPP_TEST_OUT:
++    if (data.packet) {
++        mpp_packet_deinit(&data.packet);
++        data.packet = NULL;
++    }
++
++    if (frame) {
++        mpp_frame_deinit(&frame);
++        frame = NULL;
++    }
++
++    if (ctx) {
++        mpp_destroy(ctx);
++        ctx = NULL;
++    }
++
++
++    if (frm_buf) {
++        mpp_buffer_put(frm_buf);
++        frm_buf = NULL;
++    }
++
++	if (mpp_buffer) {
++            mpp_buffer_put(mpp_buffer);
++            mpp_buffer = NULL;
++        }
++
++
++    if (data.frm_grp) {
++        mpp_buffer_group_put(data.frm_grp);
++        data.frm_grp = NULL;
++    }
++
++    if (data.buf_grp) {
++        mpp_buffer_group_put(data.buf_grp);
++        data.frm_grp = NULL;
++    }
++
++    if (data.fp_output) {
++        fclose(data.fp_output);
++        data.fp_output = NULL;
++    }
++
++    if (data.fp_verify) {
++        fclose(data.fp_verify);
++        data.fp_verify = NULL;
++    }
++
++    if (cfg) {
++        mpp_dec_cfg_deinit(cfg);
++        cfg = NULL;
++    }
++
++    //pthread_attr_destroy(&attr);
++
++    return ret;
++}
++
+-- 
+2.38.1
+

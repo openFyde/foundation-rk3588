@@ -1,0 +1,43 @@
+From e77ee85e53148e5db78d7b678d1bd1b4727521a0 Mon Sep 17 00:00:00 2001
+From: Su Yue <glass@fydeos.io>
+Date: Mon, 21 Nov 2022 09:08:04 +0800
+Subject: [PATCH 2/2] disable output for debug
+
+Signed-off-by: Su Yue <glass@fydeos.io>
+---
+ mpp/mpi.cpp         | 2 ++
+ osal/mpp_thread.cpp | 4 +---
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/mpp/mpi.cpp b/mpp/mpi.cpp
+index 1c2c9f509779..173f496f404f 100644
+--- a/mpp/mpi.cpp
++++ b/mpp/mpi.cpp
+@@ -484,7 +484,9 @@ MPP_RET mpp_create(MppCtx *ctx, MppApi **mpi)
+         *mpi = p->api;
+     } while (0);
+ 
++#ifdef DEBUG
+     show_mpp_version();
++#endif
+ 
+     mpi_dbg_func("leave ret %d ctx %p mpi %p\n", ret, *ctx, *mpi);
+     return ret;
+diff --git a/osal/mpp_thread.cpp b/osal/mpp_thread.cpp
+index 9183a1dcbc4d..50395d5c235b 100644
+--- a/osal/mpp_thread.cpp
++++ b/osal/mpp_thread.cpp
+@@ -71,9 +71,7 @@ void MppThread::start()
+         set_status(MPP_THREAD_RUNNING);
+         if (0 == pthread_create(&mThread, &attr, mFunction, mContext)) {
+ #ifndef ARMLINUX
+-            RK_S32 ret = pthread_setname_np(mThread, mName);
+-            if (ret)
+-                mpp_err("thread %p setname %s failed\n", mFunction, mName);
++            pthread_setname_np(mThread, mName);
+ #endif
+ 
+             thread_dbg(MPP_THREAD_DBG_FUNCTION, "thread %s %p context %p create success\n",
+-- 
+2.38.1
+
