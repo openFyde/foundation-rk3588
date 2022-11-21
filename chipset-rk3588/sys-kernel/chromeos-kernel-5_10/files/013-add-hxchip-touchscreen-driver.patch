@@ -190,7 +190,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
-@@ -0,0 +1,3503 @@
+@@ -0,0 +1,3506 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
 + *
@@ -3123,12 +3123,15 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 +	ret = fb_register_client(&ts->fb_notif);
 +#elif defined(HX_CONFIG_DRM_PANEL)
 +	ts->fb_notif.notifier_call = drm_notifier_callback;
-+	if (active_panel)
++	if (active_panel) {
 +		ret = drm_panel_notifier_register(active_panel,
 +			&ts->fb_notif);
-+	else
++    pr_info("hx regiest active_panel");
++	}else {
 +		ret = drm_panel_notifier_register(&gNotifier_dummy_panel,
 +			&ts->fb_notif);
++    pr_info("hx regiest fake_panel");
++  }
 +#elif defined(HX_CONFIG_DRM)
 +#if defined(__HIMAX_MOD__)
 +	hx_msm_drm_register_client =
@@ -3698,7 +3701,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
-@@ -0,0 +1,615 @@
+@@ -0,0 +1,616 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
 + *
@@ -3789,6 +3792,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 +/*Enable this if testing suspend/resume
 + *on nitrogen8m
 + */
++#define HX_CONFIG_DRM
 +#define HX_CONFIG_DRM_PANEL
 +
 +/*=============================================*/
@@ -17420,7 +17424,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
-@@ -0,0 +1,1307 @@
+@@ -0,0 +1,1305 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for QCT platform
 + *
@@ -17573,12 +17577,10 @@ Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 +	struct device_node *dt = private_ts->client->dev.of_node;
 +	u32 data = 0;
 +	int ret = 0;
-+#if defined(HX_CONFIG_DRM)
-+#if defined(HX_CONFIG_DRM_PANEL)
++#if defined(HX_CONFIG_DRM) || defined(HX_CONFIG_DRM_PANEL)
 +	ret = himax_ts_check_dt(dt);
 +	if (ret == -EPROBE_DEFER)
 +		E("himax_ts_check_dt failed\n");
-+#endif
 +#endif
 +	prop = of_find_property(dt, "himax,panel-coords", NULL);
 +

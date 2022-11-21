@@ -4,7 +4,7 @@
 EAPI=7
 
 EGIT_REPO_URI="https://github.com/rockchip-linux/mpp.git"
-EGIT_COMMIT="793acb6f66034dd62d582d692eb37f81de2ea0c6"
+EGIT_COMMIT="3198035973ed76fdff8c4871ddd6e20aa539dbe9"
 
 inherit cmake-utils git-r3 udev
 
@@ -33,11 +33,11 @@ src_configure() {
 
 src_install() {
   cmake-utils_src_install
-  default 
+  default
   insinto /etc/init
   udev_dorules ${FILESDIR}/99-rockchip-permissions.rules
 }
 
 PATCHES=(
-  "${FILESDIR}/chang-drm-device-to-render.patch"
+  "${FILESDIR}/chang-drm-device-to-render.patch.new"
 )

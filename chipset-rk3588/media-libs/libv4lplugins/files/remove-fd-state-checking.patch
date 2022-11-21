@@ -1,0 +1,190 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -33,8 +33,8 @@
+ #define FPS_UPDATE_INTERVAL 120
+ 
+ #ifdef DEBUG
+-int rkmpp_log_level = 10;
+-static bool rkmpp_log_fps = true;
++int rkmpp_log_level = 4;
++static bool rkmpp_log_fps = false;
+ #else
+ int rkmpp_log_level = 0;
+ static bool rkmpp_log_fps = false;
+@@ -566,10 +566,10 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+-	LOGV(3, "enqueue buffer: %d(%ld), size: %d, type: %d, fd: %d\n",
++	LOGV(3, "enqueue buffer: %d(%ld), size: %d, type: %d, fd: %d, plane[0].bytesused:%u, plane[0].plane_size:%u, plane[0].length:%u\n",
+ 	     buffer->index, buffer->timestamp.tv_sec,
+ 	     rkmpp_buffer->bytesused, buffer->type,
+-	     rkmpp_buffer->fd);
++	     rkmpp_buffer->fd, rkmpp_buffer->planes[0].bytesused, rkmpp_buffer->planes[0].plane_size, rkmpp_buffer->planes[0].length);
+ 
+ 	rkmpp_buffer_set_queued(rkmpp_buffer);
+ 
+@@ -616,7 +616,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
+ 
+ 	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
+ 	if (ret < 0) {
+-		LOGE("failed to convert buffer\n");
++		LOGE("failed to convert buffer, ret:%d\n", ret);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -663,8 +663,11 @@ int rkmpp_update_poll_event(struct rkmpp
+ 
+ static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
+ {
+-	ENTER();
++  char options[50] = {0};
++  int ret;
+ 
++	ENTER();
++#if 0
+ #define MAX_OPT_LEN 1024
+ #define OPT_DEC "dec"
+ #define OPT_ENC "enc"
+@@ -720,10 +723,21 @@ static int rkmpp_parse_options(struct rk
+ 			RETURN_ERR(ENODEV, -1);
+ 		}
+ 	}
++#else
++  ret = read(fd, options, sizeof(options) -1);
++  LOGV(1, "read fd:%s\n", options);
++  if (!ret || !strncmp(options, "dec", 3)) {
++    ctx->is_decoder = true;
++  } else if (!strncmp(options, "enc", 3)) {
++    ctx->is_decoder = false;
++  } else {
++    LOGV(1, "unknown options\n");
++    RETURN_ERR(ENODEV, -1);
++  }
++#endif
+ 
+ 	if (fcntl(fd, F_GETFL) & O_NONBLOCK)
+ 		ctx->nonblock = true;
+-
+ 	LEAVE();
+ 	return 0;
+ }
+@@ -740,7 +754,8 @@ static void *plugin_init(int fd)
+ 	ENTER();
+ 
+ 	/* Filter out invalid fd and real devices */
+-	if (fstat(fd, &stat) < 0 || S_ISCHR(stat.st_mode))
++
++	if (fstat(fd, &stat) < 0)
+ 		RETURN_ERR(errno, NULL);
+ 
+ 	pthread_once(&g_rkmpp_global_init_once, rkmpp_global_init);
+@@ -924,7 +939,7 @@ static void *plugin_mmap(void *dev_ops_p
+ 		RETURN_ERR(EINVAL, NULL);
+ 	}
+ 
+-	queue = rkmpp_get_queue(ctx, RKMPP_MEM_OFFSET_TYPE(offset));
++  queue = rkmpp_get_queue(ctx, RKMPP_MEM_OFFSET_TYPE(offset));
+ 	if (!queue)
+ 		RETURN_ERR(errno, NULL);
+ 
+Index: libv4l-rkmpp/include/libv4l-rkmpp.h
+===================================================================
+--- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
++++ libv4l-rkmpp/include/libv4l-rkmpp.h
+@@ -39,13 +39,11 @@ extern int rkmpp_log_level;
+ 
+ #define gettid() syscall(SYS_gettid)
+ 
++__attribute__((format(printf, 4, 5))) void log_prefix(const char *prefix, const char *func,
++  int line, const char *format, ...);
++
+ #define LOG(fmt, ...) do { \
+-	struct timeval tv; \
+-	gettimeofday(&tv, NULL); \
+-	printf("[%03ld.%03ld] [RKMPP] [%ld] %s(%d): " fmt, \
+-	       tv.tv_sec % 1000, tv.tv_usec / 1000, gettid(), \
+-	       __func__, __LINE__, ##__VA_ARGS__); \
+-	fflush(stdout); \
++  log_prefix("RKMPP", __func__, __LINE__, fmt, ##__VA_ARGS__); \
+ 	} while (0)
+ 
+ #define LOGV(level, fmt, ...) \
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -117,6 +117,7 @@ static int rkmpp_copy_buffer(struct rkmp
+ 	uint32_t sizes[3], offsets[3];
+ 	unsigned int i;
+ 	int ret = -1;
++  int err = 0;
+ 
+ 	ENTER();
+ 
+@@ -142,21 +143,27 @@ static int rkmpp_copy_buffer(struct rkmp
+ 		sizes[i] = rkmpp_buffer->planes[i].plane_size;
+ 		offsets[i] = rkmpp_buffer->planes[i].data_offset;
+ 
+-		if (!sizes[i])
++		if (!sizes[i]) {
++      LOGV(3, "index:%d,planes[%u].size :%u, offset:%u, buffer->length:%u, bytesused:%u\n", rkmpp_buffer->index, i, sizes[i], offsets[i], buffer->length, rkmpp_buffer->planes[i].bytesused);
+ 			goto out;
+-
++    }
+ 		if (buffer->memory == V4L2_MEMORY_DMABUF) {
+ 			int fd = rkmpp_buffer->planes[i].fd;
+ 			addrs[i] = mmap(NULL, sizes[i],
+ 					PROT_READ | PROT_WRITE,
+ 					MAP_SHARED, fd, offsets[i]);
+-			if (addrs[i] == MAP_FAILED)
++      err = errno;
++			if (addrs[i] == MAP_FAILED) {
++        LOGV(3, "mmap failed: i:%u, fd:%d, size:%u, offsets:%u, errno:%d, sizeimage:%u, planes[0].length:%u\n", i, fd, sizes[i], offsets[i], err, rkmpp_buffer->size,
++          rkmpp_buffer->planes[0].length);
+ 				goto out;
++      }
+ 		} else {
+ 			addrs[i] = (void *)rkmpp_buffer->planes[i].userptr;
+-			if (!addrs[i])
++			if (!addrs[i]) {
++        LOGV(3, "planes[%u]->userptr:%lu is 0\n", i, rkmpp_buffer->planes[i].userptr);
+ 				goto out;
+-
++      }
+ 			addrs[i] += offsets[i];
+ 		}
+ 
+@@ -258,6 +265,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
+ 		/* Returning data are always in plane 0 */
+ 		rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
++    rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
+ 		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
+ 
+ 		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0)
+@@ -285,7 +293,6 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 	buffer->sequence = 0;
+ 
+ 	buffer->index = rkmpp_buffer->index;
+-
+ 	LEAVE();
+ 	return 0;
+ }
+@@ -333,3 +340,14 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 	LEAVE();
+ 	return 0;
+ }
++
++void log_prefix(const char *prefix, const char *func,
++  int line, const char *format, ...) {
++  char buf[50];
++  snprintf(buf, sizeof(buf), "[%s:%s(%d)]", prefix, func, line);
++  va_list args;
++  va_start(args, format);
++  fprintf(stderr, "%s ", buf);
++  vfprintf(stderr, format, args);
++  va_end(args);
++}

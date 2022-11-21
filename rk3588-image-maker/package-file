@@ -13,6 +13,6 @@ ROOT-A    Image/ROOT-A.img
 #ROOT-C    RESERVED
 OEM       Image/OEM.img
 #reserved1  RESERVED
-#reserved2  RESERVED
+resource  Image/resource.img
 uboot		Image/uboot.img
 EFI-SYSTEM Image/EFI-SYSTEM.img
