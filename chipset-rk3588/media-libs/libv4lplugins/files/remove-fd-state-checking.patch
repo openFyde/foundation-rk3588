@@ -157,23 +157,16 @@ Index: libv4l-rkmpp/src/utils.c
  			addrs[i] += offsets[i];
  		}
  
-@@ -258,6 +265,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+@@ -258,6 +265,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
  	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
  		/* Returning data are always in plane 0 */
  		rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
-+    rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
++    if (!rkmpp_buffer->planes[0].plane_size)
++      rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
  		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
  
  		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0)
-@@ -285,7 +293,6 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
- 	buffer->sequence = 0;
- 
- 	buffer->index = rkmpp_buffer->index;
--
- 	LEAVE();
- 	return 0;
- }
-@@ -333,3 +340,14 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+@@ -333,3 +342,14 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
  	LEAVE();
  	return 0;
  }
