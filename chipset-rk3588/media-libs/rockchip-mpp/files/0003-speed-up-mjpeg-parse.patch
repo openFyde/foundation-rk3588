@@ -1,3 +1,15 @@
+diff --git a/inc/mpp_task.h b/inc/mpp_task.h
+index d526e3a0855d..2bdabf84c715 100644
+--- a/inc/mpp_task.h
++++ b/inc/mpp_task.h
+@@ -105,6 +105,7 @@ typedef enum {
+     MPP_POLL_BUTT       = -2,
+     MPP_POLL_BLOCK      = -1,
+     MPP_POLL_NON_BLOCK  = 0,
++    MPP_POLL_10MS  = 10,
+     MPP_POLL_MAX        = 8000,
+ } MppPollType;
+ 
 diff --git a/mpp/codec/dec/jpeg/jpegd_parser.c b/mpp/codec/dec/jpeg/jpegd_parser.c
 index 3834ce7701eb..c33995ebba07 100644
 --- a/mpp/codec/dec/jpeg/jpegd_parser.c
@@ -20,7 +32,7 @@ index 3834ce7701eb..c33995ebba07 100644
              *dst++ = tmp[i];
              copy_len++;
 diff --git a/mpp/mpi.cpp b/mpp/mpi.cpp
-index 173f496f404f..0f69223057e2 100644
+index 173f496f404f..291d49cd73ab 100644
 --- a/mpp/mpi.cpp
 +++ b/mpp/mpi.cpp
 @@ -799,7 +799,8 @@ static int dec_advanced(MpiDecLoopData *data)
@@ -29,7 +41,7 @@ index 173f496f404f..0f69223057e2 100644
      /* poll and wait here */
 -    ret = mpi->poll(ctx, MPP_PORT_OUTPUT, MPP_POLL_BLOCK);
 +    // https://t.rock-chips.com/forum.php?mod=viewthread&tid=3980&highlight=mjpeg
-+    ret = mpi->poll(ctx, MPP_PORT_OUTPUT, MPP_POLL_NON_BLOCK);
++    ret = mpi->poll(ctx, MPP_PORT_OUTPUT, MPP_POLL_10MS);
      if (ret) {
          mpp_err("%p mpp output poll failed\n", ctx);
          return ret;
