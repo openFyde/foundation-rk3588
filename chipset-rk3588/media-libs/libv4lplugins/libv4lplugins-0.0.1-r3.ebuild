@@ -17,8 +17,8 @@ KEYWORDS="*"
 IUSE="debug max_8k"
 
 RDEPEND="
-	media-libs/libv4l
-  x11-libs/libdrm
+    media-libs/libv4l
+    x11-libs/libdrm
 "
 
 DEPEND="${RDEPEND}"

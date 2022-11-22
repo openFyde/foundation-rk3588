@@ -40,4 +40,6 @@ src_install() {
 
 PATCHES=(
   "${FILESDIR}/chang-drm-device-to-render.patch.new"
+  "${FILESDIR}/0001-mpi_api-add-new-api-mpp_convert_mjpeg_to_nv12.patch"
+  "${FILESDIR}/0002-disable-output-for-debug.patch"
 )

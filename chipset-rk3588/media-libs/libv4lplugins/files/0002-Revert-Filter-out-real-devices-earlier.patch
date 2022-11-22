@@ -1,0 +1,43 @@
+From 592aea3ee5ba79658ca43b0949ed008968fe670b Mon Sep 17 00:00:00 2001
+From: Su Yue <glass@fydeos.io>
+Date: Tue, 8 Nov 2022 10:07:56 +0800
+Subject: [PATCH 2/3] Revert "Filter out real devices earlier"
+
+This reverts commit 2ca60e74250f8698776ab180a29b4aeff604ceaa.
+---
+ src/libv4l-rkmpp.c | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/src/libv4l-rkmpp.c b/src/libv4l-rkmpp.c
+index 69cedeecdc1b..580821394404 100644
+--- a/src/libv4l-rkmpp.c
++++ b/src/libv4l-rkmpp.c
+@@ -16,7 +16,6 @@
+ #include <sys/epoll.h>
+ #include <sys/eventfd.h>
+ #include <sys/mman.h>
+-#include <sys/stat.h>
+ #include <linux/version.h>
+ 
+ #include "libv4l-plugin.h"
+@@ -693,17 +692,12 @@ static void *plugin_init(int fd)
+ {
+ 	struct rkmpp_context *ctx = NULL;
+ 	struct epoll_event ev;
+-	struct stat stat;
+ 	unsigned int i;
+ 	int epollfd;
+ 	MPP_RET ret;
+ 
+ 	ENTER();
+ 
+-	/* Filter out invalid fd and real devices */
+-	if (fstat(fd, &stat) < 0 || S_ISCHR(stat.st_mode))
+-		RETURN_ERR(errno, NULL);
+-
+ 	pthread_once(&g_rkmpp_global_init_once, rkmpp_global_init);
+ 
+ 	ctx = (struct rkmpp_context *)
+-- 
+2.38.1
+
