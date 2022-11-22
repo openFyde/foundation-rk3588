@@ -1,0 +1,35 @@
+diff --git a/mpp/codec/dec/jpeg/jpegd_parser.c b/mpp/codec/dec/jpeg/jpegd_parser.c
+index 3834ce7701eb..c33995ebba07 100644
+--- a/mpp/codec/dec/jpeg/jpegd_parser.c
++++ b/mpp/codec/dec/jpeg/jpegd_parser.c
+@@ -913,6 +913,7 @@ jpegd_split_frame(RK_U8 *src, RK_U32 src_size,
+         tmp = src;
+         jpegd_dbg_parser("distinguish 310 from 210 camera");
+ 
++	/* https://t.rock-chips.com/forum.php?mod=viewthread&tid=2379&pid=11651&page=1&extra=page%3D1#pid11651
+         for (i = 0; i < src_size - 4; i++) {
+             if (tmp[i] == 0xff) {
+                 if (tmp[i + 1] == 0x00 && tmp[i + 2] == 0xff && ((tmp[i + 3] & 0xf0) == 0xd0))
+@@ -921,6 +922,8 @@ jpegd_split_frame(RK_U8 *src, RK_U32 src_size,
+             *dst++ = tmp[i];
+             copy_len++;
+         }
++        */
++
+         for (; i < src_size; i++) {
+             *dst++ = tmp[i];
+             copy_len++;
+diff --git a/mpp/mpi.cpp b/mpp/mpi.cpp
+index 173f496f404f..0f69223057e2 100644
+--- a/mpp/mpi.cpp
++++ b/mpp/mpi.cpp
+@@ -799,7 +799,8 @@ static int dec_advanced(MpiDecLoopData *data)
+         data->first_pkt = mpp_time();
+ 
+     /* poll and wait here */
+-    ret = mpi->poll(ctx, MPP_PORT_OUTPUT, MPP_POLL_BLOCK);
++    // https://t.rock-chips.com/forum.php?mod=viewthread&tid=3980&highlight=mjpeg
++    ret = mpi->poll(ctx, MPP_PORT_OUTPUT, MPP_POLL_NON_BLOCK);
+     if (ret) {
+         mpp_err("%p mpp output poll failed\n", ctx);
+         return ret;
