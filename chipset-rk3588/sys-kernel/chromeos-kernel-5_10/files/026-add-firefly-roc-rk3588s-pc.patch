@@ -1,18 +1,14 @@
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-===================================================================
---- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -156,3 +156,6 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-t
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -162,3 +162,6 @@
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-firefly-itx-3588j.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc-mipi101-M101014-BE45-A1.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dtb
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-roc-pc-cam-8ms1m.dtsi
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-roc-pc-cam-8ms1m.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-roc-pc-cam-8ms1m.dtsi
 @@ -0,0 +1,185 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -199,10 +195,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-roc-pc-cam-8ms1m.dtsi
 +		};
 +	};
 +};
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
++++ b/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
 @@ -0,0 +1,382 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -586,10 +580,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-
 +        };
 +    };
 +};
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-ext.dtsi
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-ext.dtsi
++++ b/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-ext.dtsi
 @@ -0,0 +1,70 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -662,10 +654,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-ext.dtsi
 +	};
 +};
 \ No newline at end of file
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
++++ b/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
 @@ -0,0 +1,394 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1061,10 +1051,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M1010
 +        };
 +    };
 +};
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc.dts
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc.dts
++++ b/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc.dts
 @@ -0,0 +1,18 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1084,10 +1072,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc.dts
 +	model = "Firefly ROC-RK3588S-PC HDMI(fydeOS)";
 +	compatible = "rockchip,roc-rk3588s-pc", "rockchip,rk3588";
 +};
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc.dtsi
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc.dtsi
++++ b/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc.dtsi
 @@ -0,0 +1,405 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*

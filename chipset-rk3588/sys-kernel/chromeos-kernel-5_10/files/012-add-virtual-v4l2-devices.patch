@@ -1,7 +1,5 @@
-Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
++++ b/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
 @@ -0,0 +1,13 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -16,10 +14,8 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
 +int init_dummy_v4l2_devices(void);
 +void cleanup_dummy_v4l2_devices(void);
 +#endif //__DUMMY_V4L2_DEVICES_H__
-Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
++++ b/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 @@ -0,0 +1,71 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +// Copyright 2022 The FydeOS Authors.
@@ -92,11 +88,9 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +  misc_deregister(&v4l2_dec_dev);
 +  misc_deregister(&v4l2_enc_dev);
 +}
-Index: kernel-rockchip/drivers/video/rockchip/mpp/Makefile
-===================================================================
---- kernel-rockchip.orig/drivers/video/rockchip/mpp/Makefile
-+++ kernel-rockchip/drivers/video/rockchip/mpp/Makefile
-@@ -8,7 +8,7 @@ MPP_GIT_REVISION := \
+--- a/drivers/video/rockchip/mpp/Makefile
++++ b/drivers/video/rockchip/mpp/Makefile
+@@ -8,7 +8,7 @@
  MPP_REVISION_0 := $(subst \,\\\,$(MPP_GIT_REVISION))
  MPP_REVISION   := $(subst ",\\\",$(MPP_REVISION_0))
  
@@ -105,10 +99,8 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/Makefile
  CFLAGS_mpp_service.o += -DMPP_VERSION="\"$(MPP_REVISION)\""
  
  rk_vcodec-$(CONFIG_ROCKCHIP_MPP_RKVDEC) += mpp_rkvdec.o
-Index: kernel-rockchip/drivers/video/rockchip/mpp/mpp_service.c
-===================================================================
---- kernel-rockchip.orig/drivers/video/rockchip/mpp/mpp_service.c
-+++ kernel-rockchip/drivers/video/rockchip/mpp/mpp_service.c
+--- a/drivers/video/rockchip/mpp/mpp_service.c
++++ b/drivers/video/rockchip/mpp/mpp_service.c
 @@ -23,6 +23,7 @@
  #include "mpp_debug.h"
  #include "mpp_common.h"
@@ -117,7 +109,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/mpp_service.c
  
  #define MPP_CLASS_NAME		"mpp_class"
  #define MPP_SERVICE_NAME	"mpp_service"
-@@ -436,8 +437,8 @@ static int mpp_service_probe(struct plat
+@@ -434,8 +435,8 @@
  	MPP_REGISTER_DRIVER(srv, HAS_RKVENC2, RKVENC2, rkvenc2);
  	MPP_REGISTER_DRIVER(srv, HAS_AV1DEC, AV1DEC, av1dec);
  
@@ -127,7 +119,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/mpp_service.c
  	return 0;
  
  fail_register:
-@@ -454,6 +455,7 @@ static int mpp_service_remove(struct pla
+@@ -452,6 +453,7 @@
  	int i;
  
  	dev_info(dev, "remove device\n");

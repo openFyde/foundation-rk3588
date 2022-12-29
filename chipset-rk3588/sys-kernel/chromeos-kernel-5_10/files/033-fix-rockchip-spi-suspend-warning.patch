@@ -1,7 +1,5 @@
-Index: kernel-rockchip/drivers/spi/spi-rockchip.c
-===================================================================
---- kernel-rockchip.orig/drivers/spi/spi-rockchip.c
-+++ kernel-rockchip/drivers/spi/spi-rockchip.c
+--- a/drivers/spi/spi-rockchip.c
++++ b/drivers/spi/spi-rockchip.c
 @@ -6,6 +6,7 @@
  
  #include <linux/acpi.h>
@@ -9,8 +7,8 @@ Index: kernel-rockchip/drivers/spi/spi-rockchip.c
 +#include <linux/clk-provider.h>
  #include <linux/dmaengine.h>
  #include <linux/interrupt.h>
- #include <linux/module.h>
-@@ -1052,8 +1053,10 @@ static int rockchip_spi_runtime_suspend(
+ #include <linux/miscdevice.h>
+@@ -1131,8 +1132,10 @@
  	struct spi_controller *ctlr = dev_get_drvdata(dev);
  	struct rockchip_spi *rs = spi_controller_get_devdata(ctlr);
  

@@ -1,7 +1,5 @@
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-imx415.dtsi
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-imx415.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-imx415.dtsi
 @@ -0,0 +1,153 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -156,10 +154,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-imx415.dtsi
 +		};
 +	};
 +};
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-radxa-10p1inch-display.dtsi
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-radxa-10p1inch-display.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-radxa-10p1inch-display.dtsi
 @@ -0,0 +1,411 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -572,10 +568,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-radxa-10p1inc
 +		};
 +	};
 +};
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
-===================================================================
 --- /dev/null
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 @@ -0,0 +1,964 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1541,20 +1535,16 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 +&vepu {
 +  status = "okay";
 +};
-Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-===================================================================
---- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
-+++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -159,3 +159,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-fi
+--- a/arch/arm64/boot/dts/rockchip/Makefile
++++ b/arch/arm64/boot/dts/rockchip/Makefile
+@@ -165,3 +165,4 @@
  dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc-mipi101-M101014-BE45-A1.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-rock-5b.dtb
-Index: kernel-rockchip/sound/soc/generic/simple-card-utils.c
-===================================================================
---- kernel-rockchip.orig/sound/soc/generic/simple-card-utils.c
-+++ kernel-rockchip/sound/soc/generic/simple-card-utils.c
-@@ -558,7 +558,7 @@ int asoc_simple_init_jack(struct snd_soc
+--- a/sound/soc/generic/simple-card-utils.c
++++ b/sound/soc/generic/simple-card-utils.c
+@@ -558,7 +558,7 @@
  
  	if (is_hp) {
  		snprintf(prop, sizeof(prop), "%shp-det-gpio", prefix);
@@ -1563,11 +1553,9 @@ Index: kernel-rockchip/sound/soc/generic/simple-card-utils.c
  		gpio_name	= "Headphone detection";
  		mask		= SND_JACK_HEADPHONE;
  	} else {
-Index: kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/drm/drm_mode_object.c
-+++ kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
-@@ -41,9 +41,9 @@ int __drm_mode_object_add(struct drm_dev
+--- a/drivers/gpu/drm/drm_mode_object.c
++++ b/drivers/gpu/drm/drm_mode_object.c
+@@ -41,9 +41,9 @@
  			  void (*obj_free_cb)(struct kref *kref))
  {
  	int ret;
@@ -1579,7 +1567,7 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
  	mutex_lock(&dev->mode_config.idr_mutex);
  	ret = idr_alloc(&dev->mode_config.object_idr, register_obj ? obj : NULL,
  			1, 0, GFP_KERNEL);
-@@ -233,9 +233,9 @@ void drm_object_attach_property(struct d
+@@ -233,9 +233,9 @@
  				uint64_t init_val)
  {
  	int count = obj->properties->count;
@@ -1590,7 +1578,7 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
  	if (obj->type == DRM_MODE_OBJECT_CONNECTOR) {
  		struct drm_connector *connector = obj_to_connector(obj);
  
-@@ -244,6 +244,7 @@ void drm_object_attach_property(struct d
+@@ -244,6 +244,7 @@
  	} else {
  		WARN_ON(!dev->driver->load && dev->registered);
  	}
@@ -1598,11 +1586,9 @@ Index: kernel-rockchip/drivers/gpu/drm/drm_mode_object.c
  
  	if (count == DRM_OBJECT_MAX_PROPERTY) {
  		WARN(1, "Failed to attach object property (type: 0x%x). Please "
-Index: kernel-rockchip/kernel/rcu/tree_plugin.h
-===================================================================
---- kernel-rockchip.orig/kernel/rcu/tree_plugin.h
-+++ kernel-rockchip/kernel/rcu/tree_plugin.h
-@@ -294,7 +294,9 @@ void rcu_note_context_switch(bool preemp
+--- a/kernel/rcu/tree_plugin.h
++++ b/kernel/rcu/tree_plugin.h
+@@ -294,7 +294,9 @@
  
  	trace_rcu_utilization(TPS("Start context switch"));
  	lockdep_assert_irqs_disabled();
@@ -1612,11 +1598,9 @@ Index: kernel-rockchip/kernel/rcu/tree_plugin.h
  	if (rcu_preempt_depth() > 0 &&
  	    !t->rcu_read_unlock_special.b.blocked) {
  
-Index: kernel-rockchip/security/chromiumos/lsm.c
-===================================================================
---- kernel-rockchip.orig/security/chromiumos/lsm.c
-+++ kernel-rockchip/security/chromiumos/lsm.c
-@@ -172,11 +172,18 @@ static int chromiumos_security_inode_fol
+--- a/security/chromiumos/lsm.c
++++ b/security/chromiumos/lsm.c
+@@ -172,11 +172,18 @@
  	policy = chromiumos_get_inode_security_policy(
  		dentry, inode,
  		CHROMIUMOS_SYMLINK_TRAVERSAL);

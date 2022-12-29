@@ -15,52 +15,45 @@ Change-Id: I9fcd7e35ca75058a4d871612f69297bc60a7b96e
  .../bifrost/device/backend/mali_kbase_device_csf.c |  9 ++-
  5 files changed, 117 insertions(+), 15 deletions(-)
 
-Index: kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
-+++ kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
-@@ -2388,17 +2388,29 @@ KBASE_EXPORT_TEST_API(kbase_pm_disable_i
+--- a/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
++++ b/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
+@@ -2509,23 +2509,24 @@
  #if MALI_USE_CSF
  static void update_user_reg_page_mapping(struct kbase_device *kbdev)
  {
-+	int i = 0;
++  int i = 0;
  	lockdep_assert_held(&kbdev->pm.lock);
  
  	mutex_lock(&kbdev->csf.reg_lock);
--	if (kbdev->csf.mali_file_inode) {
--		/* This would zap the pte corresponding to the mapping of User
--		 * register page for all the Kbase contexts.
--		 */
--		unmap_mapping_range(kbdev->csf.mali_file_inode->i_mapping,
--				    BASEP_MEM_CSF_USER_REG_PAGE_HANDLE,
--				    PAGE_SIZE, 1);
-+
-+
+ 
+-	/* Only if the mappings for USER page exist, update all PTEs associated to it */
+-	if (kbdev->csf.nr_user_page_mapped > 0) {
+-		if (likely(kbdev->csf.mali_file_inode)) {
 +	for(i = 0; i < MAX_FILE_INODE; i++)
 +	{
 +		if (kbdev->csf.mfi_pool[i]) {
-+			/* This would zap the pte corresponding to the mapping of User
-+			 * register page for all the Kbase contexts.
-+			 */
+ 			/* This would zap the pte corresponding to the mapping of User
+ 			 * register page for all the Kbase contexts.
+ 			 */
+-			unmap_mapping_range(kbdev->csf.mali_file_inode->i_mapping,
+-					    BASEP_MEM_CSF_USER_REG_PAGE_HANDLE, PAGE_SIZE, 1);
+-		} else {
+-			dev_err(kbdev->dev,
+-				"Device file inode not exist even if USER page previously mapped");
 +			//printk("rk-debug[%s %s %d] pid=%d  name:%s i_mapping:%p i=%d\n",__FILE__,__FUNCTION__,__LINE__,current->pid,current->comm,kbdev->csf.mfi_pool[i]->i_mapping,i); //kernel带进程名
 +
 +			unmap_mapping_range(kbdev->csf.mfi_pool[i]->i_mapping,
 +					    BASEP_MEM_CSF_USER_REG_PAGE_HANDLE,
 +					    PAGE_SIZE, 1);
-+		}
- 	}
-+
-+
-+
-+
+ 		}
+-	}
++ 	}
+ 
  	mutex_unlock(&kbdev->csf.reg_lock);
  }
- #endif
-Index: kernel-rockchip/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
-+++ kernel-rockchip/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
-@@ -114,6 +114,73 @@ static void kbase_context_term_partial(
+--- a/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
++++ b/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
+@@ -115,6 +115,73 @@
  	}
  }
  
@@ -134,7 +127,7 @@ Index: kernel-rockchip/drivers/gpu/arm/bifrost/context/backend/mali_kbase_contex
  struct kbase_context *kbase_create_context(struct kbase_device *kbdev,
  	bool is_compat,
  	base_context_create_flags const flags,
-@@ -140,6 +207,12 @@ struct kbase_context *kbase_create_conte
+@@ -141,6 +208,12 @@
  	kctx->filp = filp;
  	kctx->create_flags = flags;
  
@@ -147,7 +140,7 @@ Index: kernel-rockchip/drivers/gpu/arm/bifrost/context/backend/mali_kbase_contex
  	if (is_compat)
  		kbase_ctx_flag_set(kctx, KCTX_COMPAT);
  #if defined(CONFIG_64BIT)
-@@ -182,6 +255,13 @@ void kbase_destroy_context(struct kbase_
+@@ -183,6 +256,13 @@
  	if (WARN_ON(!kbdev))
  		return;
  
@@ -161,57 +154,28 @@ Index: kernel-rockchip/drivers/gpu/arm/bifrost/context/backend/mali_kbase_contex
  	/* Context termination could happen whilst the system suspend of
  	 * the GPU device is ongoing or has completed. It has been seen on
  	 * Customer side that a hang could occur if context termination is
-Index: kernel-rockchip/drivers/gpu/arm/bifrost/csf/mali_kbase_csf.c
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/arm/bifrost/csf/mali_kbase_csf.c
-+++ kernel-rockchip/drivers/gpu/arm/bifrost/csf/mali_kbase_csf.c
-@@ -1752,13 +1752,13 @@ int kbase_csf_ctx_init(struct kbase_cont
- 	 * time of device probe as the inode is created when the device node
- 	 * is created by udevd (through mknod).
- 	 */
--	if (kctx->filp) {
--		if (!kbdev->csf.mali_file_inode)
--			kbdev->csf.mali_file_inode = kctx->filp->f_inode;
--
--		/* inode is unique for a file */
--		WARN_ON(kbdev->csf.mali_file_inode != kctx->filp->f_inode);
--	}
-+//	if (kctx->filp) {
-+//		if (!kbdev->csf.mali_file_inode)
-+//			kbdev->csf.mali_file_inode = kctx->filp->f_inode;
-+//
-+//		/* inode is unique for a file */
-+//		WARN_ON(kbdev->csf.mali_file_inode != kctx->filp->f_inode);
-+//	}
- 	mutex_unlock(&kbdev->pm.lock);
- 
- 	/* Mark all the cookies as 'free' */
-Index: kernel-rockchip/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
-+++ kernel-rockchip/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
-@@ -1321,6 +1321,7 @@ struct kbase_csf_mcu_fw {
-  *                          HW counters.
-  * @fw:                     Copy of the loaded MCU firmware image.
+--- a/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
++++ b/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
+@@ -1472,6 +1472,7 @@
+  * @fw_log:                 Contain members required for handling firmware log.
+  * @dof:                    Structure for dump on fault.
   */
 +#define MAX_FILE_INODE 16
  struct kbase_csf_device {
  	struct kbase_mmu_table mcu_mmu;
  	struct list_head firmware_interfaces;
-@@ -1335,6 +1336,8 @@ struct kbase_csf_device {
- 	struct tagged_addr dummy_db_page;
+@@ -1487,6 +1488,8 @@
  	struct tagged_addr dummy_user_reg_page;
+ 	u32 nr_user_page_mapped;
  	struct inode *mali_file_inode;
 +	struct inode *mfi_pool[MAX_FILE_INODE];
 +	int mfi_pool_cached_counter[MAX_FILE_INODE];
  	struct mutex reg_lock;
  	wait_queue_head_t event_wait;
  	bool interrupt_received;
-Index: kernel-rockchip/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
-+++ kernel-rockchip/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
-@@ -354,7 +354,14 @@ static void kbase_device_term_partial(st
+--- a/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
++++ b/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
+@@ -357,7 +357,14 @@
  
  void kbase_device_term(struct kbase_device *kbdev)
  {
