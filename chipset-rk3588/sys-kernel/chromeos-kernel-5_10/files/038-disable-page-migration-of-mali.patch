@@ -1,0 +1,13 @@
+Index: linux/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
+===================================================================
+--- linux.orig/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
++++ linux/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
+@@ -665,7 +665,7 @@ static int kbase_open(struct inode *inod
+ 		return -ENODEV;
+ 
+ 	/* Set address space operation for page migration */
+-	kbase_mem_migrate_set_address_space_ops(kbdev, filp);
++	//kbase_mem_migrate_set_address_space_ops(kbdev, filp);
+ 
+ 	/* Device-wide firmware load is moved here from probing to comply with
+ 	 * Android GKI vendor guideline.
