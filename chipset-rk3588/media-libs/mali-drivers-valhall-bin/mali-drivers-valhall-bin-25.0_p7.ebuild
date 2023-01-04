@@ -13,6 +13,8 @@ LICENSE="Google-TOS"
 SLOT="0"
 KEYWORDS="-* arm64 arm"
 
+RESTRICT="arm? ( binchecks )"
+
 RDEPEND="
 	>=x11-libs/libdrm-2.4.97
 	!media-libs/mali-drivers-valhall

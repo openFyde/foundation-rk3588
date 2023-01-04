@@ -16,6 +16,8 @@ SLOT="0"
 KEYWORDS="arm arm64"
 IUSE="test-utils asan static +shared-lib"
 
+RESTRICT="arm? ( binchecks )"
+
 RDEPEND=""
 
 DEPEND="${RDEPEND}"

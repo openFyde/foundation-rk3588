@@ -11,6 +11,8 @@ SLOT="0"
 KEYWORDS="*"
 IUSE=""
 
+RESTRICT="arm? ( binchecks )"
+
 RDEPEND=""
 
 DEPEND="${RDEPEND}"
@@ -18,16 +20,16 @@ DEPEND="${RDEPEND}"
 S=${WORKDIR}
 
 src_prepare() {
-  cp ${FILESDIR}/* .
+	cp ${FILESDIR}/* .
 }
 
 src_compiles() {
-  emake || die "emake failed"
+	emake || die "emake failed"
 }
 
 src_install() {
-  exeinto /usr/bin
-  doexe brcm_patchram_plus1  
-  insinto /etc/init
-  doins brcm_bt_patchrom.conf
+	exeinto /usr/bin
+	doexe brcm_patchram_plus1
+	insinto /etc/init
+	doins brcm_bt_patchrom.conf
 }
