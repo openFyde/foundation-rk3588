@@ -69,7 +69,7 @@
 +  .fops = &fops,
 +};
 +
-+int init_dummy_v4l2_devices() {
++int init_dummy_v4l2_devices(void) {
 +  int ret = 0;
 +  ret = misc_register(&v4l2_dec_dev);
 +  if (ret) {
@@ -84,7 +84,7 @@
 +  return 0;
 +}
 +
-+void cleanup_dummy_v4l2_devices() {
++void cleanup_dummy_v4l2_devices(void) {
 +  misc_deregister(&v4l2_dec_dev);
 +  misc_deregister(&v4l2_enc_dev);
 +}

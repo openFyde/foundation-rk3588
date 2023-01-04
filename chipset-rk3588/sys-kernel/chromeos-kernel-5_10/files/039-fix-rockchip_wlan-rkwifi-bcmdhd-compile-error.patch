@@ -1,0 +1,26 @@
+diff --git a/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux_platdev.c b/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux_platdev.c
+index 21aaa1f7b1b8..ab678122d81d 100755
+--- a/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux_platdev.c
++++ b/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux_platdev.c
+@@ -1067,7 +1067,7 @@ static int dhd_wifi_platform_load_usb(void)
+ }
+ #endif /* BCMDBUS */
+ 
+-static int dhd_wifi_platform_load()
++static int dhd_wifi_platform_load(void)
+ {
+ 	int err = 0;
+ 	printf("%s: Enter\n", __FUNCTION__);
+diff --git a/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg_btcoex.c b/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg_btcoex.c
+index 934c20e0a5be..3f334744bac6 100755
+--- a/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg_btcoex.c
++++ b/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg_btcoex.c
+@@ -406,7 +406,7 @@ void* wl_cfg80211_btcoex_init(struct net_device *ndev)
+ 	return btco_inf;
+ }
+ 
+-void wl_cfg80211_btcoex_deinit()
++void wl_cfg80211_btcoex_deinit(void)
+ {
+ 	if (!btcoex_info_loc)
+ 		return;
