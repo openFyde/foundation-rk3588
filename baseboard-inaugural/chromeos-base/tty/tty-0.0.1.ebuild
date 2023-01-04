@@ -1,4 +1,4 @@
-# Copyright 2014 The Chromium OS Authors. All rights reserved.
+# Copyright 2014 The ChromiumOS Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=4
@@ -23,7 +23,7 @@ ALL_PORTS=(
 	ttyS{0..5}
 	ttySAC{0..5}
 	ttyUSB{0..5}
-  ttyFIQ{0..5}
+	ttyFIQ{0..5}
 	tty{0..5}
 )
 
