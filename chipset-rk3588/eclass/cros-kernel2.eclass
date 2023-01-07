@@ -2728,6 +2728,11 @@ cros-kernel2_src_install() {
         ln -sf "Image-${version}" "${install_dir}/boot/Image" || die
         insinto "${install_prefix}/boot/rockchip"
         doins "${dtb_dir}"/rockchip/*.dtb || die
+
+        if [[ -d "${dtb_dir}"/rockchip/overlay ]] ; then
+           insinto "${install_prefix}/boot/rockchip/overlay"
+           doins "${dtb_dir}"/rockchip/overlay/*.dtbo || die
+        fi
 				;;
 		esac
 	fi
