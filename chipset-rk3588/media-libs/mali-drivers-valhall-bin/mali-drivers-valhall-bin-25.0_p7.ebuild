@@ -19,6 +19,7 @@ RDEPEND="
 	>=x11-libs/libdrm-2.4.97
 	!media-libs/mali-drivers-valhall
 	!media-libs/mesa
+    sys-libs/gcc-libs-bin
 "
 
 S=$WORKDIR
