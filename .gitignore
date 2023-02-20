@@ -1,3 +1,5 @@
 *.swp
 update.*
 patches/*
+rk3588-image-maker/Image/*
+rk3588-image-maker/*.img

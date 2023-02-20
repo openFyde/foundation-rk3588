@@ -9,6 +9,7 @@ HOMEPAGE="http://fydeos.com"
 LICENSE="BSD-Google"
 SLOT="0"
 KEYWORDS="*"
+RESTRICT="binchecks"
 IUSE=""
 
 RDEPEND="sys-devel/arc-build"
