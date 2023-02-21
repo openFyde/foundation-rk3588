@@ -1,0 +1,13 @@
+diff --git a/cc/paint/filter_operation.h b/cc/paint/filter_operation.h
+index fdc7a009bf528..9cbed5805c005 100644
+--- a/cc/paint/filter_operation.h
++++ b/cc/paint/filter_operation.h
+@@ -142,7 +142,7 @@ class CC_PAINT_EXPORT FilterOperation {
+   static FilterOperation CreateBlurFilter(
+       float amount,
+       SkTileMode tile_mode = SkTileMode::kDecal) {
+-    return FilterOperation(BLUR, amount, tile_mode);
++    return FilterOperation(BLUR, 0.f /*amount*/, tile_mode);
+   }
+ 
+   static FilterOperation CreateDropShadowFilter(const gfx::Point& offset,
