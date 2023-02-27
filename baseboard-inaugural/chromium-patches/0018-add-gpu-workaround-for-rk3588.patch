@@ -13,3 +13,41 @@ Index: src/gpu/config/software_rendering_list.json
        ]
      },
      {
+Index: src/ui/ozone/platform/drm/gpu/hardware_display_controller.cc
+===================================================================
+--- src.orig/ui/ozone/platform/drm/gpu/hardware_display_controller.cc
++++ src/ui/ozone/platform/drm/gpu/hardware_display_controller.cc
+@@ -78,7 +78,7 @@ std::string NumberToHexString(const T va
+ bool IsRockchipAfbc(uint64_t modifier) {
+   return modifier ==
+          DRM_FORMAT_MOD_ARM_AFBC(AFBC_FORMAT_MOD_BLOCK_SIZE_16x16 |
+-                                 AFBC_FORMAT_MOD_SPARSE | AFBC_FORMAT_MOD_YTR);
++                                /* AFBC_FORMAT_MOD_SPARSE |*/ AFBC_FORMAT_MOD_YTR);
+ }
+ 
+ }  // namespace
+Index: src/gpu/config/gpu_driver_bug_list.json
+===================================================================
+--- src.orig/gpu/config/gpu_driver_bug_list.json
++++ src/gpu/config/gpu_driver_bug_list.json
+@@ -4110,6 +4110,20 @@
+       "features": [
+         "disable_accelerated_av1_encode"
+       ]
++    },
++    {
++      "id": 404,
++      "description": "Limit MSAA quality samples to 4 and storage samples 2 on RK3588",
++      "cr_bugs": [1184340],
++      "os": {
++        "type": "chromeos"
++      },
++      "gl_vendor": "ARM",
++      "gl_renderer": "Mali-L.*",
++      "features": [
++        "max_msaa_sample_count_4",
++        "use_eqaa_storage_samples_2"
++      ]
+     }
+   ]
+ }
