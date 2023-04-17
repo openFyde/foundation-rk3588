@@ -9,12 +9,12 @@ HOMEPAGE=""
 LICENSE="BSD-Fyde"
 SLOT="0"
 KEYWORDS="-* arm64 arm"
-
 RESTRICT="arm? ( binchecks )"
 
 RDEPEND=""
 
 S=${WORKDIR}
+: ${CTARGET:=${CHOST}}
 
 src_install() {
   exeinto /usr/$(get_libdir)
