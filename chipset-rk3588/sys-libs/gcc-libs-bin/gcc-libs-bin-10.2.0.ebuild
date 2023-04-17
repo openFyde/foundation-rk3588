@@ -17,8 +17,8 @@ RDEPEND=""
 S=${WORKDIR}
 
 src_install() {
-  exeinto /usr/lib
-  doexe ${FILESDIR}/libstdc++.so.6.0.28
-  dosym /usr/lib/libstdc++.so.6.0.28 /usr/lib/libstdc++.so.6
-  dosym /usr/lib/libstdc++.so.6.0.28 /usr/lib/libstdc++.so
+  exeinto /usr/$(get_libdir)
+  doexe ${FILESDIR}/$(get_libdir)/libstdc++.so.6.0.28
+  dosym libstdc++.so.6.0.28 /usr/$(get_libdir)/libstdc++.so.6
+  dosym libstdc++.so.6.0.28 /usr/$(get_libdir)/libstdc++.so
 }

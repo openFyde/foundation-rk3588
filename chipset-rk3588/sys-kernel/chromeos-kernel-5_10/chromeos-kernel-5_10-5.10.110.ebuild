@@ -34,3 +34,17 @@ KEYWORDS="*"
 #
 # The coolest prime number is: 151
 
+src_install() {
+  local kernel_arch=${CHROMEOS_KERNEL_ARCH:-$(tc-arch-kernel)}
+  local kernel_dir="$(cros-workon_get_build_dir)"
+  local dtb_dir="${kernel_dir}/arch/${kernel_arch}/boot/dts"
+  local version=$(kernelrelease)
+  cros-kernel2_src_install
+  insinto /boot/rockchip
+  dosym Image-${version}  /boot/Image
+  doins $dtb_dir/rockchip/*.dtb || die
+  if [[ -d "${dtb_dir}"/rockchip/overlay ]] ; then
+    insinto ${install_prefix}/boot/rockchip/overlay
+    doins "${dtb_dir}"/rockchip/overlay/*.dtbo || die
+  fi
+}

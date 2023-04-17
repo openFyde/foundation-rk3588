@@ -1,6 +1,8 @@
---- a/media/gpu/v4l2/generic_v4l2_device.cc
-+++ b/media/gpu/v4l2/generic_v4l2_device.cc
-@@ -110,7 +110,7 @@
+Index: src/media/gpu/v4l2/generic_v4l2_device.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/generic_v4l2_device.cc
++++ src/media/gpu/v4l2/generic_v4l2_device.cc
+@@ -110,7 +110,7 @@ bool GenericV4L2Device::Poll(bool poll_d
      VPLOGF(1) << "poll() failed";
      return false;
    }
@@ -9,7 +11,7 @@
    return true;
  }
  
-@@ -120,10 +120,19 @@
+@@ -120,10 +120,19 @@ void* GenericV4L2Device::Mmap(void* addr
                                int flags,
                                unsigned int offset) {
    DCHECK(device_fd_.is_valid());
@@ -29,7 +31,7 @@
    munmap(addr, len);
  }
  
-@@ -434,7 +443,7 @@
+@@ -434,7 +443,7 @@ bool GenericV4L2Device::OpenDevicePath(c
      return false;
  
    if (V4L2Device::UseLibV4L2()) {
@@ -38,17 +40,21 @@
          HANDLE_EINTR(v4l2_fd_open(device_fd_.get(), V4L2_DISABLE_CONVERSION)) !=
              -1) {
        DVLOGF(3) << "Using libv4l2 for " << path;
---- a/media/gpu/v4l2/v4l2.sig
-+++ b/media/gpu/v4l2/v4l2.sig
+Index: src/media/gpu/v4l2/v4l2.sig
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2.sig
++++ src/media/gpu/v4l2/v4l2.sig
 @@ -8,3 +8,5 @@
  LIBV4L_PUBLIC int v4l2_close(int fd);
  LIBV4L_PUBLIC int v4l2_ioctl(int fd, unsigned long int request, ...);
  LIBV4L_PUBLIC int v4l2_fd_open(int fd, int v4l2_flags);
 +LIBV4L_PUBLIC void *v4l2_mmap(void *start, size_t length, int prot, int flags, int fd, int64_t offset);
 +LIBV4L_PUBLIC int v4l2_munmap(void *_start, size_t length);
---- a/content/gpu/gpu_sandbox_hook_linux.cc
-+++ b/content/gpu/gpu_sandbox_hook_linux.cc
-@@ -99,6 +99,7 @@
+Index: src/content/gpu/gpu_sandbox_hook_linux.cc
+===================================================================
+--- src.orig/content/gpu/gpu_sandbox_hook_linux.cc
++++ src/content/gpu/gpu_sandbox_hook_linux.cc
+@@ -99,6 +99,7 @@ static const char kLibTegraPath[] = "/us
  static const char kLibV4l2Path[] = "/usr/lib64/libv4l2.so";
  static const char kLibV4lEncPluginPath[] =
      "/usr/lib64/libv4l/plugins/libv4l-encplugin.so";
@@ -56,7 +62,7 @@
  #else
  static const char kLibGlesPath[] = "/usr/lib/libGLESv2.so.2";
  static const char kLibEglPath[] = "/usr/lib/libEGL.so.1";
-@@ -107,7 +108,9 @@
+@@ -107,7 +108,9 @@ static const char kLibTegraPath[] = "/us
  static const char kLibV4l2Path[] = "/usr/lib/libv4l2.so";
  static const char kLibV4lEncPluginPath[] =
      "/usr/lib/libv4l/plugins/libv4l-encplugin.so";
@@ -66,7 +72,7 @@
  
  constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
  
-@@ -152,6 +155,11 @@
+@@ -152,6 +155,11 @@ void AddV4L2GpuPermissions(
            BrokerFilePermission::ReadWrite(mediaDevicePath.str()));
      }
    }
@@ -78,7 +84,7 @@
  
    // Image processor used on ARM platforms.
    static const char kDevImageProc0Path[] = "/dev/image-proc0";
-@@ -304,6 +312,8 @@
+@@ -304,6 +312,8 @@ void AddArmGpuPermissions(std::vector<Br
    permissions->push_back(BrokerFilePermission::ReadOnly(kLdSoCache));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibGlesPath));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibEglPath));
@@ -87,7 +93,7 @@
  
    AddArmMaliGpuPermissions(permissions);
  }
-@@ -545,11 +555,18 @@
+@@ -545,11 +555,18 @@ void LoadV4L2Libraries(
    DCHECK(UseV4L2Codec());
  
    if (IsAcceleratedVideoEnabled(options) && UseLibV4L2()) {
@@ -109,9 +115,11 @@
      }
    }
  }
---- a/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
-+++ b/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
-@@ -42,6 +42,9 @@
+Index: src/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
+===================================================================
+--- src.orig/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
++++ src/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
+@@ -42,6 +42,9 @@ ResultExpr CrosArmGpuProcessPolicy::Eval
  #endif  // defined(__arm__) || defined(__aarch64__)
  
    switch (sysno) {
@@ -121,13 +129,14 @@
  #if defined(__arm__) || defined(__aarch64__)
      // ARM GPU sandbox is started earlier so we need to allow networking
      // in the sandbox.
-@@ -52,6 +55,13 @@
+@@ -52,6 +55,14 @@ ResultExpr CrosArmGpuProcessPolicy::Eval
      case __NR_sched_setscheduler:
      case __NR_sysinfo:
      case __NR_uname:
 +    case __NR_ioctl:
 +    case __NR_madvise:
 +    case __NR_futex:
++    case __NR_process_vm_readv:
 +#if defined(__arm__)
 +    // Only available on ARM 32bit devices
 +    case __NR_mmap2:
