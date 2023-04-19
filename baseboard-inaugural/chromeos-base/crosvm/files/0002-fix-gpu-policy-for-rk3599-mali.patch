@@ -11,3 +11,12 @@ index 33c36483..0026a602 100644
  # Rules for Vulkan loader / layers
  access: 1
  getgid32: 1
+diff --git a/seccomp/aarch64/gpu_common.policy b/seccomp/aarch64/gpu_common.policy
+index 000f7ace5844..dd5a2e952649 100644
+--- a/seccomp/aarch64/gpu_common.policy
++++ b/seccomp/aarch64/gpu_common.policy
+@@ -97,3 +97,4 @@ faccessat: 1
+ faccessat2: 1
+ getgid: 1
+ getegid: 1
++pread64: 1
