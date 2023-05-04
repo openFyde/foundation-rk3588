@@ -18,7 +18,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/input/touchscreen/gt1x/gt1x.c
 +++ kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
-@@ -166,11 +166,14 @@ void gt1x_touch_down(s32 x, s32 y, s32 s
+@@ -167,11 +167,14 @@ void gt1x_touch_down(s32 x, s32 y, s32 s
  
  	if (gt1x_ics_slot_report) {
  		input_mt_slot(input_dev, id);
@@ -33,7 +33,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
  	} else {
  		input_report_key(input_dev, BTN_TOUCH, 1);
  
-@@ -199,6 +202,7 @@ void gt1x_touch_up(s32 id)
+@@ -200,6 +203,7 @@ void gt1x_touch_up(s32 id)
  {
  	if (gt1x_ics_slot_report) {
  		input_mt_slot(input_dev, id);
@@ -41,7 +41,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
  		input_report_abs(input_dev, ABS_MT_TRACKING_ID, -1);
  	} else {
  		input_report_key(input_dev, BTN_TOUCH, 0);
-@@ -471,7 +475,7 @@ static s8 gt1x_request_input_dev(void)
+@@ -494,7 +498,7 @@ static s8 gt1x_request_input_dev(void)
  	input_dev->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS);
  	if (gt1x_ics_slot_report) {
  #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 7, 0))
@@ -50,7 +50,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
  #else
  		input_mt_init_slots(input_dev, 16);
  #endif
-@@ -494,17 +498,18 @@ static s8 gt1x_request_input_dev(void)
+@@ -517,17 +521,18 @@ static s8 gt1x_request_input_dev(void)
  #if GTP_CHANGE_X2Y
  	input_set_abs_params(input_dev, ABS_MT_POSITION_X, 0, gt1x_abs_y_max, 0, 0);
  	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, 0, gt1x_abs_x_max, 0, 0);
@@ -76,7 +76,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x_generic.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/input/touchscreen/gt1x/gt1x_generic.c
 +++ kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x_generic.c
-@@ -1311,6 +1311,8 @@ s32 gt1x_touch_event_handler(u8 *data, s
+@@ -1315,6 +1315,8 @@ s32 gt1x_touch_event_handler(u8 *data, s
  
  	if (CHK_BIT(cur_event, BIT_TOUCH_KEY | BIT_TOUCH)
  			|| CHK_BIT(pre_event, BIT_TOUCH_KEY | BIT_TOUCH)) {

@@ -11,7 +11,7 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
  
  	return IRQ_HANDLED;
  };
-@@ -564,8 +564,32 @@ static int wait_locked_card(struct devic
+@@ -573,8 +573,32 @@ static int wait_locked_card(struct devic
  	return ret;
  }
  

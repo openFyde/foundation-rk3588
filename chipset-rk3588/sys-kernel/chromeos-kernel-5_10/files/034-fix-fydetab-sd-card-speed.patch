@@ -1,8 +1,8 @@
-diff --git a/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi b/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-index 9e9ec74cd131..fd9ff056796e 100644
---- a/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-+++ b/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-@@ -428,6 +428,7 @@ &sdmmc {
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+@@ -428,6 +428,7 @@
    max-frequency = <150000000>;
    no-sdio;
    no-mmc;
@@ -10,13 +10,13 @@ index 9e9ec74cd131..fd9ff056796e 100644
    cap-sd-highspeed;
    cap-mmc-highspeed;
   // clock-frequency = <100000000>;
-diff --git a/drivers/soc/rockchip/Kconfig b/drivers/soc/rockchip/Kconfig
-index 0773f56a9dc4..0f21c132ea94 100644
---- a/drivers/soc/rockchip/Kconfig
-+++ b/drivers/soc/rockchip/Kconfig
-@@ -268,4 +268,9 @@ config RK_MEMBLOCK_PROCFS
- 	  Extend memblock procfs to show size of each memblock, and shows the
- 	  result of total size by KiB format.
+Index: kernel-rockchip/drivers/soc/rockchip/Kconfig
+===================================================================
+--- kernel-rockchip.orig/drivers/soc/rockchip/Kconfig
++++ kernel-rockchip/drivers/soc/rockchip/Kconfig
+@@ -275,4 +275,9 @@ config RK_MEMBLOCK_PROCFS
+ 
+ endmenu
  
 +config ROCKCHIP_FYDETAB_GRF
 +	bool "initialize grf with specific values on FydeTab"
@@ -24,11 +24,11 @@ index 0773f56a9dc4..0f21c132ea94 100644
 +	help
 +	  If unsure, say n.
  endif
-diff --git a/drivers/soc/rockchip/grf.c b/drivers/soc/rockchip/grf.c
-index 97c276b6b416..f7ca16cbdf91 100644
---- a/drivers/soc/rockchip/grf.c
-+++ b/drivers/soc/rockchip/grf.c
-@@ -229,10 +229,15 @@ static const struct rockchip_grf_info rk3399_grf __initconst = {
+Index: kernel-rockchip/drivers/soc/rockchip/grf.c
+===================================================================
+--- kernel-rockchip.orig/drivers/soc/rockchip/grf.c
++++ kernel-rockchip/drivers/soc/rockchip/grf.c
+@@ -229,10 +229,15 @@ static const struct rockchip_grf_info rk
  	.num_values = ARRAY_SIZE(rk3399_defaults),
  };
  

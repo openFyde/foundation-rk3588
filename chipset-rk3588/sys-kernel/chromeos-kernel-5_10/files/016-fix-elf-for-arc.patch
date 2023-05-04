@@ -29,7 +29,7 @@ Index: kernel-rockchip/fs/binfmt_elf.c
  			/* There was a PT_LOAD segment with p_memsz > p_filesz
  			   before this one. Map anonymous pages, if needed,
  			   and clear the area.  */
-@@ -1494,7 +1494,7 @@ static void fill_elf_note_phdr(struct el
+@@ -1495,7 +1495,7 @@ static void fill_elf_note_phdr(struct el
  	phdr->p_align = 0;
  }
  
@@ -38,7 +38,7 @@ Index: kernel-rockchip/fs/binfmt_elf.c
  		unsigned int sz, void *data)
  {
  	note->name = name;
-@@ -1546,7 +1546,7 @@ static int fill_psinfo(struct elf_prpsin
+@@ -1547,7 +1547,7 @@ static int fill_psinfo(struct elf_prpsin
  {
  	const struct cred *cred;
  	unsigned int i, len;
@@ -47,7 +47,7 @@ Index: kernel-rockchip/fs/binfmt_elf.c
  	/* first copy the parameters from user space */
  	memset(psinfo, 0, sizeof(struct elf_prpsinfo));
  
-@@ -1580,7 +1580,7 @@ static int fill_psinfo(struct elf_prpsin
+@@ -1581,7 +1581,7 @@ static int fill_psinfo(struct elf_prpsin
  	SET_GID(psinfo->pr_gid, from_kgid_munged(cred->user_ns, cred->gid));
  	rcu_read_unlock();
  	strncpy(psinfo->pr_fname, p->comm, sizeof(psinfo->pr_fname));
@@ -56,7 +56,7 @@ Index: kernel-rockchip/fs/binfmt_elf.c
  	return 0;
  }
  
-@@ -1974,8 +1974,8 @@ static int elf_dump_thread_status(long s
+@@ -1975,8 +1975,8 @@ static int elf_dump_thread_status(long s
  	t->num_notes = 0;
  
  	fill_prstatus(&t->prstatus, p, signr);

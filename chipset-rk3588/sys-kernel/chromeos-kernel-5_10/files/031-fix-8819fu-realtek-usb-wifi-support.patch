@@ -2,10 +2,10 @@ Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/Kconfig
 +++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/Kconfig
-@@ -38,5 +38,6 @@ endif
- 
+@@ -39,5 +39,6 @@ endif
  source "drivers/net/wireless/rockchip_wlan/cywdhd/Kconfig"
  source "drivers/net/wireless/rockchip_wlan/infineon/Kconfig"
+ source "drivers/net/wireless/rockchip_wlan/rtl8821cu/Kconfig"
 +source "drivers/net/wireless/rockchip_wlan/rtl8188fu/Kconfig"
  
  endif # WL_ROCKCHIP
@@ -13,10 +13,10 @@ Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/Makefile
 +++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/Makefile
-@@ -2,3 +2,4 @@
- obj-$(CONFIG_BCMDHD)	+= rkwifi/
+@@ -3,3 +3,4 @@ obj-$(CONFIG_BCMDHD)	+= rkwifi/
  obj-$(CONFIG_CYW_BCMDHD)	+= cywdhd/
  obj-$(CONFIG_INFINEON_DHD)	+= infineon/
+ obj-$(CONFIG_RTL8821CU) += rtl8821cu/
 +obj-$(CONFIG_RTL8188FU) += rtl8188fu/
 Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8188fu/Makefile
 ===================================================================

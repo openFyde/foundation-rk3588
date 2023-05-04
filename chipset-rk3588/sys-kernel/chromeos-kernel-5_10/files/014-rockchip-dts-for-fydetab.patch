@@ -1,5 +1,7 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
+===================================================================
 --- /dev/null
-+++ b/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
 @@ -0,0 +1,450 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -451,8 +453,10 @@
 +		};
 +	};
 +};
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+===================================================================
 --- /dev/null
-+++ b/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 @@ -0,0 +1,562 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1016,8 +1020,10 @@
 +  /delete-property/ rockchip,plane-mask;
 +  /delete-property/ rockchip,primary-plane;
 +};
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c-linux.dts
+===================================================================
 --- /dev/null
-+++ b/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c-linux.dts
 @@ -0,0 +1,15 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1034,8 +1040,10 @@
 +	model = "Rockchip RK3588S TABLET 12C Board";
 +	compatible = "rockchip,rk3588s-tablet-12c-linux", "rockchip,rk3588";
 +};
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
 --- /dev/null
-+++ b/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 @@ -0,0 +1,1013 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -2050,9 +2058,11 @@
 +&vp2_out_dsi0 {
 +	status = "okay";
 +};
---- a/arch/arm64/boot/dts/rockchip/Makefile
-+++ b/arch/arm64/boot/dts/rockchip/Makefile
-@@ -114,6 +114,7 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
+@@ -142,6 +142,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-nv
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-ipc-6x-linux.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-linux.dtb
@@ -2060,8 +2070,10 @@
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-linux-ipc.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-lt6911uxe.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb2-lp4-v10.dtb
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-fydetab.c
+===================================================================
 --- /dev/null
-+++ b/drivers/gpu/drm/panel/panel-fydetab.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-fydetab.c
 @@ -0,0 +1,5149 @@
 +/*
 + * Copyright (C) 2013, NVIDIA Corporation.  All rights reserved.
@@ -7212,9 +7224,11 @@
 +MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 +MODULE_DESCRIPTION("DRM Driver for Simple Panels");
 +MODULE_LICENSE("GPL and additional rights");
---- a/drivers/gpu/drm/panel/Makefile
-+++ b/drivers/gpu/drm/panel/Makefile
-@@ -5,6 +5,7 @@
+Index: kernel-rockchip/drivers/gpu/drm/panel/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/Makefile
++++ kernel-rockchip/drivers/gpu/drm/panel/Makefile
+@@ -5,6 +5,7 @@ obj-$(CONFIG_DRM_PANEL_BOE_HIMAX8279D) +
  obj-$(CONFIG_DRM_PANEL_BOE_TV101WUM_NL6) += panel-boe-tv101wum-nl6.o
  obj-$(CONFIG_DRM_PANEL_LVDS) += panel-lvds.o
  obj-$(CONFIG_DRM_PANEL_SIMPLE) += panel-simple.o
@@ -7222,9 +7236,11 @@
  obj-$(CONFIG_DRM_PANEL_ELIDA_KD35T133) += panel-elida-kd35t133.o
  obj-$(CONFIG_DRM_PANEL_FEIXIN_K101_IM2BA02) += panel-feixin-k101-im2ba02.o
  obj-$(CONFIG_DRM_PANEL_FEIYANG_FY07024DI26A30D) += panel-feiyang-fy07024di26a30d.o
---- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-+++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -6647,7 +6647,14 @@
+Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
++++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
+@@ -6908,7 +6908,14 @@ static int vop2_calc_dsc_clk(struct drm_
  	 * so when txp_clk is equal to v_pixclk, we set dsc_cds = crtc_clock / 4,
  	 * otherwise dsc_cds = crtc_clock / 8;
  	 */
@@ -7240,7 +7256,7 @@
  
  	return 0;
  }
-@@ -6754,7 +6761,13 @@
+@@ -7015,7 +7022,13 @@ static void vop2_crtc_enable_dsc(struct
  	bool mipi_ds_mode = false;
  	uint32_t *reg_base = vop2->regs;
  	u32 offset = 0;
@@ -7255,7 +7271,7 @@
  	if (!vop2->data->nr_dscs) {
  		DRM_WARN("Unsupported DSC\n");
  
-@@ -6864,8 +6877,14 @@
+@@ -7125,8 +7138,14 @@ static void vop2_crtc_enable_dsc(struct
  		 * dsc_htotal = htotal * (1 << dclk_core->div_val) /
  				((1 << dsc_txp_clk->div_val) * (1 << dsc_cds_clk->div_val))
  		*/
@@ -7272,8 +7288,10 @@
  		val = dsc_htotal << 16 | dsc_hsync;
  		VOP_MODULE_SET(vop2, dsc, dsc_htotal_pw, val);
  
---- a/drivers/misc/Kconfig
-+++ b/drivers/misc/Kconfig
+Index: kernel-rockchip/drivers/misc/Kconfig
+===================================================================
+--- kernel-rockchip.orig/drivers/misc/Kconfig
++++ kernel-rockchip/drivers/misc/Kconfig
 @@ -5,6 +5,12 @@
  
  menu "Misc devices"
@@ -7287,17 +7305,21 @@
  config RK803
  	tristate "RK803"
  	default n
---- a/drivers/misc/Makefile
-+++ b/drivers/misc/Makefile
-@@ -59,3 +59,5 @@
+Index: kernel-rockchip/drivers/misc/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/misc/Makefile
++++ kernel-rockchip/drivers/misc/Makefile
+@@ -59,3 +59,5 @@ obj-$(CONFIG_UACCE)		+= uacce/
  obj-$(CONFIG_XILINX_SDFEC)	+= xilinx_sdfec.o
  obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
  obj-$(CONFIG_UID_SYS_STATS)	+= uid_sys_stats.o
 +obj-$(CONFIG_JW_IO)     += jw_io_core.o
 +obj-y   += redriver/
---- a/drivers/net/usb/Makefile
-+++ b/drivers/net/usb/Makefile
-@@ -37,6 +37,7 @@
+Index: kernel-rockchip/drivers/net/usb/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/net/usb/Makefile
++++ kernel-rockchip/drivers/net/usb/Makefile
+@@ -37,6 +37,7 @@ obj-$(CONFIG_USB_NET_CX82310_ETH)	+= cx8
  obj-$(CONFIG_USB_NET_CDC_NCM)	+= cdc_ncm.o
  obj-$(CONFIG_USB_NET_HUAWEI_CDC_NCM)	+= huawei_cdc_ncm.o
  obj-$(CONFIG_USB_VL600)		+= lg-vl600.o
@@ -7305,12 +7327,16 @@
  obj-$(CONFIG_USB_NET_QMI_WWAN)	+= qmi_wwan.o
  obj-$(CONFIG_USB_NET_CDC_MBIM)	+= cdc_mbim.o
  obj-$(CONFIG_USB_NET_CH9200)	+= ch9200.o
+Index: kernel-rockchip/drivers/misc/redriver/Makefile
+===================================================================
 --- /dev/null
-+++ b/drivers/misc/redriver/Makefile
++++ kernel-rockchip/drivers/misc/redriver/Makefile
 @@ -0,0 +1 @@
 +obj-y	+= pi3dpx1207c.o
+Index: kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
+===================================================================
 --- /dev/null
-+++ b/drivers/misc/redriver/pi3dpx1207c.c
++++ kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
 @@ -0,0 +1,136 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -7448,8 +7474,10 @@
 +MODULE_AUTHOR("Heiko Stuebner <heiko@sntech.de>");
 +MODULE_DESCRIPTION("pi3dpx1207c redriver driver");
 +MODULE_LICENSE("GPL");
+Index: kernel-rockchip/drivers/misc/jw_io_core.c
+===================================================================
 --- /dev/null
-+++ b/drivers/misc/jw_io_core.c
++++ kernel-rockchip/drivers/misc/jw_io_core.c
 @@ -0,0 +1,116 @@
 +/*
 + * Copyright (C) 2014 Rockchip Corporation.
@@ -7567,8 +7595,10 @@
 +MODULE_AUTHOR("Bin Yang <yangbin@rock-chips.com>");
 +MODULE_DESCRIPTION("USB modem GPIO Driver");
 +MODULE_LICENSE("GPL");
+Index: kernel-rockchip/drivers/net/usb/qmi_wwan_q.c
+===================================================================
 --- /dev/null
-+++ b/drivers/net/usb/qmi_wwan_q.c
++++ kernel-rockchip/drivers/net/usb/qmi_wwan_q.c
 @@ -0,0 +1,2429 @@
 +/*
 + * Copyright (c) 2012  Bjørn Mork <bjorn@mork.no>
@@ -9999,9 +10029,11 @@
 +MODULE_DESCRIPTION("Qualcomm MSM Interface (QMI) WWAN driver");
 +MODULE_LICENSE("GPL");
 +MODULE_VERSION(QUECTEL_WWAN_VERSION);
---- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
-+++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-@@ -135,6 +135,7 @@
+Index: kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
+===================================================================
+--- kernel-rockchip.orig/drivers/phy/rockchip/phy-rockchip-usbdp.c
++++ kernel-rockchip/drivers/phy/rockchip/phy-rockchip-usbdp.c
+@@ -135,6 +135,7 @@ struct rockchip_udphy {
  	u32 dp_aux_din_sel;
  	bool dp_sink_hpd_sel;
  	bool dp_sink_hpd_cfg;
@@ -10009,7 +10041,7 @@
  	u8 bw;
  	int id;
  
-@@ -356,6 +357,21 @@
+@@ -356,6 +357,21 @@ static const struct reg_sequence rk3588_
  	{0x0024, 0x6e},
  };
  
@@ -10031,7 +10063,7 @@
  static inline int grfreg_write(struct regmap *base,
  			       const struct udphy_grf_reg *reg, bool en)
  {
-@@ -559,8 +575,13 @@
+@@ -559,8 +575,13 @@ static int upphy_set_typec_default_mappi
  		udphy->lane_mux_sel[1] = PHY_LANE_MUX_DP;
  		udphy->lane_mux_sel[2] = PHY_LANE_MUX_USB;
  		udphy->lane_mux_sel[3] = PHY_LANE_MUX_USB;
@@ -10047,7 +10079,7 @@
  		gpiod_set_value_cansleep(udphy->sbu1_dc_gpio, 1);
  		gpiod_set_value_cansleep(udphy->sbu2_dc_gpio, 0);
  	} else {
-@@ -808,6 +829,8 @@
+@@ -808,6 +829,8 @@ static int udphy_parse_dt(struct rockchi
  		udphy->hs = maximum_speed <= USB_SPEED_HIGH ? true : false;
  	}
  
@@ -10056,7 +10088,7 @@
  	ret = udphy_clk_init(udphy, dev);
  	if (ret)
  		return ret;
-@@ -1071,6 +1094,10 @@
+@@ -1071,6 +1094,10 @@ static int usbdp_typec_mux_set(struct ty
  	struct rockchip_udphy *udphy = typec_mux_get_drvdata(mux);
  	const struct rockchip_udphy_cfg *cfg = udphy->cfgs;
  	u8 mode;
@@ -10067,7 +10099,7 @@
  
  	mutex_lock(&udphy->mutex);
  
-@@ -1386,7 +1413,6 @@
+@@ -1386,7 +1413,6 @@ static int rk3588_udphy_init(struct rock
  		dev_err(udphy->dev, "refclk set error %d\n", ret);
  		goto assert_apb;
  	}
@@ -10075,9 +10107,11 @@
  	/* Step 3: configure lane mux */
  	regmap_update_bits(udphy->pma_regmap, CMN_LANE_MUX_AND_EN_OFFSET,
  			   CMN_DP_LANE_MUX_ALL | CMN_DP_LANE_EN_ALL,
---- a/drivers/gpu/drm/drm_mipi_dsi.c
-+++ b/drivers/gpu/drm/drm_mipi_dsi.c
-@@ -885,6 +885,23 @@
+Index: kernel-rockchip/drivers/gpu/drm/drm_mipi_dsi.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/drm_mipi_dsi.c
++++ kernel-rockchip/drivers/gpu/drm/drm_mipi_dsi.c
+@@ -886,6 +886,23 @@ int mipi_dsi_dcs_get_pixel_format(struct
  }
  EXPORT_SYMBOL(mipi_dsi_dcs_get_pixel_format);
  
@@ -10101,9 +10135,11 @@
  /**
   * mipi_dsi_dcs_enter_sleep_mode() - disable all unnecessary blocks inside the
   *    display module except interface communication
---- a/include/drm/drm_mipi_dsi.h
-+++ b/include/drm/drm_mipi_dsi.h
-@@ -277,6 +277,7 @@
+Index: kernel-rockchip/include/drm/drm_mipi_dsi.h
+===================================================================
+--- kernel-rockchip.orig/include/drm/drm_mipi_dsi.h
++++ kernel-rockchip/include/drm/drm_mipi_dsi.h
+@@ -277,6 +277,7 @@ ssize_t mipi_dsi_dcs_read(struct mipi_ds
  int mipi_dsi_dcs_nop(struct mipi_dsi_device *dsi);
  int mipi_dsi_dcs_soft_reset(struct mipi_dsi_device *dsi);
  int mipi_dsi_dcs_get_power_mode(struct mipi_dsi_device *dsi, u8 *mode);
@@ -10111,9 +10147,11 @@
  int mipi_dsi_dcs_get_pixel_format(struct mipi_dsi_device *dsi, u8 *format);
  int mipi_dsi_dcs_enter_sleep_mode(struct mipi_dsi_device *dsi);
  int mipi_dsi_dcs_exit_sleep_mode(struct mipi_dsi_device *dsi);
---- a/drivers/power/supply/sbs-battery.c
-+++ b/drivers/power/supply/sbs-battery.c
-@@ -809,6 +809,8 @@
+Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
+===================================================================
+--- kernel-rockchip.orig/drivers/power/supply/sbs-battery.c
++++ kernel-rockchip/drivers/power/supply/sbs-battery.c
+@@ -809,6 +809,8 @@ static int sbs_get_chemistry(struct i2c_
  		val->intval = POWER_SUPPLY_TECHNOLOGY_NiCd;
  	else if (!strncasecmp(chemistry, "NiMH", 4))
  		val->intval = POWER_SUPPLY_TECHNOLOGY_NiMH;
@@ -10122,9 +10160,11 @@
  	else
  		val->intval = POWER_SUPPLY_TECHNOLOGY_UNKNOWN;
  
---- a/drivers/gpu/drm/panel/Kconfig
-+++ b/drivers/gpu/drm/panel/Kconfig
-@@ -507,4 +507,12 @@
+Index: kernel-rockchip/drivers/gpu/drm/panel/Kconfig
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/Kconfig
++++ kernel-rockchip/drivers/gpu/drm/panel/Kconfig
+@@ -507,4 +507,12 @@ config DRM_PANEL_XINPENG_XPP055C272
  	  Say Y here if you want to enable support for the Xinpeng
  	  XPP055C272 controller for 720x1280 LCD panels with MIPI/RGB/SPI
  	  system interfaces.
@@ -10137,9 +10177,11 @@
 +    Say Y here if you want to enable support for FydeTab 1600x2600 LCD panel.
 +
  endmenu
---- a/drivers/net/usb/Kconfig
-+++ b/drivers/net/usb/Kconfig
-@@ -16,85 +16,85 @@
+Index: kernel-rockchip/drivers/net/usb/Kconfig
+===================================================================
+--- kernel-rockchip.orig/drivers/net/usb/Kconfig
++++ kernel-rockchip/drivers/net/usb/Kconfig
+@@ -16,85 +16,85 @@ config USB_CATC
  	tristate "USB CATC NetMate-based Ethernet device support"
  	select CRC32
  	help
@@ -10286,7 +10328,7 @@
  
  config USB_RTL8152
  	tristate "Realtek RTL8152/RTL8153 Based USB Ethernet Adapters"
-@@ -104,12 +104,12 @@
+@@ -104,12 +104,12 @@ config USB_RTL8152
  	select CRYPTO_HASH
  	select CRYPTO_SHA256
  	help
@@ -10304,7 +10346,7 @@
  
  config USB_LAN78XX
  	tristate "Microchip LAN78XX Based USB Ethernet Adapters"
-@@ -119,50 +119,50 @@
+@@ -119,50 +119,50 @@ config USB_LAN78XX
  	select FIXED_PHY
  	select CRC32
  	help
@@ -10390,7 +10432,7 @@
  
  config USB_NET_AX8817X
  	tristate "ASIX AX88xxx Based USB 2.0 Ethernet Adapters"
-@@ -171,28 +171,28 @@
+@@ -171,28 +171,28 @@ config USB_NET_AX8817X
  	select PHYLIB
  	default y
  	help
@@ -10439,7 +10481,7 @@
  
  config USB_NET_AX88179_178A
  	tristate "ASIX AX88179/178A USB 3.0/2.0 to Gigabit Ethernet"
-@@ -201,58 +201,58 @@
+@@ -201,58 +201,58 @@ config USB_NET_AX88179_178A
  	select PHYLIB
  	default y
  	help
@@ -10537,7 +10579,7 @@
  
  config USB_NET_CDC_NCM
  	tristate "CDC NCM support"
-@@ -260,19 +260,19 @@
+@@ -260,19 +260,19 @@ config USB_NET_CDC_NCM
  	select USB_NET_CDCETHER
  	default y
  	help
@@ -10570,7 +10612,7 @@
  
  config USB_NET_HUAWEI_CDC_NCM
  	tristate "Huawei NCM embedded AT channel support"
-@@ -295,48 +295,48 @@
+@@ -295,48 +295,48 @@ config USB_NET_CDC_MBIM
  	select USB_WDM
  	select USB_NET_CDC_NCM
  	help
@@ -10640,7 +10682,7 @@
  
  config USB_NET_SMSC75XX
  	tristate "SMSC LAN75XX based USB 2.0 gigabit ethernet devices"
-@@ -345,8 +345,8 @@
+@@ -345,8 +345,8 @@ config USB_NET_SMSC75XX
  	select CRC16
  	select CRC32
  	help
@@ -10651,7 +10693,7 @@
  
  config USB_NET_SMSC95XX
  	tristate "SMSC LAN95XX based USB 2.0 10/100 ethernet devices"
-@@ -357,26 +357,26 @@
+@@ -357,26 +357,26 @@ config USB_NET_SMSC95XX
  	select CRC16
  	select CRC32
  	help
@@ -10686,7 +10728,7 @@
  
  config USB_NET_PLUSB
  	tristate "Prolific PL-2301/2302/25A1/27A1 based cables"
-@@ -384,31 +384,31 @@
+@@ -384,31 +384,31 @@ config USB_NET_PLUSB
  	# are ever resolved ... then remove "experimental"
  	depends on USB_USBNET
  	help
@@ -10732,7 +10774,7 @@
  
  config USB_NET_CDC_SUBSET_ENABLE
  	tristate
-@@ -419,32 +419,32 @@
+@@ -419,32 +419,32 @@ config USB_NET_CDC_SUBSET
  	depends on USB_USBNET
  	default y
  	help
@@ -10779,7 +10821,7 @@
  
  config USB_BELKIN
  	bool "eTEK based host-to-host cables (Advance, Belkin, ...)"
-@@ -452,9 +452,9 @@
+@@ -452,9 +452,9 @@ config USB_BELKIN
  	select USB_NET_CDC_SUBSET_ENABLE
  	default y
  	help
@@ -10792,7 +10834,7 @@
  
  config USB_ARMLINUX
  	bool "Embedded ARM Linux links (iPaq, ...)"
-@@ -462,33 +462,33 @@
+@@ -462,33 +462,33 @@ config USB_ARMLINUX
  	select USB_NET_CDC_SUBSET_ENABLE
  	default y
  	help
@@ -10841,7 +10883,7 @@
  
  config USB_NET_ZAURUS
  	tristate "Sharp Zaurus (stock ROMs) and compatible"
-@@ -497,140 +497,147 @@
+@@ -497,140 +497,147 @@ config USB_NET_ZAURUS
  	select CRC32
  	default y
  	help

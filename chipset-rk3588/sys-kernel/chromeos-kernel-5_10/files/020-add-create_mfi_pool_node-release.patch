@@ -15,11 +15,11 @@ Change-Id: I9fcd7e35ca75058a4d871612f69297bc60a7b96e
  .../bifrost/device/backend/mali_kbase_device_csf.c |  9 ++-
  5 files changed, 117 insertions(+), 15 deletions(-)
 
-Index: linux/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
 ===================================================================
---- linux.orig/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
-+++ linux/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
-@@ -2509,21 +2509,22 @@ KBASE_EXPORT_TEST_API(kbase_pm_disable_i
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
++++ kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
+@@ -2577,21 +2577,22 @@ KBASE_EXPORT_TEST_API(kbase_pm_disable_i
  #if MALI_USE_CSF
  static void update_user_reg_page_mapping(struct kbase_device *kbdev)
  {
@@ -50,11 +50,11 @@ Index: linux/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_pm_driver.c
  		}
  	}
  
-Index: linux/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
 ===================================================================
---- linux.orig/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
-+++ linux/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
-@@ -115,6 +115,73 @@ static void kbase_context_term_partial(
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
++++ kernel-rockchip/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
+@@ -117,6 +117,73 @@ static void kbase_context_term_partial(
  	}
  }
  
@@ -128,7 +128,7 @@ Index: linux/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
  struct kbase_context *kbase_create_context(struct kbase_device *kbdev,
  	bool is_compat,
  	base_context_create_flags const flags,
-@@ -141,6 +208,12 @@ struct kbase_context *kbase_create_conte
+@@ -143,6 +210,12 @@ struct kbase_context *kbase_create_conte
  	kctx->filp = filp;
  	kctx->create_flags = flags;
  
@@ -141,7 +141,7 @@ Index: linux/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
  	if (is_compat)
  		kbase_ctx_flag_set(kctx, KCTX_COMPAT);
  #if defined(CONFIG_64BIT)
-@@ -183,6 +256,13 @@ void kbase_destroy_context(struct kbase_
+@@ -185,6 +258,13 @@ void kbase_destroy_context(struct kbase_
  	if (WARN_ON(!kbdev))
  		return;
  
@@ -155,19 +155,19 @@ Index: linux/drivers/gpu/arm/bifrost/context/backend/mali_kbase_context_csf.c
  	/* Context termination could happen whilst the system suspend of
  	 * the GPU device is ongoing or has completed. It has been seen on
  	 * Customer side that a hang could occur if context termination is
-Index: linux/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
 ===================================================================
---- linux.orig/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
-+++ linux/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
-@@ -1472,6 +1472,7 @@ struct kbase_csf_dump_on_fault {
-  * @fw_log:                 Contain members required for handling firmware log.
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
++++ kernel-rockchip/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
+@@ -1546,6 +1546,7 @@ struct kbase_csf_dump_on_fault {
+  *                          core dump.
   * @dof:                    Structure for dump on fault.
   */
 +#define MAX_FILE_INODE 16
  struct kbase_csf_device {
  	struct kbase_mmu_table mcu_mmu;
  	struct list_head firmware_interfaces;
-@@ -1487,6 +1488,8 @@ struct kbase_csf_device {
+@@ -1561,6 +1562,8 @@ struct kbase_csf_device {
  	struct tagged_addr dummy_user_reg_page;
  	u32 nr_user_page_mapped;
  	struct inode *mali_file_inode;
@@ -176,11 +176,11 @@ Index: linux/drivers/gpu/arm/bifrost/csf/mali_kbase_csf_defs.h
  	struct mutex reg_lock;
  	wait_queue_head_t event_wait;
  	bool interrupt_received;
-Index: linux/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
 ===================================================================
---- linux.orig/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
-+++ linux/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
-@@ -357,7 +357,14 @@ static void kbase_device_term_partial(st
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
++++ kernel-rockchip/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
+@@ -359,7 +359,14 @@ static void kbase_device_term_partial(st
  
  void kbase_device_term(struct kbase_device *kbdev)
  {
@@ -196,11 +196,11 @@ Index: linux/drivers/gpu/arm/bifrost/device/backend/mali_kbase_device_csf.c
  	kbase_device_term_partial(kbdev, ARRAY_SIZE(dev_init));
  	kbase_mem_halt(kbdev);
  }
-Index: linux/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
 ===================================================================
---- linux.orig/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
-+++ linux/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
-@@ -3587,13 +3587,6 @@ static void kbase_csf_user_reg_vm_close(
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
++++ kernel-rockchip/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+@@ -3736,13 +3736,6 @@ static void kbase_csf_user_reg_vm_close(
  		dev_warn(kctx->kbdev->dev, "user_reg_vma pointer unexpectedly NULL");
  
  	kctx->csf.user_reg_vma = NULL;
@@ -214,7 +214,15 @@ Index: linux/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
  }
  
  /**
-@@ -3720,17 +3713,6 @@ static int kbase_csf_cpu_mmap_user_reg_p
+@@ -3845,7 +3838,6 @@ static int kbase_csf_cpu_mmap_user_reg_p
+ 				struct vm_area_struct *vma)
+ {
+ 	size_t nr_pages = PFN_DOWN(vma->vm_end - vma->vm_start);
+-	struct kbase_device *kbdev = kctx->kbdev;
+ 
+ 	/* Few sanity checks */
+ 	if (kctx->csf.user_reg_vma)
+@@ -3869,17 +3861,6 @@ static int kbase_csf_cpu_mmap_user_reg_p
  
  	kctx->csf.user_reg_vma = vma;
  

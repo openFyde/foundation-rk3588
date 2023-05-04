@@ -1,6 +1,8 @@
---- a/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
-+++ b/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
-@@ -177,15 +177,15 @@
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
++++ kernel-rockchip/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
+@@ -177,15 +177,15 @@ int kbase_devfreq_opp_helper(struct dev_
  			ret = regulator_set_voltage(mem_reg,
  						    new_supply_mem->u_volt,
  						    INT_MAX);
@@ -20,7 +22,7 @@
  			dev_err(dev, "failed to set volt %lu uV for vdd reg\n",
  				new_supply_vdd->u_volt);
  			goto restore_voltage;
-@@ -208,7 +208,7 @@
+@@ -208,7 +208,7 @@ int kbase_devfreq_opp_helper(struct dev_
  		}
  		ret = regulator_set_voltage(vdd_reg, new_supply_vdd->u_volt,
  					    INT_MAX);
@@ -29,7 +31,7 @@
  			dev_err(dev, "failed to set volt %lu uV for vdd reg\n",
  				new_supply_vdd->u_volt);
  			goto restore_freq;
-@@ -217,9 +217,9 @@
+@@ -217,9 +217,9 @@ int kbase_devfreq_opp_helper(struct dev_
  			ret = regulator_set_voltage(mem_reg,
  						    new_supply_mem->u_volt,
  						    INT_MAX);
@@ -42,8 +44,10 @@
  				goto restore_voltage;
  			}
  		}
---- a/drivers/cpufreq/rockchip-cpufreq.c
-+++ b/drivers/cpufreq/rockchip-cpufreq.c
+Index: kernel-rockchip/drivers/cpufreq/rockchip-cpufreq.c
+===================================================================
+--- kernel-rockchip.orig/drivers/cpufreq/rockchip-cpufreq.c
++++ kernel-rockchip/drivers/cpufreq/rockchip-cpufreq.c
 @@ -12,7 +12,6 @@
   * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
   * GNU General Public License for more details.
@@ -52,7 +56,7 @@
  #include <linux/clk.h>
  #include <linux/cpu.h>
  #include <linux/cpufreq.h>
-@@ -429,10 +428,12 @@
+@@ -432,10 +431,12 @@ static int rockchip_cpufreq_set_volt(str
  	ret = regulator_set_voltage_triplet(reg, supply->u_volt_min,
  					    supply->u_volt, supply->u_volt_max);
  	if (ret)

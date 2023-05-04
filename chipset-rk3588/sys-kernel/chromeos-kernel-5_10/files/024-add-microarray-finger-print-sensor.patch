@@ -49,7 +49,9 @@ Index: kernel-rockchip/drivers/input/sensors/fingerprint/Makefile
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/input/sensors/fingerprint/Makefile
-@@ -0,0 +1,2 @@
+@@ -0,0 +1,4 @@
++subdir-ccflags-y += -Wno-bitwise-instead-of-logical
++
 +microarray-fp-objs := madev.o mtk-settings.o
 +obj-$(CONFIG_MICROARRAY_FINGERPRINT) += microarray-fp.o
 Index: kernel-rockchip/drivers/input/sensors/fingerprint/ioctl_cmd.h

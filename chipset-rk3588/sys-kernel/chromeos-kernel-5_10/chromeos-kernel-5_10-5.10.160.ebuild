@@ -5,16 +5,16 @@ EAPI=7
 # CROS_WORKON_REPO is internal git url example: http://git.xxxx/repo
 CROS_WORKON_REPO="git@gitlab.fydeos.xyz:openfyde/projects"
 # CROS_WORKON_COMMIT is internel kernel commit
-CROS_WORKON_COMMIT="d46f81d42d19bf298fd608db3b46467fe4e6f755"
+CROS_WORKON_COMMIT="75a72bcfe85bbe4a46d5c095599aac011ea99821"
 # CROS_WORKON_REPO + CROS_WORKON_PROJECT will be the whole url for rockchip kernel example: http://git/xxxx/repo/rk-kernel
 CROS_WORKON_PROJECT="rk-kernel"
 # clone the kernel resource to ~/trunk/src/third_party/kernel/v5.10-rockchip to speed up the compiling.
 CROS_WORKON_LOCALNAME="kernel/v5.10-rockchip"
-CROS_WORKON_EGIT_BRANCH="rk3588_v1.0.6_20221229"
+CROS_WORKON_EGIT_BRANCH="rk3588_v1.0.7_20230420"
 CROS_WORKON_INCREMENTAL_BUILD="1"
 CROS_WORKON_MANUAL_UPREV=1
 #ECLASS_DEBUG_OUTPUT="on"
-EGIT_MASTER="rk3588_v1.0.6_20221229"
+EGIT_MASTER="rk3588_v1.0.7_20230420"
 
 # This must be inherited *after* EGIT/CROS_WORKON variables defined
 inherit cros-workon cros-kernel2

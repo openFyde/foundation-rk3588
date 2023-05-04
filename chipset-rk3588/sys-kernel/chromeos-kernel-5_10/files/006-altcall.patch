@@ -55,7 +55,7 @@ Index: kernel-rockchip/arch/arm64/include/asm/thread_info.h
  #define thread_saved_pc(tsk)	\
  	((unsigned long)(tsk->thread.cpu_context.pc))
  #define thread_saved_sp(tsk)	\
-@@ -121,6 +146,7 @@ void arch_release_task_struct(struct tas
+@@ -124,6 +149,7 @@ void arch_release_task_struct(struct tas
  	.preempt_count	= INIT_PREEMPT_COUNT,				\
  	.addr_limit	= KERNEL_DS,					\
  	INIT_SCS							\
@@ -519,7 +519,7 @@ Index: kernel-rockchip/security/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/security/Kconfig
 +++ kernel-rockchip/security/Kconfig
-@@ -241,6 +241,7 @@ source "security/loadpin/Kconfig"
+@@ -230,6 +230,7 @@ source "security/loadpin/Kconfig"
  source "security/yama/Kconfig"
  source "security/safesetid/Kconfig"
  source "security/lockdown/Kconfig"
@@ -527,7 +527,7 @@ Index: kernel-rockchip/security/Kconfig
  
  source "security/integrity/Kconfig"
  
-@@ -294,5 +295,14 @@ config LSM
+@@ -283,5 +284,14 @@ config LSM
  
  source "security/Kconfig.hardening"
  
@@ -4483,7 +4483,7 @@ Index: kernel-rockchip/drivers/android/binder_internal.h
 ===================================================================
 --- kernel-rockchip.orig/drivers/android/binder_internal.h
 +++ kernel-rockchip/drivers/android/binder_internal.h
-@@ -488,12 +488,14 @@ struct binder_proc_ext {
+@@ -466,12 +466,14 @@ struct binder_proc_ext {
  	const struct cred *cred;
  };
  
@@ -4529,7 +4529,7 @@ Index: kernel-rockchip/include/linux/security.h
 ===================================================================
 --- kernel-rockchip.orig/include/linux/security.h
 +++ kernel-rockchip/include/linux/security.h
-@@ -252,13 +252,13 @@ extern int security_init(void);
+@@ -254,13 +254,13 @@ extern int security_init(void);
  extern int early_security_init(void);
  
  /* Security operations */
@@ -4550,7 +4550,7 @@ Index: kernel-rockchip/include/linux/security.h
  int security_ptrace_access_check(struct task_struct *child, unsigned int mode);
  int security_ptrace_traceme(struct task_struct *parent);
  int security_capget(struct task_struct *target,
-@@ -494,25 +494,25 @@ static inline int early_security_init(vo
+@@ -496,25 +496,25 @@ static inline int early_security_init(vo
  	return 0;
  }
  
@@ -4583,7 +4583,7 @@ Index: kernel-rockchip/include/linux/security.h
  						struct file *file)
  {
  	return 0;
-@@ -1011,11 +1011,6 @@ static inline void security_transfer_cre
+@@ -1013,11 +1013,6 @@ static inline void security_transfer_cre
  {
  }
  
@@ -4644,7 +4644,7 @@ Index: kernel-rockchip/kernel/events/core.c
 ===================================================================
 --- kernel-rockchip.orig/kernel/events/core.c
 +++ kernel-rockchip/kernel/events/core.c
-@@ -11695,9 +11695,8 @@ again:
+@@ -11712,9 +11712,8 @@ again:
   * @cpu:		target cpu
   * @group_fd:		group leader event fd
   */
@@ -4656,7 +4656,7 @@ Index: kernel-rockchip/kernel/events/core.c
  {
  	struct perf_event *group_leader = NULL, *output_event = NULL;
  	struct perf_event *event, *sibling;
-@@ -12144,6 +12143,13 @@ err_fd:
+@@ -12175,6 +12174,13 @@ err_fd:
  	return err;
  }
  
@@ -4674,7 +4674,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
 ===================================================================
 --- kernel-rockchip.orig/kernel/time/posix-timers.c
 +++ kernel-rockchip/kernel/time/posix-timers.c
-@@ -1109,8 +1109,8 @@ int do_clock_adjtime(const clockid_t whi
+@@ -1118,8 +1118,8 @@ int do_clock_adjtime(const clockid_t whi
  	return kc->clock_adj(which_clock, ktx);
  }
  
@@ -4685,7 +4685,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
  {
  	struct __kernel_timex ktx;
  	int err;
-@@ -1126,6 +1126,12 @@ SYSCALL_DEFINE2(clock_adjtime, const clo
+@@ -1135,6 +1135,12 @@ SYSCALL_DEFINE2(clock_adjtime, const clo
  	return err;
  }
  
@@ -4698,7 +4698,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
  SYSCALL_DEFINE2(clock_getres, const clockid_t, which_clock,
  		struct __kernel_timespec __user *, tp)
  {
-@@ -1179,8 +1185,7 @@ SYSCALL_DEFINE2(clock_gettime32, clockid
+@@ -1188,8 +1194,7 @@ SYSCALL_DEFINE2(clock_gettime32, clockid
  	return err;
  }
  
@@ -4708,7 +4708,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
  {
  	struct __kernel_timex ktx;
  	int err;
-@@ -1197,6 +1202,12 @@ SYSCALL_DEFINE2(clock_adjtime32, clockid
+@@ -1206,6 +1211,12 @@ SYSCALL_DEFINE2(clock_adjtime32, clockid
  	return err;
  }
  
@@ -4772,7 +4772,7 @@ Index: kernel-rockchip/drivers/android/binder.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/android/binder.c
 +++ kernel-rockchip/drivers/android/binder.c
-@@ -2877,7 +2877,7 @@ static void binder_transaction(struct bi
+@@ -3257,7 +3257,7 @@ static void binder_transaction(struct bi
  		size_t added_size;
  		int max_retries = 100;
  
