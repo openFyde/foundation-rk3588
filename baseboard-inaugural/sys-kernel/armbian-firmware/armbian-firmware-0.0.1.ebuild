@@ -92,10 +92,6 @@ src_unpack() {
 src_prepare() {
 	default
 
-	find . -type f -not -perm 0644 -print0 \
-		| xargs --null --no-run-if-empty chmod 0644 \
-		|| die
-
 	#chmod +x copy-firmware.sh || die
 
 	# whitelist of misc files
