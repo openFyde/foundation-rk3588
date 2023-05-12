@@ -5,7 +5,7 @@ EAPI=7
 inherit savedconfig multiprocessing toolchain-funcs
 
 #SRC_URI="https://mirrors.edge.kernel.org/pub/linux/kernel/firmware/linux-firmware-20210919.tar.xz"
-SRC_URI="https://cdn.kernel.org/pub/linux/kernel/firmware/linux-firmware-20210919.tar.xz"
+SRC_URI="https://cdn.kernel.org/pub/linux/kernel/firmware/${P}.tar.xz"
 
 KEYWORDS="~alpha amd64 arm arm64 hppa ~ia64 ~loong ~m68k ~mips ppc ppc64 ~riscv ~s390 sparc x86"
 
@@ -96,10 +96,14 @@ src_prepare() {
     rm nvidia -rf
     rm amdgpu -rf
     rm radeon -rf
+    rm qcom -rf
+    rm netronome -rf
+    # https://bugs.archlinux.org/task/70071
+    rm iwlwifi-ty-a0-gf-a0.pnvm
 
-	find . -type f -not -perm 0644 -print0 \
-		| xargs --null --no-run-if-empty chmod 0644 \
-		|| die
+#	find . -type f -not -perm 0644 -print0 \
+#		| xargs --null --no-run-if-empty chmod 0644 \
+#		|| die
 
 	#chmod +x copy-firmware.sh || die
 
@@ -275,7 +279,6 @@ src_install() {
                 while IFS= read -r -d '' f; do
                         # skip symlinks pointing to directories
                         [[ -d ${f} ]] && continue
-
                         target=$(readlink "${f}")
                         [[ $? -eq 0 ]] || die
                         ln -sf "${target}".${ext} "${f}" || die
