@@ -49,7 +49,7 @@ LICENCE.rtlwifi_firmware
 "
 
 SLOT="0"
-IUSE="+compress-xz compress-zstd initramfs +redistributable savedconfig +unknown-license"
+IUSE="compress-xz compress-zstd initramfs +redistributable savedconfig +unknown-license"
 REQUIRED_USE="initramfs? ( redistributable )
 	?? ( compress-xz compress-zstd )"
 
