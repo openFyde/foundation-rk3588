@@ -1,7 +1,29 @@
-Index: libv4l-rkmpp/src/libv4l-rkmpp.c
-===================================================================
---- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
-+++ libv4l-rkmpp/src/libv4l-rkmpp.c
+diff --git a/include/libv4l-rkmpp.h b/include/libv4l-rkmpp.h
+index fa7257400694..65ccbdaa7cee 100644
+--- a/include/libv4l-rkmpp.h
++++ b/include/libv4l-rkmpp.h
+@@ -39,13 +39,11 @@ extern int rkmpp_log_level;
+ 
+ #define gettid() syscall(SYS_gettid)
+ 
++__attribute__((format(printf, 4, 5))) void log_prefix(const char *prefix, const char *func,
++  int line, const char *format, ...);
++
+ #define LOG(fmt, ...) do { \
+-	struct timeval tv; \
+-	gettimeofday(&tv, NULL); \
+-	printf("[%03ld.%03ld] [RKMPP] [%ld] %s(%d): " fmt, \
+-	       tv.tv_sec % 1000, tv.tv_usec / 1000, gettid(), \
+-	       __func__, __LINE__, ##__VA_ARGS__); \
+-	fflush(stdout); \
++  log_prefix("RKMPP", __func__, __LINE__, fmt, ##__VA_ARGS__); \
+ 	} while (0)
+ 
+ #define LOGV(level, fmt, ...) \
+diff --git a/src/libv4l-rkmpp.c b/src/libv4l-rkmpp.c
+index 44d6948d1431..3e87cd353ae9 100644
+--- a/src/libv4l-rkmpp.c
++++ b/src/libv4l-rkmpp.c
 @@ -33,8 +33,8 @@
  #define FPS_UPDATE_INTERVAL 120
  
@@ -13,7 +35,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  #else
  int rkmpp_log_level = 0;
  static bool rkmpp_log_fps = false;
-@@ -566,10 +566,10 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
+@@ -566,10 +566,10 @@ int rkmpp_qbuf(struct rkmpp_context *ctx, struct v4l2_buffer *buffer)
  		RETURN_ERR(EINVAL, -1);
  	}
  
@@ -26,7 +48,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  
  	rkmpp_buffer_set_queued(rkmpp_buffer);
  
-@@ -616,7 +616,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
+@@ -616,7 +616,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ctx, struct v4l2_buffer *buffer)
  
  	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
  	if (ret < 0) {
@@ -35,7 +57,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  		RETURN_ERR(EINVAL, -1);
  	}
  
-@@ -663,8 +663,11 @@ int rkmpp_update_poll_event(struct rkmpp
+@@ -663,8 +663,11 @@ int rkmpp_update_poll_event(struct rkmpp_context *ctx)
  
  static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
  {
@@ -48,7 +70,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  #define MAX_OPT_LEN 1024
  #define OPT_DEC "dec"
  #define OPT_ENC "enc"
-@@ -720,10 +723,21 @@ static int rkmpp_parse_options(struct rk
+@@ -720,10 +723,21 @@ static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
  			RETURN_ERR(ENODEV, -1);
  		}
  	}
@@ -81,7 +103,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  		RETURN_ERR(errno, NULL);
  
  	pthread_once(&g_rkmpp_global_init_once, rkmpp_global_init);
-@@ -924,7 +939,7 @@ static void *plugin_mmap(void *dev_ops_p
+@@ -924,7 +939,7 @@ static void *plugin_mmap(void *dev_ops_priv, void *start,
  		RETURN_ERR(EINVAL, NULL);
  	}
  
@@ -90,33 +112,19 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (!queue)
  		RETURN_ERR(errno, NULL);
  
-Index: libv4l-rkmpp/include/libv4l-rkmpp.h
-===================================================================
---- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
-+++ libv4l-rkmpp/include/libv4l-rkmpp.h
-@@ -39,13 +39,11 @@ extern int rkmpp_log_level;
+diff --git a/src/utils.c b/src/utils.c
+index 8f090eb98616..96766d364567 100644
+--- a/src/utils.c
++++ b/src/utils.c
+@@ -13,6 +13,7 @@
+  */
  
- #define gettid() syscall(SYS_gettid)
+ #include <sys/mman.h>
++#include <stdarg.h>
  
-+__attribute__((format(printf, 4, 5))) void log_prefix(const char *prefix, const char *func,
-+  int line, const char *format, ...);
-+
- #define LOG(fmt, ...) do { \
--	struct timeval tv; \
--	gettimeofday(&tv, NULL); \
--	printf("[%03ld.%03ld] [RKMPP] [%ld] %s(%d): " fmt, \
--	       tv.tv_sec % 1000, tv.tv_usec / 1000, gettid(), \
--	       __func__, __LINE__, ##__VA_ARGS__); \
--	fflush(stdout); \
-+  log_prefix("RKMPP", __func__, __LINE__, fmt, ##__VA_ARGS__); \
- 	} while (0)
+ #include "libv4l-rkmpp.h"
  
- #define LOGV(level, fmt, ...) \
-Index: libv4l-rkmpp/src/utils.c
-===================================================================
---- libv4l-rkmpp.orig/src/utils.c
-+++ libv4l-rkmpp/src/utils.c
-@@ -117,6 +117,7 @@ static int rkmpp_copy_buffer(struct rkmp
+@@ -117,6 +118,7 @@ static int rkmpp_copy_buffer(struct rkmpp_context *ctx,
  	uint32_t sizes[3], offsets[3];
  	unsigned int i;
  	int ret = -1;
@@ -124,7 +132,7 @@ Index: libv4l-rkmpp/src/utils.c
  
  	ENTER();
  
-@@ -142,21 +143,27 @@ static int rkmpp_copy_buffer(struct rkmp
+@@ -142,21 +144,27 @@ static int rkmpp_copy_buffer(struct rkmpp_context *ctx,
  		sizes[i] = rkmpp_buffer->planes[i].plane_size;
  		offsets[i] = rkmpp_buffer->planes[i].data_offset;
  
@@ -157,7 +165,7 @@ Index: libv4l-rkmpp/src/utils.c
  			addrs[i] += offsets[i];
  		}
  
-@@ -258,6 +265,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+@@ -258,6 +266,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
  	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
  		/* Returning data are always in plane 0 */
  		rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
@@ -166,7 +174,7 @@ Index: libv4l-rkmpp/src/utils.c
  		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
  
  		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0)
-@@ -333,3 +342,14 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+@@ -333,3 +343,14 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
  	LEAVE();
  	return 0;
  }

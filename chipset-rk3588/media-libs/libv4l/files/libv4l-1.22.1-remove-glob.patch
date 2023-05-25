@@ -1,5 +1,15 @@
---- lib/libv4l2/v4l2-plugin.c.orig	2014-11-07 15:01:09.063992518 +0800
-+++ lib/libv4l2/v4l2-plugin.c	2015-01-13 10:59:41.043221719 +0800
+The sandbox does not allow globbing a directory to find plugin shared
+library. This patch reverts the glob code and uses a list of full
+plugins' names (just like libv4l used to do it, before it switched to
+glob()).
+---
+ lib/libv4l2/v4l2-plugin.c | 24 ++++++++----------------
+ 1 file changed, 8 insertions(+), 16 deletions(-)
+
+diff --git a/lib/libv4l2/v4l2-plugin.c b/lib/libv4l2/v4l2-plugin.c
+index e2356cb6..72c9d205 100644
+--- a/lib/libv4l2/v4l2-plugin.c
++++ b/lib/libv4l2/v4l2-plugin.c
 @@ -46,33 +46,27 @@
     and if it was not then v4l2_* functions proceed with their usual behavior.
  */

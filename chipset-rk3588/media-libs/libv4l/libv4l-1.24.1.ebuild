@@ -2,8 +2,8 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Header: /var/cvsroot/gentoo-x86/media-libs/libv4l/libv4l-1.6.0-r1.ebuild,v 1.1 2014/11/14 03:25:09 vapier Exp $
 
-EAPI=5
-inherit autotools eutils linux-info multilib-minimal
+EAPI=7
+inherit autotools eutils linux-info multilib-minimal flag-o-matic
 
 MY_P=v4l-utils-${PV}
 
@@ -36,18 +36,22 @@ pkg_setup() {
 	linux-info_pkg_setup
 }
 
+PATCHES=(
+	"${FILESDIR}"/${PN}-1.22.1-clang-fixes.patch
+	"${FILESDIR}"/${PN}-1.22.1-increase-v4l2-max-devices.patch
+	"${FILESDIR}"/${PN}-1.22.1-remove-glob.patch
+     ${FILESDIR}/0001-libv4l2-Support-mmap-to-libv4l-plugin.patch
+     ${FILESDIR}/0002-libv4l-mplane-Filter-out-multiplane-formats.patch
+     ${FILESDIR}/0003-libv4l-Support-V4L2_MEMORY_DMABUF.patch
+     ${FILESDIR}/0004-libv4l-mplane-Support-VIDIOC_EXPBUF-for-dmabuf.patch
+)
 src_prepare() {
-	epatch "${FILESDIR}"/${P}-clang-fixes.patch
-	epatch "${FILESDIR}"/${P}-increase-v4l2-max-devices.patch
-	epatch "${FILESDIR}"/${P}-remove-glob.patch
-    epatch ${FILESDIR}/0001-libv4l2-Support-mmap-to-libv4l-plugin.patch
-    epatch ${FILESDIR}/0002-libv4l-mplane-Filter-out-multiplane-formats.patch
-    epatch ${FILESDIR}/0003-libv4l-Support-V4L2_MEMORY_DMABUF.patch
-    epatch ${FILESDIR}/0004-libv4l-mplane-Support-VIDIOC_EXPBUF-for-dmabuf.patch
+    default
 	eautoreconf
 }
 
 multilib_src_configure() {
+    append-lfs-flags
 	# Hard disable the flags that apply only to the utils.
 	ECONF_SOURCE=${S} \
 	econf \
@@ -70,5 +74,5 @@ multilib_src_install() {
 
 multilib_src_install_all() {
 	dodoc ChangeLog README.lib* TODO
-	prune_libtool_files --all
+    find "${D}" -name '*.la' -delete || die
 }
