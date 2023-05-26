@@ -33,7 +33,7 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
-@@ -0,0 +1,210 @@
+@@ -0,0 +1,237 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + *  Fydeos detachable emulator driver
@@ -47,7 +47,7 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +#include <linux/uaccess.h>
 +#include <linux/notifier.h>
 +#include <linux/usb.h>
-+#include <linux/pm_domain.h>
++#include <linux/suspend.h>
 +#include <uapi/linux/hid.h>
 +
 +#define VDTB_DEV_NAME "fyde-vdtb"
@@ -62,6 +62,7 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +  atomic_t in_suspend;
 +  struct input_dev *input_dev;
 +  struct notifier_block nb;
++  struct notifier_block power_nb;
 +};
 +
 +//static int vdtb_open(struct inode *inode, struct file *file) {return 0;}
@@ -105,7 +106,7 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +  .write = vdtb_write,
 +  .compat_ioctl = vdtb_ioctl,
 +};
-+
++/*
 +int vdtb_suspend(struct device *dev) {
 +  struct vdtb_priv *priv = dev_get_drvdata(dev);
 +  atomic_set(&priv->in_suspend, 1);
@@ -126,7 +127,7 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +    .resume = &vdtb_resume,
 +  },
 +};
-+
++*/
 +static struct miscdevice vdtb_dev = {
 +  .minor = VDTB_DEVICE_MINOR,
 +  .name = VDTB_DEVICE_ID,
@@ -174,19 +175,39 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +  struct vdtb_priv *priv = container_of(nb, struct vdtb_priv, nb);
 +  if (atomic_read(&priv->in_suspend)) {
 +    pr_info("vdtb suspend skip");
-+    return 0;
++    return NOTIFY_DONE;
 +  }
 +  if (action == USB_DEVICE_REMOVE)
 +    dev_info(&usb_dev->dev, "is removed");
 +  if (action > USB_DEVICE_REMOVE)
-+    return 0;
++    return NOTIFY_DONE;
 +  if (action == USB_DEVICE_REMOVE) {
 +    detect_usb_kbd(priv);
 +  }else if (contains_kbd_interface(usb_dev)) {
 +    set_tablet_mode(priv, false);
 +  }
-+  return 0;
++  return NOTIFY_DONE;
 +}
++
++#ifdef CONFIG_PM_SLEEP
++int power_notifier_nb(struct notifier_block *nb,
++    unsigned long action, void *data) {
++  struct vdtb_priv *priv = container_of(nb, struct vdtb_priv, power_nb);
++  switch (action) {
++    case PM_SUSPEND_PREPARE:
++      atomic_set(&priv->in_suspend, 1);
++      pr_info("fyde_vtb suspend.");
++      break;
++    case PM_POST_RESTORE:
++      atomic_set(&priv->in_suspend, 0);
++      pr_info("fyde_vtb resumed.");
++      break;
++    default:
++      break;
++  }
++  return NOTIFY_DONE;
++}
++#endif
 +
 +void remove_vdtb(void) {
 +  struct vdtb_priv *priv;
@@ -195,6 +216,9 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +  priv = (struct vdtb_priv *)dev_get_drvdata(vdtb_dev.this_device);
 +  input_unregister_device(priv->input_dev);
 +  usb_unregister_notify(&priv->nb);
++#ifdef CONFIG_PM_SLEEP
++  unregister_pm_notifier(&priv->power_nb);
++#endif
 +  misc_deregister(&vdtb_dev);
 +}
 +
@@ -224,7 +248,10 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +  priv->nb.notifier_call = usb_notifier_nb;
 +  usb_register_notify(&priv->nb);
 +  atomic_set(&priv->in_suspend, 0);
-+  dev_pm_domain_set(vdtb_dev.this_device, &pm);
++#ifdef CONFIG_PM_SLEEP
++  priv->power_nb.notifier_call = power_notifier_nb;
++  register_pm_notifier(&priv->power_nb);
++#endif
 +  dev_info(vdtb_dev.this_device, "device is working.\n");
 +  return 0;
 +
