@@ -36,7 +36,7 @@ Index: src/gpu/config/gpu_driver_bug_list.json
        ]
 +    },
 +    {
-+      "id": 404,
++      "id": 413,
 +      "description": "Limit MSAA quality samples to 4 and storage samples 2 on RK3588",
 +      "cr_bugs": [1184340],
 +      "os": {
