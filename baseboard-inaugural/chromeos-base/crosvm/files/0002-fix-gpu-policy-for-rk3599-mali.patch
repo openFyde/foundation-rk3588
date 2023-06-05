@@ -22,28 +22,3 @@ Index: crosvm/jail/seccomp/arm/gpu_common.policy
  tgkill: 1
  clock_gettime: 1
  clock_gettime64: 1
-=======
-diff --git a/jail/seccomp/aarch64/gpu_common.policy b/jail/seccomp/aarch64/gpu_common.policy
-index c636d292f633..2576c5f1aa11 100644
---- a/jail/seccomp/aarch64/gpu_common.policy
-+++ b/jail/seccomp/aarch64/gpu_common.policy
-@@ -14,6 +14,7 @@ epoll_create1: 1
- epoll_ctl: 1
- epoll_pwait: 1
- eventfd2: 1
-+pread64: 1
- exit: 1
- exit_group: 1
- futex: 1
-diff --git a/jail/seccomp/arm/gpu_common.policy b/jail/seccomp/arm/gpu_common.policy
-index 085778a55f22..ebe127cc5a77 100644
---- a/jail/seccomp/arm/gpu_common.policy
-+++ b/jail/seccomp/arm/gpu_common.policy
-@@ -18,6 +18,7 @@ exit: 1
- exit_group: 1
- futex: 1
- futex_time64: 1
-+pread64:1
- getcwd: 1
- getpid: 1
- gettid: 1

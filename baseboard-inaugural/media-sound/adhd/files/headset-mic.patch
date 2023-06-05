@@ -7,16 +7,3 @@ Index: adhd/cras/src/server/cras_alsa_jack.c
    static const char* const input_jack_base_names[] = {
        "Mic Jack",
 +      "Headset Mic Jack",
-=======
-diff --git a/cras/src/server/cras_alsa_jack.c b/cras/src/server/cras_alsa_jack.c
-index c8c6e17b54c8..26c9d2f65027 100644
---- a/cras/src/server/cras_alsa_jack.c
-+++ b/cras/src/server/cras_alsa_jack.c
-@@ -842,6 +842,7 @@ static int find_jack_controls(struct cras_alsa_jack_list* jack_list) {
-   };
-   static const char* const input_jack_base_names[] = {
-       "Mic Jack",
-+      "Headset Mic Jack"
-   };
-   const char* const* jack_names;
-   unsigned int num_jack_names;
