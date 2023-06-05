@@ -2,7 +2,7 @@ Index: src/chrome/browser/ash/login/chrome_restart_request.cc
 ===================================================================
 --- src.orig/chrome/browser/ash/login/chrome_restart_request.cc
 +++ src/chrome/browser/ash/login/chrome_restart_request.cc
-@@ -160,6 +160,7 @@ void DeriveCommandLine(const GURL& start
+@@ -161,6 +161,7 @@ void DeriveCommandLine(const GURL& start
      ::switches::kDisableWebRtcHWDecoding,
      ::switches::kDisableWebRtcHWEncoding,
      ::switches::kOzonePlatform,

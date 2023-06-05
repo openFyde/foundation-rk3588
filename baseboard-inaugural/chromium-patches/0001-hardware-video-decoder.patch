@@ -2,7 +2,7 @@ Index: src/media/gpu/v4l2/generic_v4l2_device.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/generic_v4l2_device.cc
 +++ src/media/gpu/v4l2/generic_v4l2_device.cc
-@@ -110,7 +110,7 @@ bool GenericV4L2Device::Poll(bool poll_d
+@@ -108,7 +108,7 @@ bool GenericV4L2Device::Poll(bool poll_d
      VPLOGF(1) << "poll() failed";
      return false;
    }
@@ -11,7 +11,7 @@ Index: src/media/gpu/v4l2/generic_v4l2_device.cc
    return true;
  }
  
-@@ -120,10 +120,19 @@ void* GenericV4L2Device::Mmap(void* addr
+@@ -118,10 +118,19 @@ void* GenericV4L2Device::Mmap(void* addr
                                int flags,
                                unsigned int offset) {
    DCHECK(device_fd_.is_valid());
@@ -31,7 +31,7 @@ Index: src/media/gpu/v4l2/generic_v4l2_device.cc
    munmap(addr, len);
  }
  
-@@ -434,7 +443,7 @@ bool GenericV4L2Device::OpenDevicePath(c
+@@ -391,7 +400,7 @@ bool GenericV4L2Device::OpenDevicePath(c
      return false;
  
    if (V4L2Device::UseLibV4L2()) {
@@ -84,7 +84,7 @@ Index: src/content/gpu/gpu_sandbox_hook_linux.cc
  
    // Image processor used on ARM platforms.
    static const char kDevImageProc0Path[] = "/dev/image-proc0";
-@@ -304,6 +312,8 @@ void AddArmGpuPermissions(std::vector<Br
+@@ -376,6 +384,8 @@ void AddArmGpuPermissions(std::vector<Br
    permissions->push_back(BrokerFilePermission::ReadOnly(kLdSoCache));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibGlesPath));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibEglPath));
@@ -93,7 +93,7 @@ Index: src/content/gpu/gpu_sandbox_hook_linux.cc
  
    AddArmMaliGpuPermissions(permissions);
  }
-@@ -545,11 +555,18 @@ void LoadV4L2Libraries(
+@@ -623,11 +633,18 @@ void LoadV4L2Libraries(
    DCHECK(UseV4L2Codec());
  
    if (IsAcceleratedVideoEnabled(options) && UseLibV4L2()) {

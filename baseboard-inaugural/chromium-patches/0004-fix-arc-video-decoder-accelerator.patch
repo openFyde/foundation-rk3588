@@ -1,8 +1,8 @@
-diff --git a/ash/components/arc/video_accelerator/gpu_arc_video_decode_accelerator.cc b/ash/components/arc/video_accelerator/gpu_arc_video_decode_accelerator.cc
-index fdb9cb4a56b76..757dd9787b48f 100644
---- a/ash/components/arc/video_accelerator/gpu_arc_video_decode_accelerator.cc
-+++ b/ash/components/arc/video_accelerator/gpu_arc_video_decode_accelerator.cc
-@@ -383,7 +383,7 @@ void GpuArcVideoDecodeAccelerator::InitializeTask(
+Index: src/ash/components/arc/video_accelerator/gpu_arc_video_decode_accelerator.cc
+===================================================================
+--- src.orig/ash/components/arc/video_accelerator/gpu_arc_video_decode_accelerator.cc
++++ src/ash/components/arc/video_accelerator/gpu_arc_video_decode_accelerator.cc
+@@ -386,7 +386,7 @@ void GpuArcVideoDecodeAccelerator::Initi
  
    profile_ = config->profile;
  #if BUILDFLAG(USE_CHROMEOS_MEDIA_ACCELERATION)
@@ -11,11 +11,11 @@ index fdb9cb4a56b76..757dd9787b48f 100644
  #if BUILDFLAG(USE_ARC_PROTECTED_MEDIA)
    if (!use_vd) {
      LOG(ERROR) << "Unsupported path: builds with USE_ARC_PROTECTED_MEDIA must "
-diff --git a/media/gpu/v4l2/v4l2_video_decode_accelerator.cc b/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
-index c920940572fb2..dbe81997859c3 100644
---- a/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
-+++ b/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
-@@ -410,7 +410,7 @@ void V4L2VideoDecodeAccelerator::AssignPictureBuffersTask(
+Index: src/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
++++ src/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
+@@ -413,7 +413,7 @@ void V4L2VideoDecodeAccelerator::AssignP
  
    enum v4l2_memory memory;
    if (!image_processor_device_ && output_mode_ == Config::OutputMode::IMPORT)
@@ -24,7 +24,7 @@ index c920940572fb2..dbe81997859c3 100644
    else
      memory = V4L2_MEMORY_MMAP;
  
-@@ -1510,6 +1510,26 @@ bool V4L2VideoDecodeAccelerator::DequeueOutputBuffer() {
+@@ -1511,6 +1511,26 @@ bool V4L2VideoDecodeAccelerator::Dequeue
          return false;
        }
      } else {

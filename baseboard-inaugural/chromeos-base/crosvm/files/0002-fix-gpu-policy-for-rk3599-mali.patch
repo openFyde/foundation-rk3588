@@ -1,22 +1,24 @@
-diff --git a/seccomp/arm/gpu_common.policy b/seccomp/arm/gpu_common.policy
-index 33c36483..0026a602 100644
---- a/seccomp/arm/gpu_common.policy
-+++ b/seccomp/arm/gpu_common.policy
-@@ -99,6 +99,8 @@ sched_setscheduler: 1
- sched_setaffinity: 1
- kcmp: 1
- 
-+pread64:1
-+
- # Rules for Vulkan loader / layers
- access: 1
- getgid32: 1
-diff --git a/seccomp/aarch64/gpu_common.policy b/seccomp/aarch64/gpu_common.policy
-index 000f7ace5844..dd5a2e952649 100644
---- a/seccomp/aarch64/gpu_common.policy
-+++ b/seccomp/aarch64/gpu_common.policy
-@@ -97,3 +97,4 @@ faccessat: 1
+Index: crosvm/jail/seccomp/aarch64/gpu_common.policy
+===================================================================
+--- crosvm.orig/jail/seccomp/aarch64/gpu_common.policy
++++ crosvm/jail/seccomp/aarch64/gpu_common.policy
+@@ -100,6 +100,7 @@ faccessat: 1
  faccessat2: 1
  getgid: 1
  getegid: 1
 +pread64: 1
+ 
+ ## Rules for vmm-swap
+ userfaultfd: 1
+Index: crosvm/jail/seccomp/arm/gpu_common.policy
+===================================================================
+--- crosvm.orig/jail/seccomp/arm/gpu_common.policy
++++ crosvm/jail/seccomp/arm/gpu_common.policy
+@@ -98,6 +98,7 @@ geteuid32: 1
+ getuid32: 1
+ lstat64: 1
+ fcntl64: 1
++pread64: 1
+ tgkill: 1
+ clock_gettime: 1
+ clock_gettime64: 1
