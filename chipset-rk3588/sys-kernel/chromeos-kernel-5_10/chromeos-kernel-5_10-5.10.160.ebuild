@@ -4,21 +4,23 @@
 EAPI=7
 CROS_WORKON_REPO="git@gitlab.fydeos.xyz:openfyde/projects"
 
-CROS_WORKON_COMMIT="b7ecbce3de7591a07156bad71448b31c06e06a44"
+CROS_WORKON_COMMIT="ec217c3b3a417635c36dc0f48e62b88075a6fce2"
+
 # CROS_WORKON_REPO + CROS_WORKON_PROJECT will be the whole url for rockchip kernel example: http://git/xxxx/repo/rk-kernel
 CROS_WORKON_PROJECT="rk-kernel"
 # clone the kernel resource to ~/trunk/src/third_party/kernel/v5.10-rockchip to speed up the compiling.
 CROS_WORKON_LOCALNAME="kernel/v5.10-rockchip"
-CROS_WORKON_EGIT_BRANCH="rk3588_v1.0.7_20230420"
+CROS_WORKON_EGIT_BRANCH="rk3588_v1.0.7_20230529"
 CROS_WORKON_INCREMENTAL_BUILD="1"
 CROS_WORKON_MANUAL_UPREV=1
-#ECLASS_DEBUG_OUTPUT="on"
-EGIT_MASTER="rk3588_v1.0.7_20230420"
+EGIT_MASTER="rk3588_v1.0.7_20230529"
 
+#ECLASS_DEBUG_OUTPUT="on"
 # Please uncomment the follwing if you are not fyder
 # CROS_WORKON_REPO="https://gitlab.com/rk3588_linux/rk"
 # CROS_WORKON_PROJECT="kernel"
 # CROS_WORKON_EGIT_BRANCH="linux-5.10"
+# CROS_WORKON_COMMIT="b7ecbce3de7591a07156bad71448b31c06e06a44"
 
 # This must be inherited *after* EGIT/CROS_WORKON variables defined
 inherit cros-workon cros-kernel2
