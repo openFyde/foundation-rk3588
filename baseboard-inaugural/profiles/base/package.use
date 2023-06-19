@@ -1,4 +1,4 @@
-chromeos-base/chromeos-chrome goma_thinlto v4lplugin
+chromeos-base/chromeos-chrome goma_thinlto v4lplugin hevc_codec
 chromeos-base/drm-tests v4lplugin
 media-libs/libv4lplugins rockchip_v2
 media-libs/mesa egl -gbm gles2 shared-glapi

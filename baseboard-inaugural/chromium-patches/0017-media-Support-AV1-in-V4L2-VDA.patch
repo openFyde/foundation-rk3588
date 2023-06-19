@@ -1,0 +1,56 @@
+diff --git a/media/gpu/v4l2/v4l2_device.cc b/media/gpu/v4l2/v4l2_device.cc
+index 62929528323a..a836bf14ca8d 100644
+--- a/media/gpu/v4l2/v4l2_device.cc
++++ b/media/gpu/v4l2/v4l2_device.cc
+@@ -1763,7 +1763,11 @@ std::vector<VideoCodecProfile> V4L2Device::V4L2PixFmtToVideoCodecProfiles(
+       if (!get_supported_profiles(VideoCodec::kAV1, &profiles)) {
+         DLOG(WARNING) << "Driver doesn't support QUERY AV1 profiles, "
+                       << "use default values, Main";
+-        profiles = {AV1PROFILE_PROFILE_MAIN};
++        profiles = {
++        AV1PROFILE_PROFILE_MAIN,
++        AV1PROFILE_PROFILE_HIGH,
++        AV1PROFILE_PROFILE_PRO,
++        };
+       }
+       break;
+     default:
+diff --git a/media/gpu/v4l2/v4l2_vda_helpers.cc b/media/gpu/v4l2/v4l2_vda_helpers.cc
+index 1fda578eb3a1..f9a8d1577bdd 100644
+--- a/media/gpu/v4l2/v4l2_vda_helpers.cc
++++ b/media/gpu/v4l2/v4l2_vda_helpers.cc
+@@ -162,6 +162,9 @@ InputBufferFragmentSplitter::CreateFromProfile(
+     case VideoCodec::kVP9:
+       // VP8/VP9 don't need any frame splitting, use the default implementation.
+       return std::make_unique<v4l2_vda_helpers::InputBufferFragmentSplitter>();
++    case VideoCodec::kAV1:
++      // Depends on downstream frame splitting, use the default implementation
++      return std::make_unique<v4l2_vda_helpers::InputBufferFragmentSplitter>();
+     default:
+       LOG(ERROR) << "Unhandled profile: " << profile;
+       return nullptr;
+diff --git a/media/gpu/v4l2/v4l2_video_decode_accelerator.cc b/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
+index 3ac2cc0d1e0c..c9abb614c307 100644
+--- a/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
++++ b/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
+@@ -86,7 +86,7 @@ bool IsVp9KSVCStream(uint32_t input_format_fourcc,
+ 
+ // static
+ const uint32_t V4L2VideoDecodeAccelerator::supported_input_fourccs_[] = {
+-    V4L2_PIX_FMT_H264, V4L2_PIX_FMT_HEVC, V4L2_PIX_FMT_VP8, V4L2_PIX_FMT_VP9,
++    V4L2_PIX_FMT_H264, V4L2_PIX_FMT_HEVC, V4L2_PIX_FMT_VP8, V4L2_PIX_FMT_VP9, V4L2_PIX_FMT_AV1,
+ };
+ 
+ // static
+diff --git a/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc b/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
+index 54e708f09314..08b7ed8f330d 100644
+--- a/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
++++ b/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
+@@ -780,6 +780,7 @@ bool V4L2StatefulVideoDecoderBackend::IsSupportedProfile(
+ #endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+       V4L2_PIX_FMT_VP8,
+       V4L2_PIX_FMT_VP9,
++      V4L2_PIX_FMT_AV1,
+     };
+     scoped_refptr<V4L2Device> device = V4L2Device::Create();
+     VideoDecodeAccelerator::SupportedProfiles profiles =
