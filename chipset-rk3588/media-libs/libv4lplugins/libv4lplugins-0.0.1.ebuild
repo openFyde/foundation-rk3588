@@ -4,7 +4,7 @@
 EAPI="7"
 
 EGIT_REPO_URI="https://github.com/JeffyCN/libv4l-rkmpp.git"
-EGIT_COMMIT="fe977181a5ab53bb350706cdc259ba6ccd4528da"
+EGIT_COMMIT="9d0628038ca97a67dc36c9146b67876d109a98e5"
 
 inherit autotools git-r3 eutils flag-o-matic meson
 
@@ -14,7 +14,7 @@ HOMEPAGE="https://github.com/JeffyCN/libv4l-rkmpp"
 LICENSE="LGPL-2.1"
 SLOT="0"
 KEYWORDS="*"
-IUSE="debug max_8k"
+IUSE="debug +max_8k"
 
 RDEPEND="
     media-libs/libv4l
@@ -30,6 +30,7 @@ src_prepare() {
   fi
   append-cflags -Wno-gnu-zero-variadic-macro-arguments -Wno-language-extension-token
   eapply -p1 ${FILESDIR}/remove-fd-state-checking.patch
+  eapply -p1 ${FILESDIR}/0003-Hack-codec-while-parse-options.patch
   default
 }
 

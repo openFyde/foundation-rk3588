@@ -1,0 +1,17 @@
+diff --git a/src/libv4l-rkmpp.c b/src/libv4l-rkmpp.c
+index 6d9f718f9bd1..4f8c689c0f7f 100644
+--- a/src/libv4l-rkmpp.c
++++ b/src/libv4l-rkmpp.c
+@@ -770,6 +770,12 @@ static void *plugin_init(int fd)
+ 		goto err_free_ctx;
+ 	}
+ 
++	if (ctx->is_decoder) {
++		if (ctx->codecs)
++			free(ctx->codecs);
++		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1");
++	}
++
+ 	/* Create eventfd to fake poll events */
+ 	ctx->eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+ 	if (ctx->eventfd < 0) {
