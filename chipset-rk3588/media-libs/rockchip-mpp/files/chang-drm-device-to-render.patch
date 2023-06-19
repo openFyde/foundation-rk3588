@@ -1,5 +1,5 @@
 diff --git a/osal/allocator/allocator_drm.c b/osal/allocator/allocator_drm.c
-index c0bb9f256bfb..41eb831aa5ad 100644
+index 3f5e04b29eb6..4e8e6a3bb288 100644
 --- a/osal/allocator/allocator_drm.c
 +++ b/osal/allocator/allocator_drm.c
 @@ -51,7 +51,7 @@ typedef struct {
@@ -11,3 +11,16 @@ index c0bb9f256bfb..41eb831aa5ad 100644
  
  static int drm_ioctl(int fd, int req, void *arg)
  {
+diff --git a/osal/mpp_runtime.cpp b/osal/mpp_runtime.cpp
+index c23799635bad..ca673df4bb88 100644
+--- a/osal/mpp_runtime.cpp
++++ b/osal/mpp_runtime.cpp
+@@ -85,7 +85,7 @@ MppRuntimeService::MppRuntimeService()
+ 
+     allocator_valid[MPP_BUFFER_TYPE_NORMAL] = 1;
+     allocator_valid[MPP_BUFFER_TYPE_ION] = !access("/dev/ion", F_OK | R_OK | W_OK);
+-    allocator_valid[MPP_BUFFER_TYPE_DRM] = !access("/dev/dri/card0", F_OK | R_OK | W_OK);
++    allocator_valid[MPP_BUFFER_TYPE_DRM] = !access("/dev/dri/renderD128", F_OK | R_OK | W_OK);
+     allocator_valid[MPP_BUFFER_TYPE_DMA_HEAP] = !access("/dev/dma_heap", F_OK | R_OK);
+ 
+     if (!allocator_valid[MPP_BUFFER_TYPE_ION] &&
