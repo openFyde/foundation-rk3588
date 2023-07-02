@@ -33,7 +33,7 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
-@@ -0,0 +1,237 @@
+@@ -0,0 +1,239 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + *  Fydeos detachable emulator driver
@@ -199,6 +199,8 @@ Index: kernel-rockchip/drivers/usb/misc/fyde-vdtb.c
 +      pr_info("fyde_vtb suspend.");
 +      break;
 +    case PM_POST_RESTORE:
++    case PM_POST_HIBERNATION:
++    case PM_POST_SUSPEND:
 +      atomic_set(&priv->in_suspend, 0);
 +      pr_info("fyde_vtb resumed.");
 +      break;
