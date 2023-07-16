@@ -4,7 +4,7 @@
 EAPI=7
 CROS_WORKON_REPO="git@gitlab.fydeos.xyz:openfyde/projects"
 
-CROS_WORKON_COMMIT="ec217c3b3a417635c36dc0f48e62b88075a6fce2"
+CROS_WORKON_COMMIT="ce5da098c4cd46deb075845111383d9fd34afa7a"
 
 # CROS_WORKON_REPO + CROS_WORKON_PROJECT will be the whole url for rockchip kernel example: http://git/xxxx/repo/rk-kernel
 CROS_WORKON_PROJECT="rk-kernel"

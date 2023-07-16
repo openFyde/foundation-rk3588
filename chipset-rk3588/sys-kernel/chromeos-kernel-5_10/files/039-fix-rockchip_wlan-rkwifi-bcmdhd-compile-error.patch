@@ -1,33 +1,7 @@
-Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux_platdev.c
+Index: linux/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 ===================================================================
---- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux_platdev.c
-+++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux_platdev.c
-@@ -1067,7 +1067,7 @@ static int dhd_wifi_platform_load_usb(vo
- }
- #endif /* BCMDBUS */
- 
--static int dhd_wifi_platform_load()
-+static int dhd_wifi_platform_load(void)
- {
- 	int err = 0;
- 	printf("%s: Enter\n", __FUNCTION__);
-Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg_btcoex.c
-===================================================================
---- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg_btcoex.c
-+++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg_btcoex.c
-@@ -406,7 +406,7 @@ void* wl_cfg80211_btcoex_init(struct net
- 	return btco_inf;
- }
- 
--void wl_cfg80211_btcoex_deinit()
-+void wl_cfg80211_btcoex_deinit(void)
- {
- 	if (!btcoex_info_loc)
- 		return;
-Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-===================================================================
---- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-+++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+--- linux.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
++++ linux/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 @@ -363,7 +363,7 @@ BCMDHD_ROOT = $(S)/drivers/net/wireless/
  #$(warning "BCMDHD_ROOT=$(BCMDHD_ROOT)")
  EXTRA_CFLAGS = $(DHDCFLAGS)
