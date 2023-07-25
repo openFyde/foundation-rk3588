@@ -5,7 +5,6 @@ EAPI=7
 inherit savedconfig multiprocessing git-r3
 
 EGIT_REPO_URI="https://github.com/armbian/firmware.git"
-EGIT_COMMIT="d41f868e0624236c4e2b0a2905491d53c6c295a3"
 
 KEYWORDS="~alpha amd64 arm arm64 hppa ~ia64 ~loong ~m68k ~mips ppc ppc64 ~riscv ~s390 sparc x86"
 
