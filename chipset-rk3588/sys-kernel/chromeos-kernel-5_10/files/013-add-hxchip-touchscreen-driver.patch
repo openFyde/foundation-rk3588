@@ -2,7 +2,7 @@ Index: kernel-rockchip/drivers/input/touchscreen/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/input/touchscreen/Kconfig
 +++ kernel-rockchip/drivers/input/touchscreen/Kconfig
-@@ -1365,4 +1365,15 @@ config TOUCHSCREEN_ZINITIX
+@@ -1380,4 +1380,15 @@ config TOUCHSCREEN_ZINITIX
  	  To compile this driver as a module, choose M here: the
  	  module will be called zinitix.
  
@@ -22,8 +22,8 @@ Index: kernel-rockchip/drivers/input/touchscreen/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/input/touchscreen/Makefile
 +++ kernel-rockchip/drivers/input/touchscreen/Makefile
-@@ -121,3 +121,4 @@ obj-$(CONFIG_TOUCHSCREEN_ROHM_BU21023)	+
- obj-$(CONFIG_TOUCHSCREEN_RASPBERRYPI_FW)	+= raspberrypi-ts.o
+@@ -123,3 +123,4 @@ obj-$(CONFIG_TOUCHSCREEN_RASPBERRYPI_FW)
+ obj-$(CONFIG_TOUCHSCREEN_RASPITS_FT5426)	+= raspits_ft5426.o
  obj-$(CONFIG_TOUCHSCREEN_IQS5XX)	+= iqs5xx.o
  obj-$(CONFIG_TOUCHSCREEN_ZINITIX)	+= zinitix.o
 +obj-$(CONFIG_TOUCHSCREEN_HIMAX_CHIPSET) += hxchipset/

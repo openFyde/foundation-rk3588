@@ -2062,8 +2062,8 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -142,6 +142,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3568-nv
- dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10.dtb
+@@ -159,6 +159,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-ev
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-dsi-dsc-MV2100UZ1.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-ipc-6x-linux.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-evb1-lp4-v10-linux.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-12c-linux.dtb
@@ -7240,7 +7240,7 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
-@@ -6908,7 +6908,14 @@ static int vop2_calc_dsc_clk(struct drm_
+@@ -6995,7 +6995,14 @@ static int vop2_calc_dsc_clk(struct drm_
  	 * so when txp_clk is equal to v_pixclk, we set dsc_cds = crtc_clock / 4,
  	 * otherwise dsc_cds = crtc_clock / 8;
  	 */
@@ -7256,7 +7256,7 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  
  	return 0;
  }
-@@ -7015,7 +7022,13 @@ static void vop2_crtc_enable_dsc(struct
+@@ -7102,7 +7109,13 @@ static void vop2_crtc_enable_dsc(struct
  	bool mipi_ds_mode = false;
  	uint32_t *reg_base = vop2->regs;
  	u32 offset = 0;
@@ -7271,7 +7271,7 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	if (!vop2->data->nr_dscs) {
  		DRM_WARN("Unsupported DSC\n");
  
-@@ -7125,8 +7138,14 @@ static void vop2_crtc_enable_dsc(struct
+@@ -7212,8 +7225,14 @@ static void vop2_crtc_enable_dsc(struct
  		 * dsc_htotal = htotal * (1 << dclk_core->div_val) /
  				((1 << dsc_txp_clk->div_val) * (1 << dsc_cds_clk->div_val))
  		*/
@@ -7309,12 +7309,14 @@ Index: kernel-rockchip/drivers/misc/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/misc/Makefile
 +++ kernel-rockchip/drivers/misc/Makefile
-@@ -59,3 +59,5 @@ obj-$(CONFIG_UACCE)		+= uacce/
+@@ -62,5 +62,7 @@ obj-$(CONFIG_UACCE)		+= uacce/
  obj-$(CONFIG_XILINX_SDFEC)	+= xilinx_sdfec.o
  obj-$(CONFIG_HISI_HIKEY_USB)	+= hisi_hikey_usb.o
  obj-$(CONFIG_UID_SYS_STATS)	+= uid_sys_stats.o
 +obj-$(CONFIG_JW_IO)     += jw_io_core.o
 +obj-y   += redriver/
+ obj-$(CONFIG_RK803)		+= rk803.o
+ obj-$(CONFIG_KHADAS_MCU) += khadas-mcu.o
 Index: kernel-rockchip/drivers/net/usb/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/usb/Makefile
@@ -10164,11 +10166,10 @@ Index: kernel-rockchip/drivers/gpu/drm/panel/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/panel/Kconfig
 +++ kernel-rockchip/drivers/gpu/drm/panel/Kconfig
-@@ -507,4 +507,12 @@ config DRM_PANEL_XINPENG_XPP055C272
- 	  Say Y here if you want to enable support for the Xinpeng
+@@ -528,6 +528,13 @@ config DRM_PANEL_XINPENG_XPP055C272
  	  XPP055C272 controller for 720x1280 LCD panels with MIPI/RGB/SPI
  	  system interfaces.
-+
+ 
 +config DRM_PANEL_FYDETAB
 +  tristate "LCD panel on FydeTab with MIPI interface"
 +  depends on DRM_MIPI_DSI
@@ -10176,7 +10177,9 @@ Index: kernel-rockchip/drivers/gpu/drm/panel/Kconfig
 +  help
 +    Say Y here if you want to enable support for FydeTab 1600x2600 LCD panel.
 +
- endmenu
+ config DRM_PANEL_INNOLUX_AFJ101_BA2131
+ 	tristate "Innolux AFJ101 BA2131 panel"
+ 	depends on OF
 Index: kernel-rockchip/drivers/net/usb/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/usb/Kconfig

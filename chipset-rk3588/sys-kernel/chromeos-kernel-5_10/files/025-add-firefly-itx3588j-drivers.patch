@@ -2604,7 +2604,7 @@ Index: kernel-rockchip/drivers/media/i2c/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/media/i2c/Kconfig
 +++ kernel-rockchip/drivers/media/i2c/Kconfig
-@@ -1357,6 +1357,13 @@ config VIDEO_JX_K17
+@@ -1380,6 +1380,13 @@ config VIDEO_JX_K17
  	  To compile this driver as a module, choose M here: the
  	  module will be called jx_k17.
  
@@ -2622,7 +2622,7 @@ Index: kernel-rockchip/drivers/media/i2c/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/media/i2c/Makefile
 +++ kernel-rockchip/drivers/media/i2c/Makefile
-@@ -226,6 +226,7 @@ obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-c
+@@ -229,6 +229,7 @@ obj-$(CONFIG_VIDEO_RDACM20)	+= rdacm20-c
  obj-$(CONFIG_VIDEO_ST_MIPID02) += st-mipid02.o
  
  obj-$(CONFIG_SDR_MAX2175) += max2175.o
@@ -12418,9 +12418,9 @@ Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
  #define	STMMAC_ALIGN(x)		ALIGN(ALIGN(x, SMP_CACHE_BYTES), 16)
  #define	TSO_MAX_BUFF_SIZE	(SZ_16K - 1)
  
-@@ -4984,6 +4989,27 @@ int stmmac_reinit_ringparam(struct net_d
- 	return ret;
+@@ -5100,6 +5105,27 @@ static int phy_rtl8211f_led_fixup(struct
  }
+ #endif
  
 +#ifdef CONFIG_STMMAC_FIREFLY_QUIRK
 +static int phy_rtl8211f_led_fixup(struct phy_device *phydev)
@@ -12446,7 +12446,7 @@ Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
  /**
   * stmmac_dvr_probe
   * @device: device pointer
-@@ -5216,6 +5242,14 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5332,6 +5358,14 @@ int stmmac_dvr_probe(struct device *devi
  			__func__, ret);
  		goto error_netdev_register;
  	}
@@ -12459,17 +12459,19 @@ Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
 +      pr_warn("Cannot register 8211f PHY board fixup.\n");
 +#endif //CONFIG_STMMAC_FIREFLY_QUIRK
  
- #ifdef CONFIG_DEBUG_FS
- 	stmmac_init_fs(ndev);
+ #ifdef LED_FIX 
+ /* register the PHY board fixup */
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
-@@ -193,3 +193,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-e
+@@ -224,5 +224,6 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-r
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-rk806-single-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-firefly-itx-3588j.dtb
+ 
+ subdir-y := $(dts-dirs) overlay
 Index: kernel-rockchip/sound/soc/codecs/es8323.c
 ===================================================================
 --- kernel-rockchip.orig/sound/soc/codecs/es8323.c

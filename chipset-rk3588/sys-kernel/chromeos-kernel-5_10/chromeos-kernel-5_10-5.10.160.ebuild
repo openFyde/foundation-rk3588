@@ -4,18 +4,18 @@
 EAPI=7
 CROS_WORKON_REPO="git@gitlab.fydeos.xyz:openfyde/projects"
 
-CROS_WORKON_COMMIT="ce5da098c4cd46deb075845111383d9fd34afa7a"
+CROS_WORKON_COMMIT="51df5b9c61705d08dcc01851bbf5072b5d2ac4af"
 
 # CROS_WORKON_REPO + CROS_WORKON_PROJECT will be the whole url for rockchip kernel example: http://git/xxxx/repo/rk-kernel
 CROS_WORKON_PROJECT="rk-kernel"
 # clone the kernel resource to ~/trunk/src/third_party/kernel/v5.10-rockchip to speed up the compiling.
 CROS_WORKON_LOCALNAME="kernel/v5.10-rockchip"
-CROS_WORKON_EGIT_BRANCH="rk3588_v1.0.7_20230529"
+CROS_WORKON_EGIT_BRANCH="main"
 CROS_WORKON_INCREMENTAL_BUILD="1"
 CROS_WORKON_MANUAL_UPREV=1
-EGIT_MASTER="rk3588_v1.0.7_20230529"
+EGIT_MASTER="main"
 
-#ECLASS_DEBUG_OUTPUT="on"
+# ECLASS_DEBUG_OUTPUT="on"
 # Please uncomment the follwing if you are not fyder
 # CROS_WORKON_REPO="https://gitlab.com/rk3588_linux/rk"
 # CROS_WORKON_PROJECT="kernel"

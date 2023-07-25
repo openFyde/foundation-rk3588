@@ -1,7 +1,7 @@
-Index: linux/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 ===================================================================
---- linux.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-+++ linux/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 @@ -176,15 +176,36 @@
      };
    };
@@ -48,10 +48,10 @@ Index: linux/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
  
  	finger_power_test: finger-power-test {
  		compatible = "regulator-fixed";
-Index: linux/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
---- linux.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-+++ linux/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 @@ -282,16 +282,14 @@
  	rockchip,lane-rate = <676000>;
  	dsi0_panel: panel@0 {
@@ -83,10 +83,10 @@ Index: linux/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  	connect = <&vp2_out_dsi0>;
  };
  
-Index: linux/drivers/gpu/drm/panel/panel-simple.c
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-simple.c
 ===================================================================
---- linux.orig/drivers/gpu/drm/panel/panel-simple.c
-+++ linux/drivers/gpu/drm/panel/panel-simple.c
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/panel-simple.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-simple.c
 @@ -144,6 +144,7 @@ struct panel_simple {
  	bool enabled;
  	bool power_invert;

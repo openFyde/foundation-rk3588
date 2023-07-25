@@ -28,7 +28,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
-@@ -88,7 +88,7 @@
+@@ -109,7 +109,7 @@
  		status = "disabled";
  		compatible = "rockchip,hdmi";
  		rockchip,mclk-fs = <128>;
@@ -37,7 +37,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
  		rockchip,cpu = <&i2s5_8ch>;
  		rockchip,codec = <&hdmi0>;
  		rockchip,jack-det;
-@@ -98,7 +98,7 @@
+@@ -119,7 +119,7 @@
  		status = "disabled";
  		compatible = "rockchip,hdmi";
  		rockchip,mclk-fs = <128>;
@@ -46,7 +46,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb.dtsi
  		rockchip,cpu = <&i2s6_8ch>;
  		rockchip,codec = <&hdmi1>;
  		rockchip,jack-det;
-@@ -1203,21 +1203,25 @@
+@@ -1230,21 +1230,25 @@
  
  /* vp0 & vp1 splice for 8K output */
  &vp0 {

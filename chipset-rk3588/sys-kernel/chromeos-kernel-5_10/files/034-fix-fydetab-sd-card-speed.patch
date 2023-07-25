@@ -14,7 +14,7 @@ Index: kernel-rockchip/drivers/soc/rockchip/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/soc/rockchip/Kconfig
 +++ kernel-rockchip/drivers/soc/rockchip/Kconfig
-@@ -275,4 +275,9 @@ config RK_MEMBLOCK_PROCFS
+@@ -283,4 +283,9 @@ source "drivers/soc/rockchip/minidump/Kc
  
  endmenu
  
