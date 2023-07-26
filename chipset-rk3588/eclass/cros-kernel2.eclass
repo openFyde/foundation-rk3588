@@ -658,8 +658,7 @@ CONFIG_INITRAMFS_COMPRESSION_XZ=y
 
 factory_shim_ramfs_desc="Initramfs for factory installer shim"
 factory_shim_ramfs_config='
-CONFIG_INITRAMFS_SOURCE="%ROOT%/var/lib/initramfs/factory_shim_ramfs.cpio.xz"
-CONFIG_INITRAMFS_COMPRESSION_XZ=y
+CONFIG_INITRAMFS_SOURCE="%ROOT%/var/lib/initramfs/factory_shim_ramfs.cpio"
 '
 
 minios_ramfs_desc="Initramfs for minios image"
