@@ -49,6 +49,7 @@ Index: src/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
 +                output_record.output_frame->layout().planes()[0].offset;
 +            memcpy(dst, data, buf->GetPlaneBytesUsed(0));
 +          }
++          munmap(dst, frame_dma_buffer_size);
 +        } else {
 +          LOG(ERROR) << "frame_dma_buffer do not match dq_buf";
 +          NOTIFY_ERROR(PLATFORM_FAILURE);
