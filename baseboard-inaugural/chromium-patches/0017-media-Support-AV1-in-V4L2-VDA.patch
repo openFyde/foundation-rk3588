@@ -1,8 +1,8 @@
-diff --git a/media/gpu/v4l2/v4l2_device.cc b/media/gpu/v4l2/v4l2_device.cc
-index 62929528323a..a836bf14ca8d 100644
---- a/media/gpu/v4l2/v4l2_device.cc
-+++ b/media/gpu/v4l2/v4l2_device.cc
-@@ -1763,7 +1763,11 @@ std::vector<VideoCodecProfile> V4L2Device::V4L2PixFmtToVideoCodecProfiles(
+Index: src/media/gpu/v4l2/v4l2_device.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2_device.cc
++++ src/media/gpu/v4l2/v4l2_device.cc
+@@ -1763,7 +1763,11 @@ std::vector<VideoCodecProfile> V4L2Devic
        if (!get_supported_profiles(VideoCodec::kAV1, &profiles)) {
          DLOG(WARNING) << "Driver doesn't support QUERY AV1 profiles, "
                        << "use default values, Main";
@@ -15,11 +15,11 @@ index 62929528323a..a836bf14ca8d 100644
        }
        break;
      default:
-diff --git a/media/gpu/v4l2/v4l2_vda_helpers.cc b/media/gpu/v4l2/v4l2_vda_helpers.cc
-index 1fda578eb3a1..f9a8d1577bdd 100644
---- a/media/gpu/v4l2/v4l2_vda_helpers.cc
-+++ b/media/gpu/v4l2/v4l2_vda_helpers.cc
-@@ -162,6 +162,9 @@ InputBufferFragmentSplitter::CreateFromProfile(
+Index: src/media/gpu/v4l2/v4l2_vda_helpers.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2_vda_helpers.cc
++++ src/media/gpu/v4l2/v4l2_vda_helpers.cc
+@@ -162,6 +162,9 @@ InputBufferFragmentSplitter::CreateFromP
      case VideoCodec::kVP9:
        // VP8/VP9 don't need any frame splitting, use the default implementation.
        return std::make_unique<v4l2_vda_helpers::InputBufferFragmentSplitter>();
@@ -29,11 +29,11 @@ index 1fda578eb3a1..f9a8d1577bdd 100644
      default:
        LOG(ERROR) << "Unhandled profile: " << profile;
        return nullptr;
-diff --git a/media/gpu/v4l2/v4l2_video_decode_accelerator.cc b/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
-index 3ac2cc0d1e0c..c9abb614c307 100644
---- a/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
-+++ b/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
-@@ -86,7 +86,7 @@ bool IsVp9KSVCStream(uint32_t input_format_fourcc,
+Index: src/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
++++ src/media/gpu/v4l2/v4l2_video_decode_accelerator.cc
+@@ -86,7 +86,7 @@ bool IsVp9KSVCStream(uint32_t input_form
  
  // static
  const uint32_t V4L2VideoDecodeAccelerator::supported_input_fourccs_[] = {
@@ -42,11 +42,19 @@ index 3ac2cc0d1e0c..c9abb614c307 100644
  };
  
  // static
-diff --git a/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc b/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
-index 54e708f09314..08b7ed8f330d 100644
---- a/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
-+++ b/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
-@@ -780,6 +780,7 @@ bool V4L2StatefulVideoDecoderBackend::IsSupportedProfile(
+@@ -1556,6 +1556,7 @@ bool V4L2VideoDecodeAccelerator::Enqueue
+       ret = std::move(buffer).QueueMMap();
+       break;
+     case V4L2_MEMORY_DMABUF:
++      VLOGF(3) << "QueueDMABuf buffer_id:" << buffer.BufferId() << " fd(0):" << output_record.output_frame->DmabufFds()[0].get();
+       ret = std::move(buffer).QueueDMABuf(output_record.output_frame);
+       break;
+     default:
+Index: src/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
++++ src/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
+@@ -780,6 +780,7 @@ bool V4L2StatefulVideoDecoderBackend::Is
  #endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
        V4L2_PIX_FMT_VP8,
        V4L2_PIX_FMT_VP9,

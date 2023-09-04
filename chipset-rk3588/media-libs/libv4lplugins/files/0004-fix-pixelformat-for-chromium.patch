@@ -1,0 +1,238 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-dec.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+@@ -193,6 +193,21 @@ static void rkmpp_put_frames(struct rkmp
+ 	LEAVE();
+ }
+ 
++static uint32_t mpp_format_to_v4l_format(MppFrameFormat fmt) {
++  switch(fmt & MPP_FRAME_FMT_MASK) {
++    case MPP_FMT_YUV420P:
++      return V4L2_PIX_FMT_YUV420;
++    case MPP_FMT_YUV420SP_VU:
++      return V4L2_PIX_FMT_NV21;
++    case MPP_FMT_YUV422P:
++      return V4L2_PIX_FMT_YUV422P;
++    case MPP_FMT_YUV422_YUYV:
++      return V4L2_PIX_FMT_YUYV;
++    default:
++      return V4L2_PIX_FMT_NV12;
++  }
++}
++
+ static void rkmpp_apply_info_change(struct rkmpp_dec_context *dec,
+ 				    MppFrame frame)
+ {
+@@ -237,11 +252,13 @@ static void rkmpp_apply_info_change(stru
+ 	ctx->capture.format.plane_fmt[0].sizeimage =
+ 		dec->video_info.size;
+ 
+-	LOGV(1, "frame info changed: %dx%d(%dx%d:%d)\n",
++  ctx->capture.format.pixelformat = mpp_format_to_v4l_format(mpp_frame_get_fmt(frame));
++
++	LOGV(1, "frame info changed: %dx%d(%dx%d:%d) format:%s\n",
+ 	     dec->video_info.width, dec->video_info.height,
+ 	     dec->video_info.hor_stride,
+ 	     dec->video_info.ver_stride,
+-	     dec->video_info.size);
++	     dec->video_info.size, (char *)&(ctx->capture.format.pixelformat));
+ 
+ 	LEAVE();
+ }
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -42,7 +42,7 @@ static bool rkmpp_log_fps = false;
+ 
+ static pthread_once_t g_rkmpp_global_init_once = PTHREAD_ONCE_INIT;
+ 
+-static void rkmpp_global_init()
++static void rkmpp_global_init(void)
+ {
+ 	char *env = getenv("LIBV4L_RKMPP_LOG_LEVEL");
+ 	if (env != NULL)
+@@ -496,7 +496,7 @@ int rkmpp_querybuf(struct rkmpp_context
+ 
+ 	rkmpp_buffer = &queue->buffers[buffer->index];
+ 
+-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
++	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer\n");
+ 		RETURN_ERR(EINVAL, -1);
+@@ -565,7 +565,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
+ 
+ 	rkmpp_buffer = &queue->buffers[buffer->index];
+ 
+-	ret = rkmpp_from_v4l2_buffer(ctx, buffer, rkmpp_buffer);
++	ret = rkmpp_from_v4l2_buffer(ctx, buffer, rkmpp_buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer\n");
+ 		RETURN_ERR(EINVAL, -1);
+@@ -619,7 +619,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
+ 	/* Update poll event after avail list changed */
+ 	rkmpp_update_poll_event(ctx);
+ 
+-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
++	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer, ret:%d\n", ret);
+ 		RETURN_ERR(EINVAL, -1);
+@@ -662,7 +662,10 @@ int rkmpp_update_poll_event(struct rkmpp
+ 	else
+ 		ret = eventfd_read(ctx->eventfd, &event);
+ 
++  LOGV(3, "%s: ret:%d\n", has_event ? "write" : "read", ret);
++  errno = 0;
+ 	LEAVE();
++
+ 	return ret;
+ }
+ 
+@@ -805,7 +808,7 @@ static void *plugin_init(int fd)
+ 	}
+ 
+ 	/* Filter out eventfd's POLLOUT, since it would be always generated */
+-	ev.events = EPOLLIN | EPOLLET;
++	ev.events = EPOLLIN | EPOLLET ;
+ 	ev.data.fd = ctx->eventfd;
+ 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, ctx->eventfd, &ev) < 0) {
+ 		LOGE("failed to add eventfd\n");
+@@ -950,9 +953,10 @@ static void *plugin_mmap(void *dev_ops_p
+ 	struct rkmpp_buf_queue *queue;
+ 	void *ptr;
+ 	unsigned int index;
++  int step1, step2;
+ 
+ 	ENTER();
+-
++  step1 = errno;
+ 	if (start) {
+ 		LOGE("only support start=NULL\n");
+ 		RETURN_ERR(EINVAL, NULL);
+@@ -979,9 +983,13 @@ static void *plugin_mmap(void *dev_ops_p
+ 	}
+ 
+ 	rkmpp_buffer = &queue->buffers[index];
++  step2 = errno;
+ 	ptr = mmap(start, length, prot, flags, rkmpp_buffer->fd, 0);
+ 
+-	LOGV(1, "mmap buffer(%d): %p, fd: %d\n", index, ptr, rkmpp_buffer->fd);
++  if (ptr == MAP_FAILED)
++    LOGV(1, "mmap failed buffer(%d): fd:%d errno:%d\n", index, rkmpp_buffer->fd, errno);
++  else
++	  LOGV(1, "mmap buffer(%d): %p, fd: %d errno:%d step1:%d step2:%d\n", index, ptr, rkmpp_buffer->fd, errno, step1, step2);
+ 
+ 	LEAVE();
+ 	return ptr;
+Index: libv4l-rkmpp/include/libv4l-rkmpp.h
+===================================================================
+--- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
++++ libv4l-rkmpp/include/libv4l-rkmpp.h
+@@ -39,11 +39,11 @@ extern int rkmpp_log_level;
+ 
+ #define gettid() syscall(SYS_gettid)
+ 
+-__attribute__((format(printf, 4, 5))) void log_prefix(const char *prefix, const char *func,
+-  int line, const char *format, ...);
++__attribute__((format(printf, 5, 6))) void log_prefix(const char *prefix, const char *func,
++  int line, int code, const char *format, ...);
+ 
+ #define LOG(fmt, ...) do { \
+-  log_prefix("RKMPP", __func__, __LINE__, fmt, ##__VA_ARGS__); \
++  log_prefix("RKMPP", __func__, __LINE__, errno, fmt, ##__VA_ARGS__); \
+ 	} while (0)
+ 
+ #define LOGV(level, fmt, ...) \
+@@ -420,9 +420,9 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
+ 
+ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
+ 			 struct rkmpp_buffer *rkmpp_buffer,
+-			 struct v4l2_buffer *buffer);
++			 struct v4l2_buffer *buffer, bool output);
+ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
+ 			   struct v4l2_buffer *buffer,
+-			   struct rkmpp_buffer *rkmpp_buffer);
++			   struct rkmpp_buffer *rkmpp_buffer, bool input);
+ 
+ #endif //LIBV4L_RKMPP_H
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -14,6 +14,7 @@
+ 
+ #include <sys/mman.h>
+ #include <stdarg.h>
++#include <fcntl.h>
+ 
+ #include "libv4l-rkmpp.h"
+ 
+@@ -233,7 +234,8 @@ out:
+ 
+ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
+ 			 struct rkmpp_buffer *rkmpp_buffer,
+-			 struct v4l2_buffer *buffer)
++			 struct v4l2_buffer *buffer,
++       bool output)
+ {
+ 	unsigned int i;
+ 
+@@ -262,6 +264,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 			buffer->m.planes[i].m.fd =
+ 				rkmpp_buffer->planes[i].fd;
+ 	}
++  if (output)
++    LOGV(3, "deque output buffer, length:%d, fd(0):%d \n", buffer->length, rkmpp_buffer->planes[0].fd);
+ 
+ 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
+ 		/* Returning data are always in plane 0 */
+@@ -270,7 +274,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+       rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
+ 		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
+ 
+-		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0)
++		if (output && (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0))
+ 			return -1;
+ 	}
+ 
+@@ -302,7 +306,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 
+ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
+ 			   struct v4l2_buffer *buffer,
+-			   struct rkmpp_buffer *rkmpp_buffer)
++			   struct rkmpp_buffer *rkmpp_buffer,
++         bool input)
+ {
+ 	unsigned int i;
+ 
+@@ -331,7 +336,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 				buffer->m.planes[i].m.fd;
+ 	}
+ 
+-	if (rkmpp_buffer->bytesused) {
++	if (rkmpp_buffer->bytesused && input) {
+ 		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 0) < 0)
+ 			return -1;
+ 	}
+@@ -340,14 +345,16 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 		(uint64_t)buffer->timestamp.tv_sec * 1000000 +
+ 		buffer->timestamp.tv_usec;
+ 
++  if (!input)
++    LOGV(2, "enque output buffer, length:%d, fd(0):%d, status:0x%x\n", buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
+ 	LEAVE();
+ 	return 0;
+ }
+ 
+ void log_prefix(const char *prefix, const char *func,
+-  int line, const char *format, ...) {
++  int line, int code, const char *format, ...) {
+   char buf[50];
+-  snprintf(buf, sizeof(buf), "[%s:%s(%d)]", prefix, func, line);
++  snprintf(buf, sizeof(buf), "[%s:%s(%d)err:%d]", prefix, func, line, code);
+   va_list args;
+   va_start(args, format);
+   fprintf(stderr, "%s ", buf);

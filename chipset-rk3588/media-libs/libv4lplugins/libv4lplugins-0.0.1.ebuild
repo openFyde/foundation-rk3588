@@ -31,6 +31,7 @@ src_prepare() {
   append-cflags -Wno-gnu-zero-variadic-macro-arguments -Wno-language-extension-token
   eapply -p1 ${FILESDIR}/remove-fd-state-checking.patch
   eapply -p1 ${FILESDIR}/0003-Hack-codec-while-parse-options.patch
+  eapply -p1 ${FILESDIR}/0004-fix-pixelformat-for-chromium.patch
   default
 }
 

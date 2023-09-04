@@ -2,15 +2,6 @@ Index: src/media/gpu/v4l2/generic_v4l2_device.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/generic_v4l2_device.cc
 +++ src/media/gpu/v4l2/generic_v4l2_device.cc
-@@ -108,7 +108,7 @@ bool GenericV4L2Device::Poll(bool poll_d
-     VPLOGF(1) << "poll() failed";
-     return false;
-   }
--  *event_pending = (pollfd != -1 && pollfds[pollfd].revents & POLLPRI);
-+  *event_pending = (pollfd != -1 && pollfds[pollfd].revents & POLLIN);
-   return true;
- }
- 
 @@ -118,10 +118,19 @@ void* GenericV4L2Device::Mmap(void* addr
                                int flags,
                                unsigned int offset) {
@@ -72,8 +63,16 @@ Index: src/content/gpu/gpu_sandbox_hook_linux.cc
  
  constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
  
-@@ -152,6 +155,11 @@ void AddV4L2GpuPermissions(
+@@ -152,7 +155,6 @@ void AddV4L2GpuPermissions(
            BrokerFilePermission::ReadWrite(mediaDevicePath.str()));
+     }
+   }
+-
+   // Image processor used on ARM platforms.
+   static const char kDevImageProc0Path[] = "/dev/image-proc0";
+   permissions->push_back(BrokerFilePermission::ReadWrite(kDevImageProc0Path));
+@@ -170,6 +172,11 @@ void AddV4L2GpuPermissions(
+           BrokerFilePermission::ReadWrite(encoderPath.str()));
      }
    }
 +  // Video decoder of rk3588
@@ -82,9 +81,21 @@ Index: src/content/gpu/gpu_sandbox_hook_linux.cc
 +  static const char kDevRkRgaPath[] = "/dev/rga";
 +  permissions->push_back(BrokerFilePermission::ReadWrite(kDevRkRgaPath));
  
-   // Image processor used on ARM platforms.
-   static const char kDevImageProc0Path[] = "/dev/image-proc0";
-@@ -376,6 +384,8 @@ void AddArmGpuPermissions(std::vector<Br
+   // Device node for V4L2 JPEG decode accelerator drivers.
+   static const char kDevJpegDecPath[] = "/dev/jpeg-dec";
+@@ -299,6 +306,11 @@ void AddNvidiaGpuPermissions(std::vector
+   for (const char* item : kReadOnlyList) {
+     permissions->push_back(BrokerFilePermission::ReadOnly(item));
+   }
++  // Video decoder of rk3588
++  static const char kDevRkMppPath[] = "/dev/mpp_service";
++  permissions->push_back(BrokerFilePermission::ReadWrite(kDevRkMppPath));
++  static const char kDevRkRgaPath[] = "/dev/rga";
++  permissions->push_back(BrokerFilePermission::ReadWrite(kDevRkRgaPath));
+ 
+   AddDrmGpuPermissions(permissions);
+ }
+@@ -376,6 +388,8 @@ void AddArmGpuPermissions(std::vector<Br
    permissions->push_back(BrokerFilePermission::ReadOnly(kLdSoCache));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibGlesPath));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibEglPath));
@@ -93,7 +104,7 @@ Index: src/content/gpu/gpu_sandbox_hook_linux.cc
  
    AddArmMaliGpuPermissions(permissions);
  }
-@@ -623,11 +633,18 @@ void LoadV4L2Libraries(
+@@ -623,11 +637,18 @@ void LoadV4L2Libraries(
    DCHECK(UseV4L2Codec());
  
    if (IsAcceleratedVideoEnabled(options) && UseLibV4L2()) {

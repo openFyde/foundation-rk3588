@@ -4,7 +4,7 @@
 EAPI=7
 
 EGIT_REPO_URI="https://github.com/rockchip-linux/mpp.git"
-EGIT_COMMIT="e025b079a2b01aadc09b0da118b9509c2f02dc6c"
+EGIT_COMMIT="0af9b5becc76c4685831214808e124e65543297b"
 
 inherit cmake-utils git-r3 udev
 
