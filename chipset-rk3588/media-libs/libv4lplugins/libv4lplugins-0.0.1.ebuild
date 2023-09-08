@@ -32,6 +32,7 @@ src_prepare() {
   eapply -p1 ${FILESDIR}/remove-fd-state-checking.patch
   eapply -p1 ${FILESDIR}/0003-Hack-codec-while-parse-options.patch
   eapply -p1 ${FILESDIR}/0004-fix-pixelformat-for-chromium.patch
+  eapply -p1 ${FILESDIR}/0005-fix-encoder-for-chromium.patch
   default
 }
 
@@ -48,6 +49,8 @@ src_configure() {
     emesonargs+=( -Dmax-dec-width=7680
                   -Dmax-dec-height=4320 )
   fi
+  emesonargs+=( -Dmax-enc-width=3840
+                -Dmax-enc-height=2160 )
   meson_src_configure
 }
 

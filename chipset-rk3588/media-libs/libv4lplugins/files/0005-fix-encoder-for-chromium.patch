@@ -1,0 +1,164 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-enc.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+@@ -28,6 +28,13 @@
+ #define RKMPP_ENC_POLL_TIMEOUT_MS	100
+ 
+ static struct rkmpp_fmt rkmpp_enc_fmts[] = {
++  {
++    .name = "4:2:0 1 plane Y/CbCr",
++    .fourcc = V4L2_PIX_FMT_NV12,
++    .num_planes = 1,
++    .type = MPP_VIDEO_CodingNone,
++    .depth = { 12 },
++  },
+ 	{
+ 		.name = "4:2:0 3 plane Y/Cb/Cr",
+ 		.fourcc = V4L2_PIX_FMT_YUV420M,
+@@ -68,10 +75,10 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
+ 		.format = MPP_FMT_BUTT,
+ 		.frmsize = {
+ 			.min_width = 96,
+-			.max_width = 1920,
++			.max_width = 3840,
+ 			.step_width = RKMPP_MB_DIM,
+ 			.min_height = 96,
+-			.max_height = 1088,
++			.max_height = 2160,
+ 			.step_height = RKMPP_MB_DIM,
+ 		},
+ 	},
+@@ -83,13 +90,28 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
+ 		.format = MPP_FMT_BUTT,
+ 		.frmsize = {
+ 			.min_width = 96,
+-			.max_width = 1920,
++			.max_width = 3840,
+ 			.step_width = RKMPP_MB_DIM,
+ 			.min_height = 96,
+-			.max_height = 1088,
++			.max_height = 2160,
+ 			.step_height = RKMPP_MB_DIM,
+ 		},
+ 	},
++  {
++    .name = "H.265",
++    .fourcc = V4L2_PIX_FMT_HEVC,
++    .num_planes = 1,
++    .type = MPP_VIDEO_CodingHEVC,
++    .format = MPP_FMT_BUTT,
++    .frmsize = {
++      .min_width = 96,
++      .max_width = 3840,
++      .step_width = RKMPP_MB_DIM,
++      .min_height = 96,
++      .max_height = 2160,
++      .step_height = RKMPP_MB_DIM,
++    },
++  },
+ };
+ 
+ static int rkmpp_enc_apply_rc_cfg(struct rkmpp_enc_context *enc);
+@@ -837,6 +859,48 @@ static int rkmpp_enc_s_parm(struct rkmpp
+ 	return 0;
+ }
+ 
++static int rkmmp_enc_querymenu(struct rkmpp_enc_context *enc,
++             struct v4l2_querymenu *query_menu)
++{
++  struct rkmpp_context *ctx = enc->ctx;
++  ENTER();
++  switch(query_menu->id) {
++  case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
++    if (enc->mb_rc) {
++      if (enc->rc_reaction_coeff < 10)
++        query_menu->index = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
++      else
++        query_menu->index = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR;
++    } else {
++      query_menu->index = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
++    }
++    break;
++  case V4L2_CID_MPEG_VIDEO_H264_PROFILE: {
++    static int support_h264_profiles[] = {
++    	V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
++    	V4L2_MPEG_VIDEO_H264_PROFILE_MAIN,
++    	V4L2_MPEG_VIDEO_H264_PROFILE_HIGH,
++  	};
++    int index = query_menu->index;
++    if (index >= 0 && index < 3 /*sizeof support_h264_profiles */) {
++      query_menu->index = support_h264_profiles[query_menu->index];
++    }else{
++      LOGV(1, "unsupported menu: %x index:%d\n", query_menu->id, index);
++      query_menu->index = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
++    }
++    break;
++  }
++  case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
++    query_menu->index = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
++    break;
++  default:
++    LOGV(1, "unsupported menu: %x\n", query_menu->id);
++    RETURN_ERR(EINVAL, -1);
++  }
++  LEAVE();
++  return 0;
++}
++
+ static int rkmpp_enc_queryctrl(struct rkmpp_enc_context *enc,
+ 			       struct v4l2_queryctrl *query_ctrl)
+ {
+@@ -848,6 +912,14 @@ static int rkmpp_enc_queryctrl(struct rk
+ 	case V4L2_CID_MPEG_VIDEO_PREPEND_SPSPPS_TO_IDR:
+ 		break;
+ 	/* TODO: fill info for other supported ctrls */
++  case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
++    break;
++  case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
++    query_ctrl->minimum = 0;
++    query_ctrl->maximum = 2; /*max index of support_h264_profiles*/
++    break;
++  case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
++    break;
+ 	default:
+ 		LOGV(1, "unsupported ctrl: %x\n", query_ctrl->id);
+ 		RETURN_ERR(EINVAL, -1);
+@@ -880,8 +952,10 @@ static int rkmpp_enc_s_ext_ctrls(struct
+ 
+ 	ENTER();
+ 
+-	if (ext_ctrls->ctrl_class != V4L2_CTRL_CLASS_MPEG)
++	if (ext_ctrls->which != V4L2_CTRL_WHICH_CUR_VAL && ext_ctrls->which != V4L2_CTRL_CLASS_MPEG) {
++    LOGE("bad which:%d\n", ext_ctrls->which);
+ 		RETURN_ERR(EINVAL, -1);
++  }
+ 
+ 	for (i = 0; i < ext_ctrls->count; i++) {
+ 		ctrl = &ext_ctrls->controls[i];
+@@ -929,6 +1003,15 @@ static int rkmpp_enc_s_ext_ctrls(struct
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
++    case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
++      enc->mb_rc = true;
++      if (ctrl->value == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR) {
++         enc->rc_reaction_coeff = 1;
++      } else {
++         enc->rc_reaction_coeff = 10;
++      }
++      LOGV(3, "bitrate mode:%d\n", ctrl->value);
++      break;
+ 		case V4L2_CID_MPEG_VIDEO_BITRATE:
+ 			enc->bitrate = ctrl->value;
+ 			LOGV(3, "bitrate: %d\n", enc->bitrate);
+@@ -1217,6 +1300,9 @@ int rkmpp_enc_ioctl(void *data, unsigned
+ 	case VIDIOC_S_EXT_CTRLS:
+ 		ret = rkmpp_enc_s_ext_ctrls(enc, arg);
+ 		break;
++  case VIDIOC_QUERYMENU:
++    ret = rkmmp_enc_querymenu(enc, arg);
++    break;
+ 	default:
+ 		LOGV(1, "unsupported ioctl cmd: %s(%lu)!\n",
+ 		     rkmpp_cmd2str(cmd), cmd);
