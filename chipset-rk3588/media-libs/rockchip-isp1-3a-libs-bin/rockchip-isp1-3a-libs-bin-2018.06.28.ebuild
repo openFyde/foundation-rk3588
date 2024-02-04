@@ -1,7 +1,7 @@
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Distributed under the terms of the GNU General Public License v2
 
-EAPI=5
+EAPI=7
 
 DESCRIPTION="Rockchip 3A library binaries required by the Rockchip camera HAL"
 SRC_URI="gs://chromeos-localmirror/distfiles/rockchip-isp1-3a-libs-bin-${PV}.tbz2"

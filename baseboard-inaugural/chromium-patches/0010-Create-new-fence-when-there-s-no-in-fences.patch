@@ -10,11 +10,11 @@ Signed-off-by: Jeffy Chen <jeffy.chen@rock-chips.com>
  .../wayland/gpu/gbm_surfaceless_wayland.cc    | 21 +++++++++++++++++--
  1 file changed, 19 insertions(+), 2 deletions(-)
 
-diff --git a/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc b/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-index 5bfc19ef9..a2aecf88f 100644
---- a/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-+++ b/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-@@ -33,6 +33,12 @@ static constexpr size_t kMaxSolidColorBuffers = 12;
+Index: src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
+===================================================================
+--- src.orig/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
++++ src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
+@@ -35,6 +35,12 @@ static constexpr size_t kMaxSolidColorBu
  
  static constexpr gfx::Size kSolidColorBufferSize{4, 4};
  
@@ -27,7 +27,7 @@ index 5bfc19ef9..a2aecf88f 100644
  void WaitForGpuFences(std::vector<std::unique_ptr<gfx::GpuFence>> fences) {
    for (auto& fence : fences)
      fence->Wait();
-@@ -201,8 +207,9 @@ void GbmSurfacelessWayland::Present(SwapCompletionCallback completion_callback,
+@@ -210,8 +216,9 @@ void GbmSurfacelessWayland::Present(Swap
      return;
    }
  
@@ -38,7 +38,7 @@ index 5bfc19ef9..a2aecf88f 100644
    for (auto& config : frame->configs) {
      if (!config.access_fence_handle.is_null()) {
        fences.push_back(std::make_unique<gfx::GpuFence>(
-@@ -211,7 +218,17 @@ void GbmSurfacelessWayland::Present(SwapCompletionCallback completion_callback,
+@@ -220,7 +227,17 @@ void GbmSurfacelessWayland::Present(Swap
      }
    }
  
@@ -57,6 +57,3 @@ index 5bfc19ef9..a2aecf88f 100644
  
    base::OnceClosure fence_retired_callback = base::BindOnce(
        &GbmSurfacelessWayland::FenceRetired, weak_factory_.GetWeakPtr(), frame);
--- 
-2.20.1
-

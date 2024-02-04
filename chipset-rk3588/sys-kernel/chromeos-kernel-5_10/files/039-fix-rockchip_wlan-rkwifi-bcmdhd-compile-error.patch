@@ -1,13 +1,1 @@
-Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-===================================================================
---- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-+++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-@@ -363,7 +363,7 @@ BCMDHD_ROOT = $(S)/drivers/net/wireless/
- #$(warning "BCMDHD_ROOT=$(BCMDHD_ROOT)")
- EXTRA_CFLAGS = $(DHDCFLAGS)
- EXTRA_CFLAGS += -DDHD_COMPILED=\"$(BCMDHD_ROOT)\"
--EXTRA_CFLAGS += -I$(srctree)/$(BCMDHD_ROOT)/include/ -I$(srctree)/$(BCMDHD_ROOT)/
-+EXTRA_CFLAGS += -I$(BCMDHD_ROOT)/include/ -I$(BCMDHD_ROOT)/
- EXTRA_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
- ifeq ($(CONFIG_AP6XXX),m)
- EXTRA_LDFLAGS += --strip-debug
+5.10.198/039-fix-rockchip_wlan-rkwifi-bcmdhd-compile-error.patch

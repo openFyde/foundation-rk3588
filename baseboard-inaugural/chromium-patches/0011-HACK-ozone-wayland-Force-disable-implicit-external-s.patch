@@ -11,11 +11,11 @@ Signed-off-by: Jeffy Chen <jeffy.chen@rock-chips.com>
  ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc | 5 +++--
  1 file changed, 3 insertions(+), 2 deletions(-)
 
-diff --git a/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc b/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-index a2aecf88f..5fcd5fe4b 100644
---- a/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-+++ b/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-@@ -224,10 +224,11 @@ void GbmSurfacelessWayland::Present(SwapCompletionCallback completion_callback,
+Index: src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
+===================================================================
+--- src.orig/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
++++ src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
+@@ -233,10 +233,11 @@ void GbmSurfacelessWayland::Present(Swap
    } else {
      // TODO(fangzhoug): the following should be replaced by a per surface flush
      // as it gets implemented in GL drivers.
@@ -29,6 +29,3 @@ index a2aecf88f..5fcd5fe4b 100644
    }
  
    base::OnceClosure fence_retired_callback = base::BindOnce(
--- 
-2.20.1
-

@@ -1,0 +1,46 @@
+Index: kernel-rockchip/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+===================================================================
+--- kernel-rockchip.orig/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ kernel-rockchip/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+@@ -1516,8 +1516,9 @@ static irqreturn_t rk_pcie_sys_irq_handl
+ 	}
+ 
+ 	reg = rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_INTR_STATUS_MISC);
+-	if (reg & BIT(2))
+-		queue_work(rk_pcie->hot_rst_wq, &rk_pcie->hot_rst_work);
++  if (reg & BIT(2)) {
++    queue_work(rk_pcie->hot_rst_wq, &rk_pcie->hot_rst_work);
++  }
+ 
+ 	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_STATUS_MISC, reg);
+ 
+@@ -2031,6 +2032,14 @@ retry_regulator:
+ 
+ 	reset_control_deassert(rk_pcie->rsts);
+ 
++	rk_pcie->hot_rst_wq = create_singlethread_workqueue("rk_pcie_hot_rst_wq");
++	if (!rk_pcie->hot_rst_wq) {
++		dev_err(dev, "failed to create hot_rst workqueue\n");
++		ret = -ENOMEM;
++		goto remove_irq_domain;
++	}
++	INIT_WORK(&rk_pcie->hot_rst_work, rk_pcie_hot_rst_work);
++
+ 	ret = rk_pcie_request_sys_irq(rk_pcie, pdev);
+ 	if (ret) {
+ 		dev_err(dev, "pcie irq init failed\n");
+@@ -2128,14 +2137,6 @@ retry_regulator:
+ 
+ 	dw_pcie_dbi_ro_wr_dis(pci);
+ 
+-	rk_pcie->hot_rst_wq = create_singlethread_workqueue("rk_pcie_hot_rst_wq");
+-	if (!rk_pcie->hot_rst_wq) {
+-		dev_err(dev, "failed to create hot_rst workqueue\n");
+-		ret = -ENOMEM;
+-		goto remove_irq_domain;
+-	}
+-	INIT_WORK(&rk_pcie->hot_rst_work, rk_pcie_hot_rst_work);
+-
+ 	device_init_wakeup(dev, true);
+ 
+ 	/* Enable async system PM for multiports SoC */

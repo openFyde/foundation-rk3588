@@ -1,13 +1,1 @@
-Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-===================================================================
---- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-+++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-@@ -21,7 +21,7 @@ CONFIG_BCMDHD_AUTO_SELECT := y
- #CONFIG_BCMDHD_TIMESTAMP := y
- #CONFIG_BCMDHD_WAPI := y
- #CONFIG_BCMDHD_RANDOM_MAC := y
--CONFIG_BCMDHD_REQUEST_FW := y
-+#CONFIG_BCMDHD_REQUEST_FW := y
- #CONFIG_BCMDHD_MULTIPLE_DRIVER := y
- #CONFIG_BCMDHD_DWDS := y
- CONFIG_BCMDHD_TPUT := y
+5.10.198/049-fix-ap6275.patch

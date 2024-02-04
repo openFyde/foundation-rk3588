@@ -1,13 +1,1 @@
-Index: kernel-rockchip/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
-===================================================================
---- kernel-rockchip.orig/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
-+++ kernel-rockchip/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
-@@ -671,7 +671,7 @@ static int kbase_open(struct inode *inod
- 
- #if (KERNEL_VERSION(6, 0, 0) > LINUX_VERSION_CODE)
- 	/* Set address space operations for page migration */
--	kbase_mem_migrate_set_address_space_ops(kbdev, filp);
-+	//kbase_mem_migrate_set_address_space_ops(kbdev, filp);
- #endif
- 
- 	/* Device-wide firmware load is moved here from probing to comply with
+5.10.198/038-disable-page-migration-of-mali.patch

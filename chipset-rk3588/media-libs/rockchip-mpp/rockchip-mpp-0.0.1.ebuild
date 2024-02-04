@@ -6,7 +6,7 @@ EAPI=7
 EGIT_REPO_URI="https://github.com/rockchip-linux/mpp.git"
 EGIT_COMMIT="0af9b5becc76c4685831214808e124e65543297b"
 
-inherit cmake-utils git-r3 udev
+inherit cmake git-r3 udev
 
 DESCRIPTION="Rockchip Media Process Platform (MPP) module"
 HOMEPAGE="https://github.com/rockchip-linux/mpp"
@@ -29,12 +29,12 @@ src_configure() {
   use asan && mycmakeargs+=( -DASAN_CHECK=ON )
   use static || mycmakeargs+=( -DENABLE_STATIC=OFF )
   use shared-lib && mycmakeargs+=( -DENABLE_SHARED=ON )
-  cmake-utils_src_configure
+  cmake_src_configure
   default
 }
 
 src_install() {
-  cmake-utils_src_install
+  cmake_src_install
   default
   insinto /etc/init
   udev_dorules ${FILESDIR}/99-rockchip-permissions.rules

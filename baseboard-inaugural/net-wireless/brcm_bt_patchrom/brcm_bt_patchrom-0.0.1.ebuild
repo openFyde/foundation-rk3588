@@ -1,7 +1,7 @@
 # Copyright (c) 2018 The Fyde OS Authors. All rights reserved.
 # Distributed under the terms of the BSD
 
-EAPI="5"
+EAPI="7"
 
 DESCRIPTION="brcm bluetooth rom patcher"
 HOMEPAGE="http://fydeos.com"
@@ -21,6 +21,7 @@ S=${WORKDIR}
 
 src_prepare() {
 	cp ${FILESDIR}/* .
+  default
 }
 
 src_compiles() {

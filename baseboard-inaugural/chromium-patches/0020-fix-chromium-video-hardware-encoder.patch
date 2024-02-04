@@ -2,7 +2,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
 +++ src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
-@@ -183,17 +183,20 @@ V4L2VideoEncodeAccelerator::~V4L2VideoEn
+@@ -185,17 +185,20 @@ V4L2VideoEncodeAccelerator::~V4L2VideoEn
  }
  
  bool V4L2VideoEncodeAccelerator::Initialize(
@@ -25,7 +25,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return false;
    }
  
-@@ -202,6 +205,7 @@ bool V4L2VideoEncodeAccelerator::Initial
+@@ -204,6 +207,7 @@ bool V4L2VideoEncodeAccelerator::Initial
    if (config.HasSpatialLayer()) {
      MEDIA_LOG(ERROR, media_log.get())
          << "Spatial layer encoding is not yet supported";
@@ -33,15 +33,15 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return false;
    }
  
-@@ -215,6 +219,7 @@ bool V4L2VideoEncodeAccelerator::Initial
-   if (!output_format_fourcc_) {
+@@ -217,6 +221,7 @@ bool V4L2VideoEncodeAccelerator::Initial
+   if (output_format_fourcc_ == V4L2_PIX_FMT_INVALID) {
      MEDIA_LOG(ERROR, media_log.get())
          << "invalid output_profile=" << GetProfileName(config.output_profile);
 +    VLOGF(2) << "invalid output_profile=" <<  GetProfileName(config.output_profile);
      return false;
    }
  
-@@ -223,6 +228,9 @@ bool V4L2VideoEncodeAccelerator::Initial
+@@ -225,6 +230,9 @@ bool V4L2VideoEncodeAccelerator::Initial
          << "Failed to open device for profile="
          << GetProfileName(config.output_profile)
          << ", fourcc=" << FourccToString(output_format_fourcc_);
@@ -51,7 +51,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return false;
    }
  
-@@ -238,6 +246,9 @@ bool V4L2VideoEncodeAccelerator::Initial
+@@ -241,6 +249,9 @@ bool V4L2VideoEncodeAccelerator::Initial
          << "Unsupported resolution: " << config.input_visible_size.ToString()
          << ", min=" << min_resolution.ToString()
          << ", max=" << max_resolution.ToString();
@@ -61,7 +61,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return false;
    }
  
-@@ -255,12 +266,14 @@ bool V4L2VideoEncodeAccelerator::Initial
+@@ -258,12 +269,14 @@ bool V4L2VideoEncodeAccelerator::Initial
    if (device_->Ioctl(VIDIOC_QUERYCAP, &caps) != 0) {
      MEDIA_LOG(ERROR, media_log.get())
          << "ioctl() failed: VIDIOC_QUERYCAP, errno=" << errno;
