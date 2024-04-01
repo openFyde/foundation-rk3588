@@ -2,7 +2,63 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 ===================================================================
 --- kernel-rockchip.orig/sound/soc/rockchip/rockchip_multicodecs.c
 +++ kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
-@@ -261,7 +261,7 @@ static irqreturn_t headset_det_irq_threa
+@@ -42,6 +42,9 @@
+ #define WAIT_CARDS	(SNDRV_CARDS - 1)
+ #define DEFAULT_MCLK_FS	256
+ 
++#define VOLUME_ON 1
++#define VOLUME_OFF 0
++#define VOLUME_DELAY_TIME 200
+ struct adc_keys_button {
+ 	u32 voltage;
+ 	u32 keycode;
+@@ -65,6 +68,9 @@ struct multicodecs_data {
+ 	struct iio_channel *adc;
+ 	struct extcon_dev *extcon;
+ 	struct delayed_work handler;
++  struct delayed_work hp_blast_handler;
++  bool hp_on_stream;
++  bool sp_on_stream;
+ 	unsigned int mclk_fs;
+ 	bool codec_hp_det;
+ 	u32 num_keys;
+@@ -210,6 +216,13 @@ static int mc_keys_load_keymap(struct de
+ 	return 0;
+ }
+ 
++static void hp_blast_handler(struct work_struct *work) {
++  struct multicodecs_data *mc_data = container_of(to_delayed_work(work),
++    struct multicodecs_data, hp_blast_handler);
++  if (extcon_get_state(mc_data->extcon, EXTCON_JACK_HEADPHONE))
++    gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, VOLUME_ON);
++}
++
+ static void adc_jack_handler(struct work_struct *work)
+ {
+ 	struct multicodecs_data *mc_data = container_of(to_delayed_work(work),
+@@ -231,6 +244,7 @@ static void adc_jack_handler(struct work
+ 	}
+ 	if (!mc_data->adc) {
+ 		/* no ADC, so is headphone */
++    gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, VOLUME_OFF);
+ 		snd_soc_jack_report(jack_headset, SND_JACK_HEADPHONE, SND_JACK_HEADSET);
+ 		extcon_set_state_sync(mc_data->extcon, EXTCON_JACK_HEADPHONE, true);
+ 		extcon_set_state_sync(mc_data->extcon, EXTCON_JACK_MICROPHONE, false);
+@@ -239,11 +253,13 @@ static void adc_jack_handler(struct work
+ 	ret = iio_read_channel_processed(mc_data->adc, &adc);
+ 	if (ret < 0) {
+ 		/* failed to read ADC, so assume headphone */
++    gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, VOLUME_OFF);
+ 		snd_soc_jack_report(jack_headset, SND_JACK_HEADPHONE, SND_JACK_HEADSET);
+ 		extcon_set_state_sync(mc_data->extcon, EXTCON_JACK_HEADPHONE, true);
+ 		extcon_set_state_sync(mc_data->extcon, EXTCON_JACK_MICROPHONE, false);
+ 
+ 	} else {
++    gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, VOLUME_OFF);
+ 		snd_soc_jack_report(jack_headset,
+ 				    snd_soc_jack_get_type(jack_headset, adc),
+ 				    SND_JACK_HEADSET);
+@@ -261,7 +277,7 @@ static irqreturn_t headset_det_irq_threa
  {
  	struct multicodecs_data *mc_data = (struct multicodecs_data *)data;
  
@@ -11,7 +67,35 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
  
  	return IRQ_HANDLED;
  };
-@@ -570,8 +570,32 @@ static int wait_locked_card(struct devic
+@@ -274,10 +290,13 @@ static int mc_hp_event(struct snd_soc_da
+ 
+ 	switch (event) {
+ 	case SND_SOC_DAPM_POST_PMU:
+-		gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, 1);
++    mc_data->hp_on_stream = true;
++    queue_delayed_work(system_power_efficient_wq,
++               &mc_data->hp_blast_handler, msecs_to_jiffies(VOLUME_DELAY_TIME));
+ 		break;
+ 	case SND_SOC_DAPM_PRE_PMD:
+-		gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, 0);
++    mc_data->hp_on_stream = false;
++		gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, VOLUME_OFF);
+ 		break;
+ 	default:
+ 		return 0;
+@@ -295,9 +314,11 @@ static int mc_spk_event(struct snd_soc_d
+ 
+ 	switch (event) {
+ 	case SND_SOC_DAPM_POST_PMU:
++    mc_data->sp_on_stream = true;
+ 		gpiod_set_value_cansleep(mc_data->spk_ctl_gpio, 1);
+ 		break;
+ 	case SND_SOC_DAPM_PRE_PMD:
++    mc_data->sp_on_stream = false;
+ 		gpiod_set_value_cansleep(mc_data->spk_ctl_gpio, 0);
+ 		break;
+ 	default:
+@@ -570,8 +591,38 @@ static int wait_locked_card(struct devic
  	return ret;
  }
  
@@ -20,8 +104,8 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 +    struct snd_soc_pcm_runtime *rtd = asoc_substream_to_rtd(substream);
 +    struct multicodecs_data *mc_data = snd_soc_card_get_drvdata(rtd->card);
 +
-+    gpiod_set_value_cansleep(mc_data->spk_ctl_gpio,0);
-+    gpiod_set_value_cansleep(mc_data->hp_ctl_gpio,0);
++    gpiod_set_value_cansleep(mc_data->spk_ctl_gpio, VOLUME_OFF);
++    gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, VOLUME_OFF);
 +}
 +
 +static int rk_test_startup(struct snd_pcm_substream *substream)
@@ -31,8 +115,14 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 +
 +  /*fix double startup process when headphone is plugged in.*/
 +  if (extcon_get_state(mc_data->extcon, EXTCON_JACK_HEADPHONE)) {
-+    if (gpiod_get_value_cansleep(mc_data->hp_ctl_gpio))
-+      return -ENOTSUPP;
++    if (mc_data->hp_on_stream) {
++      //return -ENOTSUPP;
++      pr_info("hp_on_stream\n");
++    }
++  } else {
++    if (mc_data->sp_on_stream) {
++      pr_info("sp_on_stream\n");
++    }
 +  }
 +  return 0;
 +}
@@ -44,6 +134,30 @@ Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
  };
  
  static int rk_multicodecs_probe(struct platform_device *pdev)
+@@ -757,6 +808,7 @@ static int rk_multicodecs_probe(struct p
+ 	}
+ 
+ 	INIT_DEFERRABLE_WORK(&mc_data->handler, adc_jack_handler);
++  INIT_DEFERRABLE_WORK(&mc_data->hp_blast_handler, hp_blast_handler);
+ 
+ 	mc_data->spk_ctl_gpio = devm_gpiod_get_optional(&pdev->dev,
+ 							"spk-con",
+@@ -811,6 +863,7 @@ static int rk_multicodec_remove(struct p
+ 	struct multicodecs_data *mc_data = snd_soc_card_get_drvdata(card);
+ 
+ 	cancel_delayed_work_sync(&mc_data->handler);
++  cancel_delayed_work_sync(&mc_data->hp_blast_handler);
+ 
+ 	return 0;
+ }
+@@ -821,6 +874,7 @@ static void rk_multicodec_shutdown(struc
+ 	struct multicodecs_data *mc_data = snd_soc_card_get_drvdata(card);
+ 
+ 	cancel_delayed_work_sync(&mc_data->handler);
++  cancel_delayed_work_sync(&mc_data->hp_blast_handler);
+ }
+ 
+ static const struct of_device_id rockchip_multicodecs_of_match[] = {
 Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
@@ -1543,7 +1657,16 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  
  	return 0;
  }
-@@ -998,10 +1002,14 @@ static void sbs_supply_changed(struct sb
+@@ -811,6 +815,8 @@ static int sbs_get_chemistry(struct i2c_
+ 		val->intval = POWER_SUPPLY_TECHNOLOGY_NiMH;
+   else if (!strncasecmp(chemistry, "3613", 4))
+     val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
++  else if (!strncasecmp(chemistry, "1550", 4))
++    val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+ 	else
+ 		val->intval = POWER_SUPPLY_TECHNOLOGY_UNKNOWN;
+ 
+@@ -998,10 +1004,14 @@ static void sbs_supply_changed(struct sb
  	struct power_supply *battery = chip->power_supply;
  	int ret;
  
@@ -1562,7 +1685,7 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  	power_supply_changed(battery);
  }
  
-@@ -1071,6 +1079,58 @@ static const struct power_supply_desc sb
+@@ -1071,6 +1081,58 @@ static const struct power_supply_desc sb
  	.external_power_changed = sbs_external_power_changed,
  };
  
@@ -1621,7 +1744,7 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  static int sbs_probe(struct i2c_client *client)
  {
  	struct sbs_info *chip;
-@@ -1177,7 +1237,9 @@ skip_gpio:
+@@ -1177,7 +1239,9 @@ skip_gpio:
  		rc = PTR_ERR(chip->power_supply);
  		goto exit_psupply;
  	}
@@ -1632,7 +1755,7 @@ Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
  	dev_info(&client->dev,
  		"%s: battery gas gauge device registered\n", client->name);
  
-@@ -1190,7 +1252,8 @@ exit_psupply:
+@@ -1190,7 +1254,8 @@ exit_psupply:
  static int sbs_remove(struct i2c_client *client)
  {
  	struct sbs_info *chip = i2c_get_clientdata(client);
