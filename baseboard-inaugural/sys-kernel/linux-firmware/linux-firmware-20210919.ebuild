@@ -98,6 +98,13 @@ src_prepare() {
     rm radeon -rf
     rm qcom -rf
     rm netronome -rf
+    rm i915 -rf
+    rm mellanox -rf
+    rm intel -rf
+    rm qcom -rf
+    rm liquidio -rf
+    rm dpaa2 -rf
+    rm aic8800 -rf
     # https://bugs.archlinux.org/task/70071
     rm iwlwifi-ty-a0-gf-a0.pnvm
 
@@ -292,7 +299,7 @@ src_install() {
 
 	insinto "${FIRMWARE_INSTALL_ROOT}"
 	doins -r *
-	
+
 	local link target
 	while read -r link target; do
                 # ${target} is link-relative, so we need to construct a full path.
@@ -301,7 +308,7 @@ src_install() {
                 [[ -f "${install_target}" ]] || continue
                 einfo "Creating link ${link} (${target})"
                 dodir "${FIRMWARE_INSTALL_ROOT}/$(dirname "${link}")"
-                dosym "${target}" "${FIRMWARE_INSTALL_ROOT}/${link}"	
+                dosym "${target}" "${FIRMWARE_INSTALL_ROOT}/${link}"
         done < <(grep -E '^Link:' WHENCE | sed -e's/^Link: *//g' -e's/-> //g')
 
 }

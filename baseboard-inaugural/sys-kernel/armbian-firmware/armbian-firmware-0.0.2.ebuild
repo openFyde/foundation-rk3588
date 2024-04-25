@@ -279,7 +279,7 @@ src_install() {
 
 	insinto "${FIRMWARE_INSTALL_ROOT}"
 	doins -r *
-	
+
 	local link target
 	while read -r link target; do
                 # ${target} is link-relative, so we need to construct a full path.
@@ -288,7 +288,7 @@ src_install() {
                 [[ -f "${install_target}" ]] || continue
                 einfo "Creating link ${link} (${target})"
                 dodir "${FIRMWARE_INSTALL_ROOT}/$(dirname "${link}")"
-                dosym "${target}" "${FIRMWARE_INSTALL_ROOT}/${link}"	
+                dosym "${target}" "${FIRMWARE_INSTALL_ROOT}/${link}"
         done < <(grep -E '^Link:' WHENCE | sed -e's/^Link: *//g' -e's/-> //g')
 
 }
