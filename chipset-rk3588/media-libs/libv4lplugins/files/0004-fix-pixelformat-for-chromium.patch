@@ -24,7 +24,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
  };
  
  /* Feed all available packets to mpp */
-@@ -193,6 +208,21 @@ static void rkmpp_put_frames(struct rkmp
+@@ -242,6 +257,21 @@ static void rkmpp_put_frames(struct rkmp
  	LEAVE();
  }
  
@@ -46,22 +46,6 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
  static void rkmpp_apply_info_change(struct rkmpp_dec_context *dec,
  				    MppFrame frame)
  {
-@@ -237,11 +267,13 @@ static void rkmpp_apply_info_change(stru
- 	ctx->capture.format.plane_fmt[0].sizeimage =
- 		dec->video_info.size;
- 
--	LOGV(1, "frame info changed: %dx%d(%dx%d:%d)\n",
-+  ctx->capture.format.pixelformat = mpp_format_to_v4l_format(mpp_frame_get_fmt(frame));
-+
-+	LOGV(1, "frame info changed: %dx%d(%dx%d:%d) format:%s\n",
- 	     dec->video_info.width, dec->video_info.height,
- 	     dec->video_info.hor_stride,
- 	     dec->video_info.ver_stride,
--	     dec->video_info.size);
-+	     dec->video_info.size, (char *)&(ctx->capture.format.pixelformat));
- 
- 	LEAVE();
- }
 Index: libv4l-rkmpp/src/libv4l-rkmpp.c
 ===================================================================
 --- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
@@ -75,7 +59,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  {
  	char *env = getenv("LIBV4L_RKMPP_LOG_LEVEL");
  	if (env != NULL)
-@@ -496,7 +496,7 @@ int rkmpp_querybuf(struct rkmpp_context
+@@ -552,7 +552,7 @@ int rkmpp_querybuf(struct rkmpp_context
  
  	rkmpp_buffer = &queue->buffers[buffer->index];
  
@@ -84,7 +68,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (ret < 0) {
  		LOGE("failed to convert buffer\n");
  		RETURN_ERR(EINVAL, -1);
-@@ -565,7 +565,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
+@@ -621,7 +621,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
  
  	rkmpp_buffer = &queue->buffers[buffer->index];
  
@@ -93,16 +77,16 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (ret < 0) {
  		LOGE("failed to convert buffer\n");
  		RETURN_ERR(EINVAL, -1);
-@@ -619,7 +619,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
- 	/* Update poll event after avail list changed */
- 	rkmpp_update_poll_event(ctx);
+@@ -671,7 +671,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
+ 	rkmpp_buffer = TAILQ_FIRST(&queue->avail_buffers);
+ 	pthread_mutex_unlock(&queue->queue_mutex);
  
 -	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
 +	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
  	if (ret < 0) {
  		LOGE("failed to convert buffer, ret:%d\n", ret);
  		RETURN_ERR(EINVAL, -1);
-@@ -662,7 +662,10 @@ int rkmpp_update_poll_event(struct rkmpp
+@@ -819,7 +819,10 @@ int rkmpp_update_poll_event(struct rkmpp
  	else
  		ret = eventfd_read(ctx->eventfd, &event);
  
@@ -113,7 +97,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	return ret;
  }
  
-@@ -788,8 +791,12 @@ static void *plugin_init(int fd)
+@@ -945,8 +948,12 @@ static void *plugin_init(int fd)
  	if (ctx->is_decoder) {
  		if (ctx->codecs)
  			free(ctx->codecs);
@@ -128,7 +112,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  
  	/* Create eventfd to fake poll events */
  	ctx->eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-@@ -805,7 +812,7 @@ static void *plugin_init(int fd)
+@@ -962,7 +969,7 @@ static void *plugin_init(int fd)
  	}
  
  	/* Filter out eventfd's POLLOUT, since it would be always generated */
@@ -137,7 +121,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	ev.data.fd = ctx->eventfd;
  	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, ctx->eventfd, &ev) < 0) {
  		LOGE("failed to add eventfd\n");
-@@ -952,7 +959,6 @@ static void *plugin_mmap(void *dev_ops_p
+@@ -1125,7 +1132,6 @@ static void *plugin_mmap(void *dev_ops_p
  	unsigned int index;
  
  	ENTER();
@@ -145,7 +129,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (start) {
  		LOGE("only support start=NULL\n");
  		RETURN_ERR(EINVAL, NULL);
-@@ -981,7 +987,8 @@ static void *plugin_mmap(void *dev_ops_p
+@@ -1154,7 +1160,8 @@ static void *plugin_mmap(void *dev_ops_p
  	rkmpp_buffer = &queue->buffers[index];
  	ptr = mmap(start, length, prot, flags, rkmpp_buffer->fd, 0);
  
@@ -174,7 +158,7 @@ Index: libv4l-rkmpp/include/libv4l-rkmpp.h
  	} while (0)
  
  #define LOGV(level, fmt, ...) \
-@@ -420,9 +420,9 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
+@@ -453,9 +453,9 @@ void rkmpp_finish_flushing(struct rkmpp_
  
  int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
  			 struct rkmpp_buffer *rkmpp_buffer,
@@ -198,7 +182,7 @@ Index: libv4l-rkmpp/src/utils.c
  
  #include "libv4l-rkmpp.h"
  
-@@ -233,7 +234,8 @@ out:
+@@ -123,7 +124,8 @@ out:
  
  int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
  			 struct rkmpp_buffer *rkmpp_buffer,
@@ -208,7 +192,7 @@ Index: libv4l-rkmpp/src/utils.c
  {
  	unsigned int i;
  
-@@ -262,6 +264,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+@@ -152,6 +154,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
  			buffer->m.planes[i].m.fd =
  				rkmpp_buffer->planes[i].fd;
  	}
@@ -217,7 +201,7 @@ Index: libv4l-rkmpp/src/utils.c
  
  	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
  		/* Returning data are always in plane 0 */
-@@ -270,7 +274,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+@@ -160,7 +164,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
        rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
  		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
  
@@ -226,7 +210,7 @@ Index: libv4l-rkmpp/src/utils.c
  			return -1;
  	}
  
-@@ -302,7 +306,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+@@ -194,7 +198,8 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
  
  int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
  			   struct v4l2_buffer *buffer,
@@ -236,7 +220,7 @@ Index: libv4l-rkmpp/src/utils.c
  {
  	unsigned int i;
  
-@@ -331,7 +336,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+@@ -223,7 +228,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
  				buffer->m.planes[i].m.fd;
  	}
  
@@ -245,9 +229,9 @@ Index: libv4l-rkmpp/src/utils.c
  		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 0) < 0)
  			return -1;
  	}
-@@ -340,14 +345,16 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
- 		(uint64_t)buffer->timestamp.tv_sec * 1000000 +
- 		buffer->timestamp.tv_usec;
+@@ -240,14 +245,16 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 	if (rkmpp_buffer_last(rkmpp_buffer))
+ 		rkmpp_buffer_clr_last(rkmpp_buffer);
  
 +  if (!input)
 +    LOGV(2, "enque output buffer, length:%d, fd(0):%d, status:0x%x\n", buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
