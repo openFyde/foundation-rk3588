@@ -19,9 +19,9 @@ Index: kernel-rockchip/arch/arm64/include/asm/thread_info.h
  #include <asm/stack_pointer.h>
  #include <asm/types.h>
 +#include <asm/unistd.h>
- 
+
  typedef unsigned long mm_segment_t;
- 
+
 @@ -45,8 +46,32 @@ struct thread_info {
  	void			*scs_base;
  	void			*scs_sp;
@@ -35,7 +35,7 @@ Index: kernel-rockchip/arch/arm64/include/asm/thread_info.h
 +#endif
 +#endif
  };
- 
+
 +#ifdef CONFIG_ALT_SYSCALL
 +#ifdef CONFIG_COMPAT
 +#define INIT_THREAD_INFO_SYSCALL_COMPAT       \
@@ -61,7 +61,7 @@ Index: kernel-rockchip/arch/arm64/include/asm/thread_info.h
  	INIT_SCS							\
 +  INIT_THREAD_INFO_SYSCALL          \
  }
- 
+
  #endif /* __ASM_THREAD_INFO_H */
 Index: kernel-rockchip/arch/arm64/include/asm/unistd.h
 ===================================================================
@@ -416,13 +416,13 @@ Index: kernel-rockchip/arch/arm64/include/asm/unistd.h
 +#define __NR_compat_membarrier		389
  #define __NR_compat_clock_gettime64	403
  #define __NR_compat_clock_getres_time64	406
- 
+
 Index: kernel-rockchip/arch/arm64/kernel/syscall.c
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/kernel/syscall.c
 +++ kernel-rockchip/arch/arm64/kernel/syscall.c
 @@ -190,14 +190,28 @@ static inline void sve_user_discard(void
- 
+
  void do_el0_svc(struct pt_regs *regs)
  {
 +	struct thread_info __maybe_unused *ti;
@@ -436,7 +436,7 @@ Index: kernel-rockchip/arch/arm64/kernel/syscall.c
  	el0_svc_common(regs, regs->regs[8], __NR_syscalls, sys_call_table);
 +#endif
  }
- 
+
  #ifdef CONFIG_COMPAT
  void do_el0_svc_compat(struct pt_regs *regs)
  {
@@ -524,13 +524,13 @@ Index: kernel-rockchip/security/Kconfig
  source "security/safesetid/Kconfig"
  source "security/lockdown/Kconfig"
 +source "security/chromiumos/Kconfig"
- 
+
  source "security/integrity/Kconfig"
- 
+
 @@ -283,5 +284,14 @@ config LSM
- 
+
  source "security/Kconfig.hardening"
- 
+
 +config ARCH_HAS_ALT_SYSCALL
 +  def_bool n
 +
@@ -541,7 +541,7 @@ Index: kernel-rockchip/security/Kconfig
 +    Allow syscall table to be swapped on a running process.
 +
  endmenu
- 
+
 Index: kernel-rockchip/security/Makefile
 ===================================================================
 --- kernel-rockchip.orig/security/Makefile
@@ -551,7 +551,7 @@ Index: kernel-rockchip/security/Makefile
  subdir-$(CONFIG_SECURITY_LOCKDOWN_LSM)	+= lockdown
  subdir-$(CONFIG_BPF_LSM)		+= bpf
 +subdir-$(CONFIG_SECURITY_CHROMIUMOS)  += chromiumos
- 
+
  # always enable default capabilities
  obj-y					+= commoncap.o
 @@ -21,6 +22,7 @@ obj-$(CONFIG_MMU)			+= min_addr.o
@@ -567,9 +567,9 @@ Index: kernel-rockchip/security/selinux/Kconfig
 --- kernel-rockchip.orig/security/selinux/Kconfig
 +++ kernel-rockchip/security/selinux/Kconfig
 @@ -93,6 +93,16 @@ config SECURITY_SELINUX_CHECKREQPROT_VAL
- 
+
  	  If you are unsure how to answer this question, answer 0.
- 
+
 +config SECURITY_SELINUX_PERMISSIVE_DONTAUDIT
 +  bool "NSA SELinux don't audit permissive"
 +  depends on SECURITY_SELINUX
@@ -590,7 +590,7 @@ Index: kernel-rockchip/security/selinux/avc.c
 @@ -776,6 +776,11 @@ noinline int slow_avc_audit(struct selin
  	struct common_audit_data stack_data;
  	struct selinux_audit_data sad;
- 
+
 +  if (IS_ENABLED(CONFIG_SECURITY_SELINUX_PERMISSIVE_DONTAUDIT) && denied
 +      && !result) {
 +    return 0;
@@ -598,15 +598,15 @@ Index: kernel-rockchip/security/selinux/avc.c
 +
  	if (WARN_ON(!tclass || tclass >= ARRAY_SIZE(secclass_map)))
  		return -EINVAL;
- 
+
 Index: kernel-rockchip/security/selinux/hooks.c
 ===================================================================
 --- kernel-rockchip.orig/security/selinux/hooks.c
 +++ kernel-rockchip/security/selinux/hooks.c
 @@ -2015,19 +2015,22 @@ static inline u32 open_file_to_av(struct
- 
+
  /* Hook functions begin here. */
- 
+
 -static int selinux_binder_set_context_mgr(const struct cred *mgr)
 +static int selinux_binder_set_context_mgr(struct task_struct *mgr)
  {
@@ -618,7 +618,7 @@ Index: kernel-rockchip/security/selinux/hooks.c
 +			    mysid, mgrsid, SECCLASS_BINDER,
  			    BINDER__SET_CONTEXT_MGR, NULL);
  }
- 
+
 -static int selinux_binder_transaction(const struct cred *from,
 -				      const struct cred *to)
 +static int selinux_binder_transaction(struct task_struct *from,
@@ -630,19 +630,19 @@ Index: kernel-rockchip/security/selinux/hooks.c
 +	u32 fromsid = task_sid(from);
 +	u32 tosid = task_sid(to);
  	int rc;
- 
+
  	if (mysid != fromsid) {
 @@ -2038,24 +2041,27 @@ static int selinux_binder_transaction(co
  			return rc;
  	}
- 
+
 -	return avc_has_perm(&selinux_state, fromsid, tosid,
 -			    SECCLASS_BINDER, BINDER__CALL, NULL);
 +	return avc_has_perm(&selinux_state,
 +			    fromsid, tosid, SECCLASS_BINDER, BINDER__CALL,
 +			    NULL);
  }
- 
+
 -static int selinux_binder_transfer_binder(const struct cred *from,
 -					  const struct cred *to)
 +static int selinux_binder_transfer_binder(struct task_struct *from,
@@ -657,7 +657,7 @@ Index: kernel-rockchip/security/selinux/hooks.c
 +			    fromsid, tosid, SECCLASS_BINDER, BINDER__TRANSFER,
  			    NULL);
  }
- 
+
 -static int selinux_binder_transfer_file(const struct cred *from,
 -					const struct cred *to,
 +static int selinux_binder_transfer_file(struct task_struct *from,
@@ -676,7 +676,7 @@ Index: kernel-rockchip/arch/arm64/include/asm/syscall.h
 @@ -17,6 +17,8 @@ extern const syscall_fn_t sys_call_table
  extern const syscall_fn_t compat_sys_call_table[];
  #endif
- 
+
 +#define sys_call_ptr_t syscall_fn_t /* Needed for alt-syscall */
 +
  static inline int syscall_get_nr(struct task_struct *task,
@@ -687,7 +687,7 @@ Index: kernel-rockchip/arch/arm64/kernel/Makefile
 --- kernel-rockchip.orig/arch/arm64/kernel/Makefile
 +++ kernel-rockchip/arch/arm64/kernel/Makefile
 @@ -63,6 +63,9 @@ obj-$(CONFIG_ARM64_MTE)			+= mte.o
- 
+
  obj-y					+= vdso/ probes/
  obj-$(CONFIG_COMPAT_VDSO)		+= vdso32/
 +
@@ -695,7 +695,7 @@ Index: kernel-rockchip/arch/arm64/kernel/Makefile
 +
  head-y					:= head.o
  extra-y					+= $(head-y) vmlinux.lds
- 
+
 Index: kernel-rockchip/arch/arm64/kernel/alt-syscall.c
 ===================================================================
 --- /dev/null
@@ -816,13 +816,13 @@ Index: kernel-rockchip/include/uapi/linux/prctl.h
 @@ -155,6 +155,9 @@ struct prctl_mm_map {
  #define PR_SET_PTRACER 0x59616d61
  # define PR_SET_PTRACER_ANY ((unsigned long)-1)
- 
+
 +#define PR_ALT_SYSCALL 0x43724f53
 +# define PR_ALT_SYSCALL_SET_SYSCALL_TABLE 1
 +
  #define PR_SET_CHILD_SUBREAPER	36
  #define PR_GET_CHILD_SUBREAPER	37
- 
+
 Index: kernel-rockchip/security/chromiumos/Kconfig
 ===================================================================
 --- /dev/null
@@ -1820,7 +1820,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/android_whitelists.h
-@@ -0,0 +1,639 @@
+@@ -0,0 +1,641 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -2000,6 +2000,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	SYSCALL_ENTRY(remap_file_pages),
 +	SYSCALL_ENTRY(removexattr),
 +	SYSCALL_ENTRY(renameat),
++	SYSCALL_ENTRY(renameat2),
 +	SYSCALL_ENTRY(restart_syscall),
 +	SYSCALL_ENTRY(rt_sigaction),
 +	SYSCALL_ENTRY(rt_sigpending),
@@ -2282,6 +2283,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	COMPAT_SYSCALL_ENTRY(removexattr),
 +	COMPAT_SYSCALL_ENTRY(rename),
 +	COMPAT_SYSCALL_ENTRY(renameat),
++	COMPAT_SYSCALL_ENTRY(renameat2),
 +	COMPAT_SYSCALL_ENTRY(restart_syscall),
 +	COMPAT_SYSCALL_ENTRY(rmdir),
 +	COMPAT_SYSCALL_ENTRY(rt_sigaction),
@@ -4295,7 +4297,7 @@ Index: kernel-rockchip/kernel/Makefile
 @@ -51,6 +51,8 @@ obj-y += livepatch/
  obj-y += dma/
  obj-y += entry/
- 
+
 +obj-$(CONFIG_ALT_SYSCALL) += alt-syscall.o
 +
  obj-$(CONFIG_KCMP) += kcmp.o
@@ -4377,7 +4379,7 @@ Index: kernel-rockchip/kernel/sys.c
 --- kernel-rockchip.orig/kernel/sys.c
 +++ kernel-rockchip/kernel/sys.c
 @@ -47,6 +47,7 @@
- 
+
  #include <linux/compat.h>
  #include <linux/syscalls.h>
 +#include <linux/alt-syscall.h>
@@ -4387,7 +4389,7 @@ Index: kernel-rockchip/kernel/sys.c
 @@ -204,7 +205,7 @@ out:
  	return error;
  }
- 
+
 -SYSCALL_DEFINE3(setpriority, int, which, int, who, int, niceval)
 +int ksys_setpriority(int which, int who, int niceval)
  {
@@ -4396,7 +4398,7 @@ Index: kernel-rockchip/kernel/sys.c
 @@ -268,13 +269,18 @@ out:
  	return error;
  }
- 
+
 +SYSCALL_DEFINE3(setpriority, int, which, int, who, int, niceval)
 +{
 +	return ksys_setpriority(which, who, niceval);
@@ -4416,7 +4418,7 @@ Index: kernel-rockchip/kernel/sys.c
 @@ -339,6 +345,11 @@ out_unlock:
  	return retval;
  }
- 
+
 +SYSCALL_DEFINE2(getpriority, int, which, int, who)
 +{
 +	return ksys_getpriority(which, who);
@@ -4426,9 +4428,9 @@ Index: kernel-rockchip/kernel/sys.c
   * Unprivileged users may change the real gid to the effective gid
   * or vice versa.  (BSD-style)
 @@ -2430,8 +2441,8 @@ static int prctl_set_vma(unsigned long o
- 
+
  #define PR_IO_FLUSHER (PF_MEMALLOC_NOIO | PF_LOCAL_THROTTLE)
- 
+
 -SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 -		unsigned long, arg4, unsigned long, arg5)
 +int ksys_prctl(int option, unsigned long arg2, unsigned long arg3,
@@ -4452,7 +4454,7 @@ Index: kernel-rockchip/kernel/sys.c
 @@ -2701,8 +2718,14 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
  	return error;
  }
- 
+
 -SYSCALL_DEFINE3(getcpu, unsigned __user *, cpup, unsigned __user *, nodep,
 -		struct getcpu_cache __user *, unused)
 +SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
@@ -4469,7 +4471,7 @@ Index: kernel-rockchip/kernel/sys.c
 @@ -2714,6 +2737,12 @@ SYSCALL_DEFINE3(getcpu, unsigned __user
  	return err ? -EFAULT : 0;
  }
- 
+
 +SYSCALL_DEFINE3(getcpu, unsigned __user *, cpup, unsigned __user *, nodep,
 +		struct getcpu_cache __user *, unused)
 +{
@@ -4486,19 +4488,19 @@ Index: kernel-rockchip/drivers/android/binder_internal.h
 @@ -466,12 +466,14 @@ struct binder_proc_ext {
  	const struct cred *cred;
  };
- 
+
 -static inline const struct cred *binder_get_cred(struct binder_proc *proc)
 +static inline struct task_struct *binder_get_cred(struct binder_proc *proc)
  {
 +  /*
  	struct binder_proc_ext *eproc;
- 
+
  	eproc = container_of(proc, struct binder_proc_ext, proc);
 -	return eproc->cred;
 +  */
 +	return proc->tsk;
  }
- 
+
  /**
 Index: kernel-rockchip/include/linux/lsm_hook_defs.h
 ===================================================================
@@ -4531,7 +4533,7 @@ Index: kernel-rockchip/include/linux/security.h
 +++ kernel-rockchip/include/linux/security.h
 @@ -254,13 +254,13 @@ extern int security_init(void);
  extern int early_security_init(void);
- 
+
  /* Security operations */
 -int security_binder_set_context_mgr(const struct cred *mgr);
 -int security_binder_transaction(const struct cred *from,
@@ -4553,13 +4555,13 @@ Index: kernel-rockchip/include/linux/security.h
 @@ -496,25 +496,25 @@ static inline int early_security_init(vo
  	return 0;
  }
- 
+
 -static inline int security_binder_set_context_mgr(const struct cred *mgr)
 +static inline int security_binder_set_context_mgr(struct task_struct *mgr)
  {
  	return 0;
  }
- 
+
 -static inline int security_binder_transaction(const struct cred *from,
 -					      const struct cred *to)
 +static inline int security_binder_transaction(struct task_struct *from,
@@ -4567,7 +4569,7 @@ Index: kernel-rockchip/include/linux/security.h
  {
  	return 0;
  }
- 
+
 -static inline int security_binder_transfer_binder(const struct cred *from,
 -						  const struct cred *to)
 +static inline int security_binder_transfer_binder(struct task_struct *from,
@@ -4575,7 +4577,7 @@ Index: kernel-rockchip/include/linux/security.h
  {
  	return 0;
  }
- 
+
 -static inline int security_binder_transfer_file(const struct cred *from,
 -						const struct cred *to,
 +static inline int security_binder_transfer_file(struct task_struct *from,
@@ -4586,7 +4588,7 @@ Index: kernel-rockchip/include/linux/security.h
 @@ -1013,11 +1013,6 @@ static inline void security_transfer_cre
  {
  }
- 
+
 -static inline void security_cred_getsecid(const struct cred *c, u32 *secid)
 -{
 -	*secid = 0;
@@ -4600,15 +4602,15 @@ Index: kernel-rockchip/security/security.c
 --- kernel-rockchip.orig/security/security.c
 +++ kernel-rockchip/security/security.c
 @@ -689,25 +689,25 @@ static void __init lsm_early_task(struct
- 
+
  /* Security operations */
- 
+
 -int security_binder_set_context_mgr(const struct cred *mgr)
 +int security_binder_set_context_mgr(struct task_struct *mgr)
  {
  	return call_int_hook(binder_set_context_mgr, 0, mgr);
  }
- 
+
 -int security_binder_transaction(const struct cred *from,
 -				const struct cred *to)
 +int security_binder_transaction(struct task_struct *from,
@@ -4616,7 +4618,7 @@ Index: kernel-rockchip/security/security.c
  {
  	return call_int_hook(binder_transaction, 0, from, to);
  }
- 
+
 -int security_binder_transfer_binder(const struct cred *from,
 -				    const struct cred *to)
 +int security_binder_transfer_binder(struct task_struct *from,
@@ -4624,7 +4626,7 @@ Index: kernel-rockchip/security/security.c
  {
  	return call_int_hook(binder_transfer_binder, 0, from, to);
  }
- 
+
 -int security_binder_transfer_file(const struct cred *from,
 -				  const struct cred *to, struct file *file)
 +int security_binder_transfer_file(struct task_struct *from,
@@ -4637,7 +4639,7 @@ Index: kernel-rockchip/security/security.c
  	return call_int_hook(path_chown, 0, path, uid, gid);
  }
 +EXPORT_SYMBOL(security_path_chown);
- 
+
  int security_path_chroot(const struct path *path)
  {
 Index: kernel-rockchip/kernel/events/core.c
@@ -4659,7 +4661,7 @@ Index: kernel-rockchip/kernel/events/core.c
 @@ -12175,6 +12174,13 @@ err_fd:
  	return err;
  }
- 
+
 +SYSCALL_DEFINE5(perf_event_open,
 +   struct perf_event_attr __user *, attr_uptr,
 +   pid_t, pid, int, cpu, int, group_fd, unsigned long, flags)
@@ -4677,7 +4679,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
 @@ -1118,8 +1118,8 @@ int do_clock_adjtime(const clockid_t whi
  	return kc->clock_adj(which_clock, ktx);
  }
- 
+
 -SYSCALL_DEFINE2(clock_adjtime, const clockid_t, which_clock,
 -		struct __kernel_timex __user *, utx)
 +int ksys_clock_adjtime(const clockid_t which_clock,
@@ -4688,7 +4690,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
 @@ -1135,6 +1135,12 @@ SYSCALL_DEFINE2(clock_adjtime, const clo
  	return err;
  }
- 
+
 +SYSCALL_DEFINE2(clock_adjtime, const clockid_t, which_clock,
 +		struct __kernel_timex __user *, utx)
 +{
@@ -4701,7 +4703,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
 @@ -1188,8 +1194,7 @@ SYSCALL_DEFINE2(clock_gettime32, clockid
  	return err;
  }
- 
+
 -SYSCALL_DEFINE2(clock_adjtime32, clockid_t, which_clock,
 -		struct old_timex32 __user *, utp)
 +int ksys_clock_adjtime32(clockid_t which_clock, struct old_timex32 __user * utp)
@@ -4711,7 +4713,7 @@ Index: kernel-rockchip/kernel/time/posix-timers.c
 @@ -1206,6 +1211,12 @@ SYSCALL_DEFINE2(clock_adjtime32, clockid
  	return err;
  }
- 
+
 +SYSCALL_DEFINE2(clock_adjtime32, clockid_t, which_clock,
 +		struct old_timex32 __user *, utp)
 +{
@@ -4727,7 +4729,7 @@ Index: kernel-rockchip/kernel/time/time.c
 +++ kernel-rockchip/kernel/time/time.c
 @@ -266,7 +266,7 @@ COMPAT_SYSCALL_DEFINE2(settimeofday, str
  #endif
- 
+
  #ifdef CONFIG_64BIT
 -SYSCALL_DEFINE1(adjtimex, struct __kernel_timex __user *, txc_p)
 +int ksys_adjtimex(struct __kernel_timex __user * txc_p)
@@ -4744,19 +4746,19 @@ Index: kernel-rockchip/kernel/time/time.c
 +	return ksys_adjtimex(txc_p);
 +}
  #endif
- 
+
  #ifdef CONFIG_COMPAT_32BIT_TIME
 @@ -346,7 +351,7 @@ int put_old_timex32(struct old_timex32 _
  	return 0;
  }
- 
+
 -SYSCALL_DEFINE1(adjtimex_time32, struct old_timex32 __user *, utp)
 +int ksys_adjtimex_time32(struct old_timex32 __user * utp)
  {
  	struct __kernel_timex txc;
  	int err, ret;
 @@ -363,6 +368,12 @@ SYSCALL_DEFINE1(adjtimex_time32, struct
- 
+
  	return ret;
  }
 +
@@ -4766,7 +4768,7 @@ Index: kernel-rockchip/kernel/time/time.c
 +}
 +
  #endif
- 
+
  /*
 Index: kernel-rockchip/drivers/android/binder.c
 ===================================================================
@@ -4775,7 +4777,7 @@ Index: kernel-rockchip/drivers/android/binder.c
 @@ -3257,7 +3257,7 @@ static void binder_transaction(struct bi
  		size_t added_size;
  		int max_retries = 100;
- 
+
 -		security_cred_getsecid(binder_get_cred(proc), &secid);
 +		security_task_getsecid(binder_get_cred(proc), &secid);
   retry_alloc:
