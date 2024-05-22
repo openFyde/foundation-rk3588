@@ -1,4 +1,0 @@
-# Members of this group have write access to /dev/net/tun.
-group:tun
-gid:413
-users:crosvm,shill,vpn,wpa
