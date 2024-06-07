@@ -17,7 +17,7 @@
  ******************************************************************************/
 
 /*****************************************************************************
-**                                                                           
+**
 **  Name:          brcm_patchram_plus.c
 **
 **  Description:   This program downloads a patchram files in the HCD format
@@ -91,15 +91,15 @@
 **                 It will return 0 for success and a number greater than 0
 **                 for any errors.
 **
-**                 For Android, this program invoked using a 
+**                 For Android, this program invoked using a
 **                 "system(2)" call from the beginning of the bt_enable
-**                 function inside the file 
+**                 function inside the file
 **                 system/bluetooth/bluedroid/bluetooth.c.
 **
 **                 If the Android system property "ro.bt.bcm_bdaddr_path" is
 **                 set, then the bd_addr will be read from this path.
 **                 This is overridden by --bd_addr on the command line.
-**  
+**
 ******************************************************************************/
 
 // TODO: Integrate BCM support into Bluez hciattach
@@ -166,12 +166,12 @@ typedef struct {
 #define FW_TABLE_VERSION "v1.1 20161117"
 static const fw_auto_detection_entry_t fw_auto_detection_table[] = {
 	{"4343A0","bcm43438a0"},    //AP6212
-	{"BCM43430A1","bcm43438a1"}, //AP6212A
+	{"BCM43430A1","BCM4343A1"}, //AP6212A
 	{"BCM20702A","BCM20710A1"}, //AP6210B
-	{"BCM4335C0","bcm4339a0"}, //AP6335
+	{"BCM4335C0","BCM4335C0"}, //AP6335
 	{"BCM4330B1","BCM40183B2"}, //AP6330
 	{"BCM4324B3","BCM43241B4"}, //AP62X2
-	{"BCM4350C0","bcm4354a1"}, //AP6354
+	{"BCM4350C0","BCM4350C0"}, //AP6354
 	{"BCM4345C5","BCM4345C5"}, //AP6256
 	{"BCM4354A2","BCM4356A2"}, //AP6356
 	{"BCM4345C0","BCM4345C0"}, //AP6255
@@ -181,6 +181,11 @@ static const fw_auto_detection_entry_t fw_auto_detection_table[] = {
 	{"BCM4359C0","BCM4359C0"},  //AP6359
 	{"BCM4349B1","BCM4359B1"},  //AP6359
 	{"BCM4359C0","BCM4359C0"},	//AP6398s
+  //add
+  {"BCM4362A2","BCM4362A2"},  //AP6275S/PCIE
+  {"BCM4381A1","BCM4381A1"},  //AP6281S
+  {"BCM43013A0","BCM43013A0"},  //AP6203BM
+  {"SYN43756B0","SYN43756B0"},  //AP6276S
 	{(char *) NULL, NULL}
 };
 int uart_fd = -1;
@@ -225,6 +230,9 @@ uchar hci_write_pcm_data_format[] =
 
 uchar hci_write_i2spcm_interface_param[] =
 	{ 0x01, 0x6d, 0xFC, 0x04, 0x00, 0x00, 0x00, 0x00 };
+
+uchar hci_enable_wbs[] =
+  { 0x01,0x7e,0xfc,0x03,0x01,0x02,0x00 };
 
 int
 parse_patchram(char *optarg)
@@ -399,7 +407,7 @@ writeApName(const char* name, int len)
             fclose(devInfo);
         }
         system("cp /data/cfg/device_info.txt /data/cfg/device_info");
-    }	
+    }
 }
 
 int
@@ -408,7 +416,7 @@ parse_bdaddr_rand(char *optarg)
 	int bd_addr[6];
 	int i,j;
 	char optargtest[18];
-	
+
 	char mh[]=":";
 	char metachar[]="ABCDEF0123456789";
 	if(0 != readApName(optargtest,AP_NAME_SUFFIX_LEN)){
@@ -417,11 +425,11 @@ parse_bdaddr_rand(char *optarg)
 			if(j%3 == 2){
 			optargtest[j]= mh[0];
 			}else{
-				optargtest[j] = metachar[rand()%16]; 
+				optargtest[j] = metachar[rand()%16];
 			}
 		}
 		optargtest[17]='\0';
-		
+
 		writeApName(optargtest,AP_NAME_SUFFIX_LEN);
 	}
 
@@ -822,7 +830,7 @@ proc_patchram()
 	int len;
 
 	hci_send_cmd(hci_download_minidriver, sizeof(hci_download_minidriver));
-	
+
 	fprintf(stderr, "send hci_download_minidriver");
 
 	read_event(uart_fd, buffer);
@@ -862,7 +870,7 @@ proc_baudrate()
 	hci_send_cmd(hci_update_baud_rate, sizeof(hci_update_baud_rate));
 
 	read_event(uart_fd, buffer);
-	
+
 	usleep(200000);
 
 	cfsetospeed(&termios, termios_baudrate);
@@ -907,6 +915,11 @@ proc_scopcm()
 void
 proc_i2s()
 {
+  hci_send_cmd(hci_enable_wbs,
+          sizeof(hci_enable_wbs));
+
+  read_event(uart_fd, buffer);
+
 	hci_send_cmd(hci_write_i2spcm_interface_param,
 		sizeof(hci_write_i2spcm_interface_param));
 
