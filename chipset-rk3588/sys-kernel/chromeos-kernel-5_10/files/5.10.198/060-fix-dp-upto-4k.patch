@@ -18,7 +18,7 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  &dsi0_in_vp2 {
  	status = "okay";
  };
-@@ -282,7 +291,7 @@
+@@ -282,14 +291,16 @@
  	rockchip,lane-rate = <676000>;
  	dsi0_panel: panel@0 {
  		status = "okay";
@@ -26,7 +26,18 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +		compatible = "simple-panel-dsi-fyde";
  		reg = <0>;
  		backlight = <&backlight>;
- 		power-supply = <&vcc_avee>;
+-		power-supply = <&vcc_avee>;
++		power-supply = <&vcc_lcd_en>;
+ 		reset-gpios = <&gpio3 RK_PC6 GPIO_ACTIVE_HIGH>;
++    avdd-gpios = <&gpio3 RK_PA7 GPIO_ACTIVE_HIGH>;
++    avee-gpios = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
+     reset-enable-combined;
+ 		pinctrl-names = "default";
+-		pinctrl-0 = <&lcd_rst_gpio>;
++		pinctrl-0 = <&lcd_rst_gpio &avdd_lcd_gpio &avee_lcd_gpio>;
+ 		reset-delay-ms = <120>;
+ 		enable-delay-ms = <120>;
+ 		prepare-delay-ms = <120>;
 Index: kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/misc/redriver/pi3dpx1207c.c
@@ -137,3 +148,24 @@ Index: kernel-rockchip/drivers/gpu/drm/panel/panel-fydetab.c
  	gpiod_direction_output(p->reset_gpio, 1);
  
  	if (p->desc->delay.reset)
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+@@ -184,7 +184,7 @@
+     pinctrl-names = "default";
+     pinctrl-0 = <&vcc_lcd_en_pin>;
+   };
+-
++#if 0
+   vcc_avdd: vcc-avdd {
+     compatible = "regulator-fixed";
+     regulator-name = "vcc_avdd";
+@@ -206,6 +206,7 @@
+     pinctrl-0 = <&avee_lcd_gpio>;
+     vin-supply = <&vcc_avdd>;
+   };
++#endif
+ 
+ 	finger_power_test: finger-power-test {
+ 		compatible = "regulator-fixed";
