@@ -13,5 +13,6 @@ USE="${USE} v4l2_codec mosys_platform_generic"
 USE="${USE} disable_cros_video_decoder"
 USE="${USE} native_gpu_memory_buffers disable_explicit_dma_fences"
 USE="${USE} direncryption direncription_allow_v2"
+#USE="${USE} device_tree"
 
 ACCEPT_LICENSE="${ACCEPT_LICENSE} Google-TOS"

@@ -1,0 +1,41 @@
+/dts-v1/;
+
+/ {
+    description = "U-Boot fitImage for rk3588s/rk3588 aarch64 kernel";
+    #address-cells = <1>;
+
+    images {
+        kernel-1 {
+            description = "Linux Kernel";
+            data = /incbin/("BOOT_IMG");
+            type = "kernel";
+            arch = "arm64";
+            os = "linux";
+            compression = "lzma";
+            load = <0xffffff01>;
+            entry = <0xffffff01>;
+            hash {
+                algo = "sha256";
+            };
+        };
+        fdt-1 {
+            description = "Normal DTB";
+            data = /incbin/("BOARD_DTB");
+            type = "flat_dt";
+            arch = "arm64";
+            compression = "none";
+            load = <0xffffff00>;
+            hash {
+                algo = "sha256";
+            };
+        };
+    };
+    configurations {
+        default = "normal";
+        normal {
+            description = "Normal boot with FDT blob";
+            kernel = "kernel-1";
+            fdt = "fdt-1";
+        };
+    };
+};

@@ -35,3 +35,5 @@ USE="${USE} -video_capture_use_gpu_memory_buffer"
 
 # Disable Floss Bluetooth for boards with 2GB rootfs.
 #USE="${USE} -floss"
+
+EXTRA_BOOT_ARGS="cros_debug cros_secure"
