@@ -1,0 +1,375 @@
+Index: kernel-rockchip/drivers/gpu/drm/panfrost/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panfrost/Makefile
++++ kernel-rockchip/drivers/gpu/drm/panfrost/Makefile
+@@ -9,6 +9,7 @@ panfrost-y := \
+ 	panfrost_gpu.o \
+ 	panfrost_job.o \
+ 	panfrost_mmu.o \
++  panfrost_rk3588.o \
+ 	panfrost_perfcnt.o
+ 
+ obj-$(CONFIG_DRM_PANFROST) += panfrost.o
+Index: kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_devfreq.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panfrost/panfrost_devfreq.c
++++ kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_devfreq.c
+@@ -1,6 +1,7 @@
+ // SPDX-License-Identifier: GPL-2.0
+ /* Copyright 2019 Collabora ltd. */
+ 
++#define DEBUG
+ #include <linux/clk.h>
+ #include <linux/devfreq.h>
+ #include <linux/devfreq_cooling.h>
+@@ -8,6 +9,7 @@
+ #include <linux/pm_opp.h>
+ 
+ #include "panfrost_device.h"
++#include "panfrost_rk3588.h"
+ #include "panfrost_devfreq.h"
+ 
+ static void panfrost_devfreq_update_utilization(struct panfrost_devfreq *pfdevfreq)
+@@ -97,6 +99,7 @@ int panfrost_devfreq_init(struct panfros
+ 	struct thermal_cooling_device *cooling;
+ 	struct panfrost_devfreq *pfdevfreq = &pfdev->pfdevfreq;
+ 
++  dev_dbg(dev, "%s dev_pm_opp_set_regulators\n", __func__);
+ 	opp_table = dev_pm_opp_set_regulators(dev, pfdev->comp->supply_names,
+ 					      pfdev->comp->num_supplies);
+ 	if (IS_ERR(opp_table)) {
+@@ -106,17 +109,26 @@ int panfrost_devfreq_init(struct panfros
+ 			DRM_DEV_ERROR(dev, "Couldn't set OPP regulators\n");
+ 			goto err_fini;
+ 		}
+-	} else {
+-		pfdevfreq->regulators_opp_table = opp_table;
+-	}
+-
+-	ret = dev_pm_opp_of_add_table(dev);
+-	if (ret) {
+-		/* Optional, continue without devfreq */
+-		if (ret == -ENODEV)
+-			ret = 0;
+-		goto err_fini;
+ 	}
++  opp_table = dev_pm_opp_register_set_opp_helper(dev, rk_devfreq_opp_helper);
++  if (IS_ERR(opp_table)) {
++    DRM_DEV_ERROR(dev, "Couldn't set opp helper");
++    goto err_fini;
++  } else {
++    pfdevfreq->regulators_opp_table = opp_table;
++  }
++  dev_dbg(dev, "%s rk_init_opp_table\n", __func__);
++  ret = rk_init_opp_table(dev);
++  if (ret) {
++    DRM_DEV_ERROR(dev, "rk_init_opp_table failed. ret:%d\n", ret);
++    ret = dev_pm_opp_of_add_table(dev);
++    if (ret) {
++      /* Optional, continue without devfreq */
++      if (ret == -ENODEV)
++        ret = 0;
++      goto err_fini;
++    }
++  }
+ 	pfdevfreq->opp_of_table_added = true;
+ 
+ 	spin_lock_init(&pfdevfreq->lock);
+@@ -125,6 +137,7 @@ int panfrost_devfreq_init(struct panfros
+ 
+ 	cur_freq = clk_get_rate(pfdev->clock);
+ 
++  dev_dbg(dev, "%s devfreq_recommended_opp\n", __func__);
+ 	opp = devfreq_recommended_opp(dev, &cur_freq, 0);
+ 	if (IS_ERR(opp)) {
+ 		ret = PTR_ERR(opp);
+@@ -171,6 +184,7 @@ void panfrost_devfreq_fini(struct panfro
+ 	}
+ 
+ 	if (pfdevfreq->regulators_opp_table) {
++    dev_pm_opp_unregister_set_opp_helper(pfdevfreq->regulators_opp_table);
+ 		dev_pm_opp_put_regulators(pfdevfreq->regulators_opp_table);
+ 		pfdevfreq->regulators_opp_table = NULL;
+ 	}
+Index: kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_rk3588.c
+===================================================================
+--- /dev/null
++++ kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_rk3588.c
+@@ -0,0 +1,243 @@
++#include <linux/of.h>
++#include <linux/pm_opp.h>
++#include <linux/dev_printk.h>
++#include <linux/regmap.h>
++#include <linux/pm_runtime.h>
++#include <linux/regulator/consumer.h>
++#include <soc/rockchip/rockchip_opp_select.h>
++#include <linux/clk.h>
++#include "panfrost_rk3588.h"
++
++static int rk3588_gpu_get_soc_info(struct device *dev, struct device_node *np,
++             int *bin, int *process)
++{
++  int ret = 0;
++  u8 value = 0;
++
++  if (!bin)
++    return 0;
++
++  if (of_property_match_string(np, "nvmem-cell-names",
++             "specification_serial_number") >= 0) {
++    ret = rockchip_nvmem_cell_read_u8(np,
++              "specification_serial_number",
++              &value);
++    if (ret) {
++      dev_err(dev,
++        "Failed to get specification_serial_number\n");
++      return ret;
++    }
++    /* RK3588M */
++    if (value == 0xd)
++      *bin = 1;
++    /* RK3588J */
++    else if (value == 0xa)
++      *bin = 2;
++  }
++  if (*bin < 0)
++    *bin = 0;
++  dev_info(dev, "bin=%d\n", *bin);
++
++  return ret;
++}
++
++static int rk3588_gpu_set_soc_info(struct device *dev, struct device_node *np,
++             int bin, int process, int volt_sel)
++{
++  struct opp_table *opp_table;
++  u32 supported_hw[2];
++
++  if (volt_sel < 0)
++    return 0;
++  if (bin < 0)
++    bin = 0;
++
++  if (!of_property_read_bool(np, "rockchip,supported-hw"))
++    return 0;
++
++  /* SoC Version */
++  supported_hw[0] = BIT(bin);
++  /* Speed Grade */
++  supported_hw[1] = BIT(volt_sel);
++  opp_table = dev_pm_opp_set_supported_hw(dev, supported_hw, 2);
++  if (IS_ERR(opp_table)) {
++    dev_err(dev, "failed to set supported opp\n");
++    return PTR_ERR(opp_table);
++  }
++
++  return 0;
++}
++
++static int rk3588_gpu_set_read_margin(struct device *dev,
++              struct rockchip_opp_info *opp_info,
++              u32 rm)
++{
++  int ret = 0;
++  u32 val;
++
++  if (!opp_info->grf || !opp_info->volt_rm_tbl)
++    return 0;
++  if (rm == opp_info->current_rm || rm == UINT_MAX)
++    return 0;
++
++  dev_dbg(dev, "set rm to %d\n", rm);
++
++  ret = regmap_read(opp_info->grf, 0x24, &val);
++  if (ret < 0) {
++    dev_err(dev, "failed to get rm from 0x24\n");
++    return ret;
++  }
++  val &= ~0x1c;
++  regmap_write(opp_info->grf, 0x24, val | (rm << 2));
++
++  ret = regmap_read(opp_info->grf, 0x28, &val);
++  if (ret < 0) {
++    dev_err(dev, "failed to get rm from 0x28\n");
++    return ret;
++  }
++  val &= ~0x1c;
++  regmap_write(opp_info->grf, 0x28, val | (rm << 2));
++
++  opp_info->current_rm = rm;
++
++  return 0;
++}
++
++static const struct rockchip_opp_data rk3588_gpu_opp_data = {
++  .get_soc_info = rk3588_gpu_get_soc_info,
++  .set_soc_info = rk3588_gpu_set_soc_info,
++  .set_read_margin = rk3588_gpu_set_read_margin,
++};
++
++static const struct of_device_id rockchip_mali_of_match[] = {
++  {
++    .compatible = "rockchip,rk3588",
++    .data = (void *)&rk3588_gpu_opp_data,
++  },
++  {},
++};
++
++struct rockchip_opp_info rk_opp_info;
++
++int rk_init_opp_table(struct device *dev) {
++  rockchip_get_opp_data(rockchip_mali_of_match, &rk_opp_info);
++	return rockchip_init_opp_table(dev, &rk_opp_info,
++		"gpu_leakage", "mali");
++}
++
++int rk_devfreq_opp_helper(struct dev_pm_set_opp_data *data) {
++  struct device *dev = data->dev;
++  struct dev_pm_opp_supply *old_supply_vdd = &data->old_opp.supplies[0];
++  struct dev_pm_opp_supply *new_supply_vdd = &data->new_opp.supplies[0];
++  struct regulator *vdd_reg = data->regulators[0];
++  struct dev_pm_opp_supply *old_supply_mem;
++  struct dev_pm_opp_supply *new_supply_mem;
++  struct regulator *mem_reg;
++  struct clk *clk = data->clk;
++  struct rockchip_opp_info *opp_info = &rk_opp_info;
++  unsigned long old_freq = data->old_opp.rate;
++  unsigned long new_freq = data->new_opp.rate;
++  unsigned int reg_count = data->regulator_count;
++  bool is_set_rm = true;
++  bool is_set_clk = true;
++  u32 target_rm = UINT_MAX;
++  int ret = 0;
++
++  if (reg_count > 1) {
++    old_supply_mem = &data->old_opp.supplies[1];
++    new_supply_mem = &data->new_opp.supplies[1];
++    mem_reg = data->regulators[1];
++  }
++
++  if (!pm_runtime_active(dev)) {
++    is_set_rm = false;
++    if (opp_info->scmi_clk)
++      is_set_clk = false;
++  }
++
++  ret = clk_bulk_prepare_enable(opp_info->num_clks,  opp_info->clks);
++  if (ret) {
++    dev_err(dev, "failed to enable opp clks\n");
++    return ret;
++  }
++  rockchip_get_read_margin(dev, opp_info, new_supply_vdd->u_volt,
++         &target_rm);
++
++    /* Change frequency */
++  dev_dbg(dev, "switching OPP: %lu Hz --> %lu Hz\n", old_freq, new_freq);
++  /* Scaling up? Scale voltage before frequency */
++  if (new_freq >= old_freq) {
++    rockchip_set_intermediate_rate(dev, opp_info, clk, old_freq,
++                 new_freq, true, is_set_clk);
++    if (reg_count > 1) {
++      ret = regulator_set_voltage(mem_reg,
++                new_supply_mem->u_volt,
++                INT_MAX);
++      if (ret < 0) {
++        dev_err(dev, "failed to set bigger volt %lu uV for mem reg, ret:%d\n",
++          new_supply_mem->u_volt,  ret);
++        goto restore_voltage;
++      }
++    }
++    ret = regulator_set_voltage(vdd_reg, new_supply_vdd->u_volt,
++              INT_MAX);
++    if (ret < 0) {
++      dev_err(dev, "failed to set volt %lu uV for vdd reg\n",
++        new_supply_vdd->u_volt);
++      goto restore_voltage;
++    }
++    rockchip_set_read_margin(dev, opp_info, target_rm, is_set_rm);
++    if (is_set_clk && clk_set_rate(clk, new_freq)) {
++      ret = -EINVAL;
++      dev_err(dev, "failed to set clk rate\n");
++      goto restore_rm;
++    }
++  /* Scaling down? Scale voltage after frequency */
++  } else {
++    rockchip_set_intermediate_rate(dev, opp_info, clk, old_freq,
++                 new_freq, false, is_set_clk);
++    rockchip_set_read_margin(dev, opp_info, target_rm, is_set_rm);
++    if (is_set_clk && clk_set_rate(clk, new_freq)) {
++      ret = -EINVAL;
++      dev_err(dev, "failed to set clk rate\n");
++      goto restore_rm;
++    }
++    ret = regulator_set_voltage(vdd_reg, new_supply_vdd->u_volt,
++              INT_MAX);
++    if (ret < 0) {
++      dev_err(dev, "failed to set volt %lu uV for vdd reg\n",
++        new_supply_vdd->u_volt);
++      goto restore_freq;
++    }
++    if (reg_count > 1) {
++      ret = regulator_set_voltage(mem_reg,
++                new_supply_mem->u_volt,
++                INT_MAX);
++      if (ret < 0) {
++        dev_err(dev, "failed to set volt %lu uV for mem reg, ret:%d\n",
++          new_supply_mem->u_volt, ret);
++        goto restore_voltage;
++      }
++    }
++  }
++
++  clk_bulk_disable_unprepare(opp_info->num_clks, opp_info->clks);
++
++  return 0;
++
++restore_freq:
++  if (is_set_clk && clk_set_rate(clk, old_freq))
++    dev_err(dev, "failed to restore old-freq %lu Hz\n", old_freq);
++restore_rm:
++  rockchip_get_read_margin(dev, opp_info, old_supply_vdd->u_volt,
++         &target_rm);
++  rockchip_set_read_margin(dev, opp_info, opp_info->target_rm, is_set_rm);
++restore_voltage:
++  if (reg_count > 1 && old_supply_mem->u_volt)
++    regulator_set_voltage(mem_reg, old_supply_mem->u_volt, INT_MAX);
++  regulator_set_voltage(vdd_reg, old_supply_vdd->u_volt, INT_MAX);
++  clk_bulk_disable_unprepare(opp_info->num_clks, opp_info->clks);
++
++  return ret;
++}
++
+Index: kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_rk3588.h
+===================================================================
+--- /dev/null
++++ kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_rk3588.h
+@@ -0,0 +1,5 @@
++struct device;
++struct device_node;
++
++int rk_init_opp_table(struct device *dev);
++int rk_devfreq_opp_helper(struct dev_pm_set_opp_data *data);
+Index: kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_drv.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panfrost/panfrost_drv.c
++++ kernel-rockchip/drivers/gpu/drm/panfrost/panfrost_drv.c
+@@ -629,12 +629,19 @@ static int panfrost_remove(struct platfo
+ }
+ 
+ static const char * const default_supplies[] = { "mali" };
++static const char * const rk3588_supplies[] = { "mali", "mem" };
+ static const struct panfrost_compatible default_data = {
+ 	.num_supplies = ARRAY_SIZE(default_supplies),
+ 	.supply_names = default_supplies,
+ 	.num_pm_domains = 1, /* optional */
+ 	.pm_domain_names = NULL,
+ };
++static const struct panfrost_compatible rk3588_data = {
++  .num_supplies = ARRAY_SIZE(rk3588_supplies),
++  .supply_names = rk3588_supplies,
++  .num_pm_domains = 1, /* optional */
++  .pm_domain_names = NULL,
++};
+ 
+ static const struct panfrost_compatible amlogic_data = {
+ 	.num_supplies = ARRAY_SIZE(default_supplies),

@@ -1,0 +1,15 @@
+diff --git a/drv.c b/drv.c
+index 7fd2250..5ee60f9 100644
+--- a/drv.c
++++ b/drv.c
+@@ -121,8 +121,8 @@ struct driver *drv_create(int fd)
+ 
+ 	const char *minigbm_debug;
+ 	minigbm_debug = drv_get_os_option(MINIGBM_DEBUG);
+-	drv->compression =
+-	    (minigbm_debug == NULL) || (strstr(minigbm_debug, "nocompression") == NULL);
++	drv->compression = false;
++	//    (minigbm_debug == NULL) || (strstr(minigbm_debug, "nocompression") == NULL);
+ 	drv->log_bos = (minigbm_debug && strstr(minigbm_debug, "log_bos") != NULL);
+ 
+ 	drv->fd = fd;

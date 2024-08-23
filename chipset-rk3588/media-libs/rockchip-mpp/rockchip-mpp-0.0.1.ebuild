@@ -4,7 +4,7 @@
 EAPI=7
 
 EGIT_REPO_URI="https://github.com/rockchip-linux/mpp.git"
-EGIT_COMMIT="bebc9961103af2b53fb18175dd858b15a73c9ad8"
+EGIT_COMMIT="239e15eaebf98f68c0093b00ff8108d23b0147e7"
 
 inherit cmake git-r3 udev
 
@@ -41,7 +41,6 @@ src_install() {
 }
 
 PATCHES=(
-  "${FILESDIR}/chang-drm-device-to-render.patch"
   "${FILESDIR}/0001-mpi_api-add-new-api-mpp_convert_mjpeg_to_nv12.patch"
   "${FILESDIR}/0002-disable-output-for-debug.patch"
 )

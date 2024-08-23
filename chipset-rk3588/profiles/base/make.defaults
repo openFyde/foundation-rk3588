@@ -4,7 +4,7 @@ BOARD_RUSTFLAGS="-Ctarget-feature=+a76,+crc"
 CHROMEOS_KERNEL_ARCH="arm64"
 
 USE=""
-USE="${USE} big_little"
+USE="${USE} march_armv8-a big_little"
 USE="${USE} drm_atomic"
 USE="${USE} hardfp"
 USE="${USE} kernel-5_10"
@@ -16,3 +16,4 @@ USE="${USE} direncryption direncription_allow_v2"
 #USE="${USE} device_tree"
 
 ACCEPT_LICENSE="${ACCEPT_LICENSE} Google-TOS"
+SKIP_OPENFYDE_KERNEL_PATCHES=1

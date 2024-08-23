@@ -15,7 +15,7 @@ Index: src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
 ===================================================================
 --- src.orig/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
 +++ src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-@@ -233,10 +233,11 @@ void GbmSurfacelessWayland::Present(Swap
+@@ -238,10 +238,11 @@ void GbmSurfacelessWayland::Present(Swap
    } else {
      // TODO(fangzhoug): the following should be replaced by a per surface flush
      // as it gets implemented in GL drivers.

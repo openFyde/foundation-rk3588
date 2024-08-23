@@ -1,0 +1,194 @@
+Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
++++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+@@ -1844,7 +1844,12 @@ static struct dma_buf *rockchip_drm_gem_
+ 	return drm_gem_dmabuf_export(dev, &exp_info);
+ }
+ 
++static int rockchip_drm_load(struct drm_device *dev, unsigned long flags) {
++  return 0;
++}
++
+ static struct drm_driver rockchip_drm_driver = {
++  .load = rockchip_drm_load,
+ 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC | DRIVER_RENDER,
+ 	.postclose		= rockchip_drm_postclose,
+ 	.lastclose		= rockchip_drm_lastclose,
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+@@ -46,6 +46,8 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -W
+ 	-DENABLE_INSMOD_NO_FW_LOAD -Wframe-larger-than=2048                   \
+ 	-DSCHED_SCAN_DELAYED_WORK -DDHD_PNO_FLAG
+ 
++#-DDHD_DEBUG
++
+ DHDOFILES = aiutils.o siutils.o sbutils.o bcmutils.o bcmwifi_channels.o   \
+ 	dhd_linux.o dhd_linux_platdev.o dhd_linux_sched.o dhd_pno.o           \
+ 	dhd_common.o dhd_ip.o dhd_linux_wq.o dhd_custom_gpio.o                \
+@@ -188,7 +190,7 @@ ifneq ($(CONFIG_CFG80211),)
+ 	DHDCFLAGS += -DWL_SAR_TX_POWER
+ #	DHDCFLAGS += -DLINKSTAT_SUPPORT
+ 	DHDCFLAGS += -DCUSTOM_COUNTRY_CODE -DDHD_GET_VALID_CHANNELS
+-	DHDCFLAGS += -DDEBUGABILITY -DDBG_PKT_MON
++#	DHDCFLAGS += -DDEBUGABILITY -DDBG_PKT_MON
+ #	DHDCFLAGS += -DDHD_LOG_DUMP
+ 	DHDCFLAGS += -DDHD_FW_COREDUMP
+ 	DHDCFLAGS += -DWL_P2P_RAND
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linuxver.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linuxver.h
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linuxver.h
+@@ -641,7 +641,7 @@ extern char* dhd_dbg_get_system_timestam
+ #define DHD_LOG_PREFIX "[dhd]"
+ #endif
+ #define DHD_LOG_PREFIXS DHD_LOG_PREFIX" "
+-#ifdef DHD_DEBUG
++#ifndef DHD_DEBUG
+ #define	printf_thr(fmt, args...)	printk(PERCENT_S DHD_LOG_PREFIXS fmt, PRINTF_SYSTEM_TIME, ## args)
+ #define DBG_THR(args)		do {printf_thr args;} while (0)
+ #else
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.h
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.h
+@@ -416,7 +416,7 @@ extern char *dhd_dbg_get_system_timestam
+ #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0)) */
+ 
+ /* 0 invalidates all debug messages.  default is 1 */
+-#define WL_DBG_LEVEL 0xFF
++#define WL_DBG_LEVEL 0x1
+ 
+ #if defined(CUSTOMER_DBG_SYSTEM_TIME) && defined(DHD_DEBUGABILITY_LOG_DUMP_RING)
+ #define WL_DBG_PRINT_SYSTEM_TIME \
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.h
+===================================================================
+--- kernel-rockchip.orig/drivers/input/sensors/fingerprint/madev.h
++++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.h
+@@ -184,12 +184,17 @@ extern int mas_do_some_for_probe(struct
+ //#define MALOGD(x) MALOGF(x)																									//debug log
+ //#define MALOGW(x) printk(KERN_WARNING "%s%s: warning log! the function %s's ret = %d\n", MALOG_TAG, __func__,x, ret);			//warning log
+ //use for the log print
+-
++#ifdef DEBUG
+ #define MALOGD(fmt, args...) do{printk(KERN_ERR "<mafp>-dbg-[%04d]-[@%s]" fmt "\n", __LINE__, __FUNCTION__, ##args);}while(0)
+ #define MALOGE(fmt, args...) do{printk(KERN_ERR "<mafp>-err-[%04d]-[@%s]" fmt "\n", __LINE__, __FUNCTION__, ##args);}while(0)
+ #define MALOGF(x)            do{printk(KERN_ERR "<mafp>-fun-[%04d]-[@%s] is called!\n", __LINE__, __FUNCTION__);}while(0)
+ #define MALOGW(fmt, args...) do{printk(KERN_ERR "<mafp>-warn-[%04d]-[@%s]" fmt "\n", __LINE__, __FUNCTION__, ##args);}while(0)
+-
++#else
++#define MALOGD(fmt, args...)
++#define MALOGE(fmt, args...)
++#define MALOGF(x)
++#define MALOGW(fmt, args...)
++#endif
+ 
+ /**
+  *	the old ioctl command, compatible for the old version
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
+===================================================================
+--- kernel-rockchip.orig/drivers/input/sensors/fingerprint/madev.c
++++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
+@@ -772,7 +772,7 @@ int mas_probe(struct spi_device *spi) {
+ 
+     int ret = 0;
+ 
+-printk("lipeiyang [%s][%d]\n", __func__, __LINE__);
++MALOGD("lipeiyang [%s][%d]\n", __func__, __LINE__);
+     MALOGD("start");
+ 
+ 	mas_do_some_for_probe(spi);
+@@ -792,7 +792,7 @@ printk("lipeiyang [%s][%d]\n", __func__,
+     mas_disable_spi_clock(smas->spi);
+ 
+ 
+-printk("lipeiyang [%s][%d]ret[%d]\n", __func__, __LINE__,ret);
++MALOGD("lipeiyang [%s][%d]ret[%d]\n", __func__, __LINE__,ret);
+ 	if(ret == 0){//not chip
+         goto err3;
+     } else {
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_common.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_common.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_common.c
+@@ -2487,16 +2487,16 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bc
+ 
+ 	case IOV_SVAL(IOV_WLMSGLEVEL):
+ 		if (int_val & DHD_ANDROID_VAL) {
+-			android_msg_level = (uint)(int_val & 0xFFFF);
++	//		android_msg_level = (uint)(int_val & 0xFFFF);
+ 			printf("android_msg_level=0x%x\n", android_msg_level);
+ 		}
+ 		if (int_val & DHD_CONFIG_VAL) {
+-			config_msg_level = (uint)(int_val & 0xFFFF);
++	//		config_msg_level = (uint)(int_val & 0xFFFF);
+ 			printf("config_msg_level=0x%x\n", config_msg_level);
+ 		}
+ #if defined(WL_WIRELESS_EXT)
+ 		if (int_val & DHD_IW_VAL) {
+-			iw_msg_level = (uint)(int_val & 0xFFFF);
++	//		iw_msg_level = (uint)(int_val & 0xFFFF);
+ 			printf("iw_msg_level=0x%x\n", iw_msg_level);
+ 		}
+ #endif
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_android.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_android.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_android.c
+@@ -88,7 +88,7 @@
+ #define WL_BSSIDX_MAX	16
+ #endif /* WL_STATIC_IF */
+ 
+-uint android_msg_level = ANDROID_ERROR_LEVEL | ANDROID_MSG_LEVEL;
++uint android_msg_level = ANDROID_ERROR_LEVEL;
+ 
+ #define ANDROID_ERROR_MSG(x, args...) \
+ 	do { \
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_android_ext.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_android_ext.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_android_ext.c
+@@ -1153,12 +1153,12 @@ wl_ext_wlmsglevel(struct net_device *dev
+ 
+ 	if (val >=0) {
+ 		if (val & DHD_ANDROID_VAL) {
+-			android_msg_level = (uint)(val & 0xFFFF);
++			//android_msg_level = (uint)(val & 0xFFFF);
+ 			WL_MSG(dev->name, "android_msg_level=0x%x\n", android_msg_level);
+ 		}
+ #if defined(WL_WIRELESS_EXT)
+ 		else if (val & DHD_IW_VAL) {
+-			iw_msg_level = (uint)(val & 0xFFFF);
++			//iw_msg_level = (uint)(val & 0xFFFF);
+ 			WL_MSG(dev->name, "iw_msg_level=0x%x\n", iw_msg_level);
+ 		}
+ #endif
+@@ -1168,11 +1168,11 @@ wl_ext_wlmsglevel(struct net_device *dev
+ 		}
+ #endif
+ 		else if (val & DHD_CONFIG_VAL) {
+-			config_msg_level = (uint)(val & 0xFFFF);
++			//config_msg_level = (uint)(val & 0xFFFF);
+ 			WL_MSG(dev->name, "config_msg_level=0x%x\n", config_msg_level);
+ 		}
+ 		else if (val & DHD_DUMP_VAL) {
+-			dump_msg_level = (uint)(val & 0xFFFF);
++			//dump_msg_level = (uint)(val & 0xFFFF);
+ 			WL_MSG(dev->name, "dump_msg_level=0x%x\n", dump_msg_level);
+ 		}
+ 	}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
+@@ -15180,7 +15180,7 @@ wl_cfg80211_netdev_notifier_call(struct
+ 
+ 	wdev = ndev_to_wdev(dev);
+ 	if (!wdev) {
+-		WL_ERR(("wdev null. Do nothing\n"));
++//		WL_ERR(("wdev null. Do nothing\n"));
+ 		return NOTIFY_DONE;
+ 	}
+ 

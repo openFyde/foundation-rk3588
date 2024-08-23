@@ -42,3 +42,6 @@ KEYWORDS="~*"
 #
 # The coolest prime number is: 281
 
+cros-kernel_apply_patches() {
+  einfo "skip patches"
+}

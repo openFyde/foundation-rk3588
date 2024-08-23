@@ -9,11 +9,11 @@ Signed-off-by: Su Yue <glass@fydeos.io>
  osal/mpp_thread.cpp | 4 +---
  2 files changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/mpp/mpi.cpp b/mpp/mpi.cpp
-index 1c2c9f509779..173f496f404f 100644
---- a/mpp/mpi.cpp
-+++ b/mpp/mpi.cpp
-@@ -484,7 +484,9 @@ MPP_RET mpp_create(MppCtx *ctx, MppApi **mpi)
+Index: mpp/mpp/mpi.cpp
+===================================================================
+--- mpp.orig/mpp/mpi.cpp
++++ mpp/mpp/mpi.cpp
+@@ -460,7 +460,9 @@ MPP_RET mpp_create(MppCtx *ctx, MppApi *
          *mpi = p->api;
      } while (0);
  
@@ -23,11 +23,11 @@ index 1c2c9f509779..173f496f404f 100644
  
      mpi_dbg_func("leave ret %d ctx %p mpi %p\n", ret, *ctx, *mpi);
      return ret;
-diff --git a/osal/mpp_thread.cpp b/osal/mpp_thread.cpp
-index 9183a1dcbc4d..50395d5c235b 100644
---- a/osal/mpp_thread.cpp
-+++ b/osal/mpp_thread.cpp
-@@ -71,9 +71,7 @@ void MppThread::start()
+Index: mpp/osal/mpp_thread.cpp
+===================================================================
+--- mpp.orig/osal/mpp_thread.cpp
++++ mpp/osal/mpp_thread.cpp
+@@ -73,9 +73,7 @@ void MppThread::start()
          set_status(MPP_THREAD_RUNNING);
          if (0 == pthread_create(&mThread, &attr, mFunction, mContext)) {
  #ifndef ARMLINUX
@@ -38,6 +38,3 @@ index 9183a1dcbc4d..50395d5c235b 100644
  #endif
  
              thread_dbg(MPP_THREAD_DBG_FUNCTION, "thread %s %p context %p create success\n",
--- 
-2.38.1
-

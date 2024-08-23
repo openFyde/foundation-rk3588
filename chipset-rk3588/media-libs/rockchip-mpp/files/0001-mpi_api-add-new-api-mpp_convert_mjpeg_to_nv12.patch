@@ -9,11 +9,11 @@ Signed-off-by: Su Yue <glass@fydeos.io>
  mpp/mpi.cpp  | 559 +++++++++++++++++++++++++++++++++++++++++++++++++++
  2 files changed, 564 insertions(+)
 
-diff --git a/inc/rk_mpi.h b/inc/rk_mpi.h
-index 2cce8973e22c..ce7cef11180e 100644
---- a/inc/rk_mpi.h
-+++ b/inc/rk_mpi.h
-@@ -267,6 +267,11 @@ MPP_RET mpp_check_support_format(MppCtxType type, MppCodingType coding);
+Index: mpp/inc/rk_mpi.h
+===================================================================
+--- mpp.orig/inc/rk_mpi.h
++++ mpp/inc/rk_mpi.h
+@@ -267,6 +267,11 @@ MPP_RET mpp_check_support_format(MppCtxT
  void    mpp_show_support_format(void);
  void    mpp_show_color_format(void);
  
@@ -25,10 +25,10 @@ index 2cce8973e22c..ce7cef11180e 100644
  #ifdef __cplusplus
  }
  #endif
-diff --git a/mpp/mpi.cpp b/mpp/mpi.cpp
-index 9e86544ca2f1..1c2c9f509779 100644
---- a/mpp/mpi.cpp
-+++ b/mpp/mpi.cpp
+Index: mpp/mpp/mpi.cpp
+===================================================================
+--- mpp.orig/mpp/mpi.cpp
++++ mpp/mpp/mpi.cpp
 @@ -17,6 +17,14 @@
  #define MODULE_TAG "mpi"
  
@@ -55,7 +55,7 @@ index 9e86544ca2f1..1c2c9f509779 100644
  RK_U32 mpi_debug = 0;
  
  typedef struct {
-@@ -602,3 +614,550 @@ void mpp_show_color_format()
+@@ -578,3 +590,550 @@ void mpp_show_color_format()
                  info->format, info->format, info->name);
      }
  }
@@ -606,6 +606,3 @@ index 9e86544ca2f1..1c2c9f509779 100644
 +    return ret;
 +}
 +
--- 
-2.38.1
-

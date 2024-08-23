@@ -1,0 +1,2449 @@
+Index: kernel-rockchip/drivers/input/touchscreen/focaltech_touch/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/input/touchscreen/focaltech_touch/Makefile
++++ kernel-rockchip/drivers/input/touchscreen/focaltech_touch/Makefile
+@@ -15,5 +15,4 @@ focaltech-ts-y += focaltech_esdcheck.o
+ focaltech-ts-y += focaltech_i2c.o
+ focaltech-ts-y += focaltech_point_report_check.o
+ focaltech-ts-y += focaltech_upgrade_ft8201.o
+-focaltech-ts-y += focaltech_test/
+-
++obj-$(CONFIG_TOUCHSCREEN_FTS) += focaltech_test/
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8723cs/include/rtw_mlme_ext.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8723cs/include/rtw_mlme_ext.h
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8723cs/include/rtw_mlme_ext.h
+@@ -274,7 +274,7 @@ enum TDLS_option {
+ #if defined(CONFIG_ATMEL_RC_PATCH)
+ 	#define RTW_SCAN_NUM_OF_CH 2
+ 	#define RTW_BACK_OP_CH_MS 200
+-#elseif defined(CONFIG_CUSTOMER_EZVIZ_CHIME2)
++#elif defined(CONFIG_CUSTOMER_EZVIZ_CHIME2)
+ 	#define RTW_SCAN_NUM_OF_CH 1
+ 	#define RTW_BACK_OP_CH_MS 200
+ #else
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cs/include/rtw_mlme_ext.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cs/include/rtw_mlme_ext.h
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cs/include/rtw_mlme_ext.h
+@@ -275,7 +275,7 @@ enum TDLS_option {
+ #if defined(CONFIG_ATMEL_RC_PATCH)
+ 	#define RTW_SCAN_NUM_OF_CH 2
+ 	#define RTW_BACK_OP_CH_MS 200
+-#elseif defined(CONFIG_CUSTOMER_EZVIZ_CHIME2)
++#elif defined(CONFIG_CUSTOMER_EZVIZ_CHIME2)
+ 	#define RTW_SCAN_NUM_OF_CH 1
+ 	#define RTW_BACK_OP_CH_MS 200
+ #else
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_debug.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_debug.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_debug.c
+@@ -168,7 +168,7 @@ extern uint rtw_recvbuf_nr;
+ 
+ #ifdef CONFIG_RTW_TPT_MODE
+ 	RTW_PRINT_SEL(sel, "CONFIG_RTW_TPT_MODE\n");
+-#endif 
++#endif
+ 
+ #ifdef CONFIG_USB_HCI
+ #ifdef CONFIG_SUPPORT_USB_INT
+@@ -414,7 +414,7 @@ void bb_reg_dump(void *sel, _adapter *ad
+ 		_RTW_PRINT_SEL(sel, " 0x%08x ", rtw_read32(adapter, i));
+ 		if ((j++) % 4 == 0)
+ 			_RTW_PRINT_SEL(sel, "\n");
+-	}	
++	}
+ 
+ 	for (i = 0x4000; i < 0x4060; i += 4) {
+ 		if (j % 4 == 1)
+@@ -422,7 +422,7 @@ void bb_reg_dump(void *sel, _adapter *ad
+ 		_RTW_PRINT_SEL(sel, " 0x%08x ", rtw_read32(adapter, i));
+ 		if ((j++) % 4 == 0)
+ 			_RTW_PRINT_SEL(sel, "\n");
+-	}	
++	}
+ 
+ 	for (i = 0x4100; i < 0x4200; i += 4) {
+ 		if (j % 4 == 1)
+@@ -430,7 +430,7 @@ void bb_reg_dump(void *sel, _adapter *ad
+ 		_RTW_PRINT_SEL(sel, " 0x%08x ", rtw_read32(adapter, i));
+ 		if ((j++) % 4 == 0)
+ 			_RTW_PRINT_SEL(sel, "\n");
+-	}	
++	}
+ 
+ #endif /* CONFIG_RTL8822C || CONFIG_RTL8814B */
+ 
+@@ -502,7 +502,7 @@ void rtw_sink_rtp_seq_dbg(_adapter *adap
+ 				} else {
+ 					RTW_INFO("%s : RTP Seq num from %d to %d\n", __FUNCTION__, precvpriv->pre_rtp_rxseq, precvpriv->cur_rtp_rxseq);
+ 				}
+-			}	
++			}
+ 		}
+ 	}
+ }
+@@ -1572,9 +1572,9 @@ int proc_get_war_offload_mdns_domain_nam
+ 	if (_TRUE == pwrpriv->wowlan_war_offload_mode) {
+ 		if ((WAR_MDNS_V4_RSP_EN & pwrpriv->wowlan_war_offload_ctrl) ||
+ 			(WAR_MDNS_V6_RSP_EN & pwrpriv->wowlan_war_offload_ctrl) ||
+-			(WAR_MDNS_V4_WAKEUP_EN & pwrpriv->wowlan_war_offload_ctrl) || 
++			(WAR_MDNS_V4_WAKEUP_EN & pwrpriv->wowlan_war_offload_ctrl) ||
+ 			(WAR_MDNS_V6_WAKEUP_EN & pwrpriv->wowlan_war_offload_ctrl)) {
+-			RTW_PRINT_SEL(m, "\nDomain Name:[%s](%d)\n\n", 
++			RTW_PRINT_SEL(m, "\nDomain Name:[%s](%d)\n\n",
+ 			pwrpriv->wowlan_war_offload_mdns_domain_name, pwrpriv->wowlan_war_offload_mdns_domain_name_len);
+ 		} else {
+ 			RTW_PRINT_SEL(m, "\nMSND RSP Not enabled\n\n");
+@@ -1585,7 +1585,7 @@ int proc_get_war_offload_mdns_domain_nam
+ 
+ 	return 0;
+ }
+- 
++
+ ssize_t proc_set_war_offload_mdns_domain_name(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+ {
+ 	struct net_device *dev = data;
+@@ -1615,7 +1615,7 @@ ssize_t proc_set_war_offload_mdns_domain
+ 		int num = sscanf(tmp, "%s", domain_name);
+ 		if(1 == num) {
+ 			pwrpriv->wowlan_war_offload_mdns_domain_name_len = strlen(domain_name);
+-			_rtw_memset(pwrpriv->wowlan_war_offload_mdns_domain_name, 0x00, MAX_MDNS_DOMAIN_NAME_LEN);		
++			_rtw_memset(pwrpriv->wowlan_war_offload_mdns_domain_name, 0x00, MAX_MDNS_DOMAIN_NAME_LEN);
+ 			_rtw_memcpy(pwrpriv->wowlan_war_offload_mdns_domain_name, domain_name, strlen(domain_name));
+ 		}
+ 	}
+@@ -1640,7 +1640,7 @@ int proc_get_war_offload_mdns_machine_na
+ 			for(i=0; i<pwrpriv->wowlan_war_offload_mdns_mnane_num; i++)
+ 			{
+ 				RTW_PRINT_SEL(m, "[%d]", i);
+-				rtw_wow_war_mdns_dump_buf(m, "Machine Name", 
++				rtw_wow_war_mdns_dump_buf(m, "Machine Name",
+ 					pwrpriv->wowlan_war_offload_mdns_mnane[i].name, pwrpriv->wowlan_war_offload_mdns_mnane[i].name_len);
+ 			}
+ 				RTW_PRINT_SEL(m, "\n");
+@@ -1654,7 +1654,7 @@ int proc_get_war_offload_mdns_machine_na
+ 	return 0;
+ }
+ 
+- 
++
+ ssize_t proc_set_war_offload_mdns_machine_name(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+ {
+ 	struct net_device *dev = data;
+@@ -1717,8 +1717,8 @@ int proc_get_war_offload_mdns_service_in
+ 			(WAR_MDNS_V6_WAKEUP_EN & pwrpriv->wowlan_war_offload_ctrl)) {
+ 				for(i=0; i<pwrpriv->wowlan_war_offload_mdns_service_info_num; i++)
+ 				{
+-					RTW_PRINT_SEL(m, "[%d] service info ===> \n", i+1);  
+-					RTW_PRINT_SEL(m, "\tservice-transport-domain : %s(%d)- %s(%d)- %s(%d)\n", 
++					RTW_PRINT_SEL(m, "[%d] service info ===> \n", i+1);
++					RTW_PRINT_SEL(m, "\tservice-transport-domain : %s(%d)- %s(%d)- %s(%d)\n",
+ 						psinfo[i].service, psinfo[i].service_len,
+ 						psinfo[i].transport, psinfo[i].transport_len,
+ 						psinfo[i].domain, psinfo[i].domain_len);
+@@ -1726,9 +1726,9 @@ int proc_get_war_offload_mdns_service_in
+ 					RTW_PRINT_SEL(m, "\tport : %x-%x, ttl : %d \n", psinfo[i].port[0], psinfo[i].port[1], psinfo[i].ttl);
+ 					j = psinfo[i].txt_rsp_idx;
+ 					RTW_PRINT_SEL(m, "\ttype txt rsp. [%d] \n", j);
+-					rtw_wow_war_mdns_dump_txt(m, "type txt rsp. (Str)", 
++					rtw_wow_war_mdns_dump_txt(m, "type txt rsp. (Str)",
+ 							pwrpriv->wowlan_war_offload_mdns_txt_rsp[j].txt, pwrpriv->wowlan_war_offload_mdns_txt_rsp[j].txt_len);
+-					
++
+ 				}
+ 				RTW_PRINT_SEL(m, "\n");
+ 		} else {
+@@ -1740,7 +1740,7 @@ int proc_get_war_offload_mdns_service_in
+ 
+ 	return 0;
+ }
+- 
++
+ ssize_t proc_set_war_offload_mdns_service_info(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+ {
+ 	struct net_device *dev = data;
+@@ -1775,7 +1775,7 @@ ssize_t proc_set_war_offload_mdns_servic
+ 	tmp = rtw_zvmalloc(sizeof(char)*(max_input_size));
+ 	if (NULL == tmp) {
+ 		RTW_INFO(FUNC_ADPT_FMT ": tmp buffer allocate fail!!\n", FUNC_ADPT_ARG(padapter));
+-		count = -EFAULT;	
++		count = -EFAULT;
+ 		goto exit;
+ 	}
+ 
+@@ -1792,7 +1792,7 @@ ssize_t proc_set_war_offload_mdns_servic
+ 		}
+ 		/*else if(count != sscanf_parameter_length)
+ 		{
+-			RTW_INFO(FUNC_ADPT_FMT ": Length of total parameters does not match the input buffer. (%d != %lu)\n", 
++			RTW_INFO(FUNC_ADPT_FMT ": Length of total parameters does not match the input buffer. (%d != %lu)\n",
+ 				FUNC_ADPT_ARG(padapter), sscanf_parameter_length, count);
+ 			RTW_INFO(FUNC_ADPT_FMT ": Please check the content and length of each parameter.\n", FUNC_ADPT_ARG(padapter));
+ 			RTW_INFO(FUNC_ADPT_FMT ": input buffer = (%s)(%lu)!\n\n", FUNC_ADPT_ARG(padapter), tmp, count);
+@@ -1802,7 +1802,7 @@ ssize_t proc_set_war_offload_mdns_servic
+ 			RTW_INFO(FUNC_ADPT_FMT ": target = %s (%lu)!\n", FUNC_ADPT_ARG(padapter), target, strlen(target));
+ 			RTW_INFO(FUNC_ADPT_FMT ": port = %x-%x, ttl = %d!\n", FUNC_ADPT_ARG(padapter), port0, port1, ttl);
+ 			RTW_INFO(FUNC_ADPT_FMT ": txt idx = %d!\n", FUNC_ADPT_ARG(padapter), txt_idx);
+-			count = -EFAULT;    
++			count = -EFAULT;
+ 			goto exit;
+ 		}*/else
+ 		{
+@@ -1811,16 +1811,16 @@ ssize_t proc_set_war_offload_mdns_servic
+ 
+ 			if(txt_idx >= MAX_MDNS_TXT_NUM) {
+ 				RTW_INFO(FUNC_ADPT_FMT ": input txt idx, %d, is out of range (0~%d)!\n", FUNC_ADPT_ARG(padapter), txt_idx, MAX_MDNS_TXT_NUM-1);
+-				count = -EFAULT;    
++				count = -EFAULT;
+ 				goto exit;
+ 			}
+ 
+ 			if(pwrpriv->wowlan_war_offload_mdns_txt_rsp[txt_idx].txt_len == 0) {
+ 				RTW_INFO(FUNC_ADPT_FMT ": wowlan_war_offload_mdns_txt_rsp[%d] is null! Please initiate it first.\n", FUNC_ADPT_ARG(padapter), txt_idx);
+-				count = -EFAULT;    
++				count = -EFAULT;
+ 				goto exit;
+ 			}
+-			
++
+ 			// 1. set the value of members for this new service
+ 			psinfo[idx].service_len = strlen(srv);
+ 			_rtw_memcpy(psinfo[idx].service, srv, psinfo[idx].service_len );
+@@ -1837,7 +1837,7 @@ ssize_t proc_set_war_offload_mdns_servic
+ 		}
+ 	}
+ 
+-exit:	
++exit:
+ 	if(tmp)
+ 		rtw_vmfree(tmp, sizeof(char)*(max_input_size));
+ 	return count;
+@@ -1861,9 +1861,9 @@ int proc_get_war_offload_mdns_txt_rsp(st
+ 					RTW_PRINT_SEL(m, " (null)\n");
+ 					continue;
+ 				}
+-				rtw_wow_war_mdns_dump_txt(m, "type txt rsp. (Str)", 
++				rtw_wow_war_mdns_dump_txt(m, "type txt rsp. (Str)",
+ 					pwrpriv->wowlan_war_offload_mdns_txt_rsp[i].txt, pwrpriv->wowlan_war_offload_mdns_txt_rsp[i].txt_len);
+-				rtw_wow_war_mdns_dump_buf(m, "type txt rsp. (Hex)", 
++				rtw_wow_war_mdns_dump_buf(m, "type txt rsp. (Hex)",
+ 					pwrpriv->wowlan_war_offload_mdns_txt_rsp[i].txt, pwrpriv->wowlan_war_offload_mdns_txt_rsp[i].txt_len);
+ 			}
+ 			RTW_PRINT_SEL(m, "\n");
+@@ -1901,7 +1901,7 @@ ssize_t proc_set_war_offload_mdns_txt_rs
+ 	tmp = rtw_zvmalloc(sizeof(char)*(max_input_size));
+ 	if (NULL == tmp) {
+ 		RTW_INFO(FUNC_ADPT_FMT ": tmp buffer allocate fail!!\n", FUNC_ADPT_ARG(padapter));
+-		count = -EFAULT;	
++		count = -EFAULT;
+ 		goto exit;
+ 	}
+ 
+@@ -1915,7 +1915,7 @@ ssize_t proc_set_war_offload_mdns_txt_rs
+ 			}else{
+ 				RTW_INFO(FUNC_ADPT_FMT ": Txt rsp are refered! (Current service_info_num = %d)\n", FUNC_ADPT_ARG(padapter), pwrpriv->wowlan_war_offload_mdns_service_info_num);
+ 				count = -EFAULT;
+-				goto exit;     
++				goto exit;
+ 			 }
+ 
+ 		}else{
+@@ -1928,7 +1928,7 @@ ssize_t proc_set_war_offload_mdns_txt_rs
+ 			sscanf_parameter_length = 1 + strlen(op) + txt_len + num;
+ 
+ 			if(count != sscanf_parameter_length) {
+-				RTW_INFO(FUNC_ADPT_FMT ": Length of total parameters does not match the input buffer. (%d != %lu)(num=%d)\n", 
++				RTW_INFO(FUNC_ADPT_FMT ": Length of total parameters does not match the input buffer. (%d != %lu)(num=%d)\n",
+ 					FUNC_ADPT_ARG(padapter), sscanf_parameter_length, count, num);
+ 				RTW_INFO(FUNC_ADPT_FMT ": Please check the content and length of each parameter.\n", FUNC_ADPT_ARG(padapter));
+ 				RTW_INFO(FUNC_ADPT_FMT ": input buffer = (%s)(%lu)!\n\n", FUNC_ADPT_ARG(padapter), tmp, count);
+@@ -1943,7 +1943,7 @@ ssize_t proc_set_war_offload_mdns_txt_rs
+ 				if(idx >= MAX_MDNS_TXT_NUM) {
+ 					RTW_INFO(FUNC_ADPT_FMT ": the index, %d, is over the range of txt rsp(0~%d)!\n", FUNC_ADPT_ARG(padapter), idx, MAX_MDNS_TXT_NUM-1);
+ 					count = -EFAULT;
+-					goto exit; 
++					goto exit;
+ 				}
+ 
+ 				if( strncmp(op, "new", 3) == 0 ) {
+@@ -1951,11 +1951,11 @@ ssize_t proc_set_war_offload_mdns_txt_rs
+ 					pwrpriv->wowlan_war_offload_mdns_txt_rsp[idx].txt_len = 0;
+ 				}else if(strncmp(op, "append", 6) == 0 ){
+ 					if((pwrpriv->wowlan_war_offload_mdns_txt_rsp[idx].txt_len+strlen(txt_str)+1) > MAX_MDNS_TXT_LEN) {
+-						RTW_INFO(FUNC_ADPT_FMT ": the txt rsp(%d) will be over the limitation(%d) if append input string(%lu)!\n", FUNC_ADPT_ARG(padapter), 
++						RTW_INFO(FUNC_ADPT_FMT ": the txt rsp(%d) will be over the limitation(%d) if append input string(%lu)!\n", FUNC_ADPT_ARG(padapter),
+ 						pwrpriv->wowlan_war_offload_mdns_txt_rsp[idx].txt_len,
+ 						MAX_MDNS_TXT_LEN, strlen(txt_str)+1);
+ 						count = -EFAULT;
+-						goto exit; 
++						goto exit;
+ 					}
+ 				}else{
+ 					RTW_INFO(FUNC_ADPT_FMT ": Invaild op str %s (new/append only)!\n", FUNC_ADPT_ARG(padapter), op);
+@@ -1970,13 +1970,13 @@ ssize_t proc_set_war_offload_mdns_txt_rs
+ 
+ 				/* Dump ==> */
+ 				//RTW_PRINT_SEL(RTW_DBGDUMP, "[%d]", idx);
+-				//rtw_wow_war_mdns_dump_txt(RTW_DBGDUMP, "type txt rsp. (Str)", 
+-				//		pwrpriv->wowlan_war_offload_mdns_txt_rsp[idx].txt, pwrpriv->wowlan_war_offload_mdns_txt_rsp[idx].txt_len);         
++				//rtw_wow_war_mdns_dump_txt(RTW_DBGDUMP, "type txt rsp. (Str)",
++				//		pwrpriv->wowlan_war_offload_mdns_txt_rsp[idx].txt, pwrpriv->wowlan_war_offload_mdns_txt_rsp[idx].txt_len);
+ 			}
+ 		}
+ 	}
+ 
+-exit:	
++exit:
+ 	if(tmp)
+ 		rtw_vmfree(tmp, sizeof(char)*(max_input_size));
+ 	return count;
+@@ -2686,7 +2686,7 @@ ssize_t proc_set_rate_ctl(struct file *f
+ 
+ 		if ((fix_rate == 0) || (fix_rate == 0xFF))
+ 			en = 0;
+-			
++
+ 		if (macid != 255) {
+ 			RTW_INFO("Call phydm_fw_fix_rate()--en[%d] mac_id[%d] bw[%d] fix_rate[%d]\n", en, macid, bw, fix_rate);
+ 			phydm_fw_fix_rate(dm, en, macid, bw, fix_rate);
+@@ -3506,7 +3506,7 @@ int proc_get_rx_signal(struct seq_file *
+ 
+ 		RTW_PRINT_SEL(m, "rx_rate = %s\n", HDATA_RATE(odm->rx_rate));
+ 		return 0;
+-	} else 
++	} else
+ #endif
+ 	{
+ 		/* RTW_PRINT_SEL(m, "rxpwdb:%d\n", padapter->recvpriv.rxpwdb); */
+@@ -4256,10 +4256,10 @@ int proc_get_dyn_rrsr(struct seq_file *m
+ 	struct registry_priv *pregpriv = &padapter->registrypriv;
+ 	u32 init_rrsr =0xFFFFFFFF;
+ 
+-	if (padapter) 
++	if (padapter)
+ 		RTW_PRINT_SEL(m, "en_dyn_rrsr = %d fixed_rrsr_value =0x%x %s\n"
+ 			, pregpriv->en_dyn_rrsr
+-			, pregpriv->set_rrsr_value 
++			, pregpriv->set_rrsr_value
+ 			, (pregpriv->set_rrsr_value == init_rrsr)?"(default)":"(fixed)"
+ 		);
+ 
+@@ -5559,7 +5559,7 @@ ssize_t proc_set_wow_enable(struct file
+ 	int num = 0;
+ 	int mode = 0;
+ 
+-	if (count < 1) 
++	if (count < 1)
+ 		return -EFAULT;
+ 
+ 	if (count > sizeof(tmp)) {
+@@ -5567,9 +5567,9 @@ ssize_t proc_set_wow_enable(struct file
+ 		return -EFAULT;
+ 	}
+ 
+-	if (buffer && !copy_from_user(tmp, buffer, count)) 
++	if (buffer && !copy_from_user(tmp, buffer, count))
+ 		num = sscanf(tmp, "%d", &mode);
+-	else 
++	else
+ 		return -EFAULT;
+ 
+ 	if (num != 1) {
+@@ -6064,7 +6064,7 @@ ssize_t proc_set_ps_info(struct file *fi
+ 		RTW_INFO("%s: back to original LPS/IPS Mode\n", __FUNCTION__);
+ 
+ 		rtw_pm_set_lps(adapter, adapter->registrypriv.power_mgnt);
+-		
++
+ 		rtw_pm_set_ips(adapter, adapter->registrypriv.ips_mode);
+ 
+ #ifdef CONFIG_WOWLAN
+@@ -6075,16 +6075,16 @@ ssize_t proc_set_ps_info(struct file *fi
+ 
+ 		goto exit;
+ 	}
+-	
+-	if (mode == 1) { 
++
++	if (mode == 1) {
+ 		/* LPS */
+-		RTW_INFO("%s: LPS: %s, en=%d\n", __FUNCTION__, (en == 0) ? "disable":"enable", en);	
++		RTW_INFO("%s: LPS: %s, en=%d\n", __FUNCTION__, (en == 0) ? "disable":"enable", en);
+ 		if (rtw_pm_set_lps(adapter, en) != 0 )
+ 			RTW_ERR("%s: invalid parameter, mode=%d, level=%d\n", __FUNCTION__, mode, en);
+-		
++
+ 	} else if (mode == 2) {
+ 		/* IPS */
+-		RTW_INFO("%s: IPS: %s, en=%d\n", __FUNCTION__, (en == 0) ? "disable":"enable", en);	
++		RTW_INFO("%s: IPS: %s, en=%d\n", __FUNCTION__, (en == 0) ? "disable":"enable", en);
+ 		if (rtw_pm_set_ips(adapter, en) != 0 )
+ 			RTW_ERR("%s: invalid parameter, mode=%d, level=%d\n", __FUNCTION__, mode, en);
+ 	}
+@@ -6722,7 +6722,7 @@ ssize_t proc_set_simple_config(struct fi
+ 		RTW_INFO("argument size is less than 1\n");
+ 		return -EFAULT;
+ 	}
+-	
++
+ 	if (count > sizeof(tmp)) {
+ 		rtw_warn_on(1);
+ 		return -EFAULT;
+@@ -6990,7 +6990,7 @@ ssize_t proc_set_tx_deauth(struct file *
+ 	char tmp[16];
+ 	u8	mac_addr[NUM_STA][ETH_ALEN];
+ 	u8 bc_addr[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+-	u32 key_type;
++	u32 key_type = 0;
+ 	u8 index;
+ 
+ 
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_mlme_ext.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_mlme_ext.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_mlme_ext.c
+@@ -299,10 +299,10 @@ void rtw_txpwr_init_regd(struct rf_ctl_t
+ 		if (rfctl->regd_name)
+ 			break;
+ 		/* fall through */
+-	default:
++    __attribute__((__fallthrough__));
++  default:
+ 		rfctl->regd_name = regd_str(TXPWR_LMT_WW);
+ 		RTW_PRINT("assign %s for default case\n", regd_str(TXPWR_LMT_WW));
+-		break;
+ 	};
+ 
+ release_lock:
+@@ -1666,7 +1666,9 @@ void mgt_dispatcher(_adapter *padapter,
+ 		else
+ 			ptable->func = &OnAuthClient;
+ 	/* fall through */
++    __attribute__((__fallthrough__));
+ 	case WIFI_ASSOCREQ:
++    __attribute__((__fallthrough__));
+ 	case WIFI_REASSOCREQ:
+ 		_mgt_dispatcher(padapter, ptable, precv_frame);
+ 		#ifdef CONFIG_HOSTAPD_MLME
+@@ -2118,7 +2120,7 @@ static void rtw_check_legacy_ap(_adapter
+ 		unsigned char *pos;
+ 		struct rtw_ieee802_11_elems elems;
+ #ifdef CONFIG_80211N_HT
+-		u16 cur_op_mode; 
++		u16 cur_op_mode;
+ #endif
+ 		/* checking IEs */
+ 		left = len - sizeof(struct rtw_ieee80211_hdr_3addr) - _BEACON_IE_OFFSET_;
+@@ -2382,8 +2384,8 @@ static u32 rtw_get_sta_num_by_state(_ada
+ 	struct sta_info *psta = NULL;
+ 	struct sta_priv *pstapriv = &(padapter->stapriv);
+ 
+-	_enter_critical_bh(&pstapriv->sta_hash_lock, &irqL);	
+-	for (index = 0; index < NUM_STA; index++) {		
++	_enter_critical_bh(&pstapriv->sta_hash_lock, &irqL);
++	for (index = 0; index < NUM_STA; index++) {
+ 		phead = &(pstapriv->sta_hash[index]);
+ 		plist = get_next(phead);
+ 		while ((rtw_end_of_queue_search(phead, plist)) == _FALSE) {
+@@ -2416,7 +2418,7 @@ static u8  rtw_defs_attack_chk(_adapter
+ 
+ 	ptime = stime;
+ 	/* RTW_INFO("%s : current linking num=%u\n", __func__, sta_limit); */
+-	return is_reject;	
++	return is_reject;
+ }
+ #endif
+ 
+@@ -2488,7 +2490,7 @@ unsigned int OnAuth(_adapter *padapter,
+ 	RTW_INFO("auth alg=%x, seq=%X\n", algorithm, seq);
+ 
+ 	if (rtw_check_invalid_mac_address(sa, _FALSE)){
+-		RTW_INFO("%s : reject invalid AUTH-req "MAC_FMT"\n", 
++		RTW_INFO("%s : reject invalid AUTH-req "MAC_FMT"\n",
+ 			__func__, MAC_ARG(get_addr2_ptr(pframe)));
+ 		return _FAIL;
+ 	}
+@@ -2551,7 +2553,7 @@ unsigned int OnAuth(_adapter *padapter,
+ 		/* pstat->capability = 0; */
+ 	} else {
+ #ifdef CONFIG_IEEE80211W
+-		if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++		if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 			|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 		{
+@@ -2576,7 +2578,7 @@ unsigned int OnAuth(_adapter *padapter,
+ 	}
+ 
+ #ifdef CONFIG_IEEE80211W
+-	if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++	if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 		|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 	{
+@@ -2614,7 +2616,7 @@ unsigned int OnAuth(_adapter *padapter,
+ 	if (algorithm == 0 && (auth_mode == 0 || auth_mode == 2 || auth_mode == 3)) {
+ 		if (seq == 1) {
+ #ifdef CONFIG_IEEE80211W
+-			if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++			if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 				|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 			{
+@@ -2636,7 +2638,7 @@ unsigned int OnAuth(_adapter *padapter,
+ 			/* get_random_bytes((void *)pstat->chg_txt, 128); */ /* TODO: */
+ 			_rtw_memset((void *)pstat->chg_txt, 78, 128);
+ #ifdef CONFIG_IEEE80211W
+-			if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++			if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 				|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 			{
+@@ -2660,7 +2662,7 @@ unsigned int OnAuth(_adapter *padapter,
+ 
+ 			if (_rtw_memcmp((void *)(p + 2), pstat->chg_txt, 128)) {
+ #ifdef CONFIG_IEEE80211W
+-				if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++				if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 					|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 				{
+@@ -2859,7 +2861,7 @@ unsigned int OnAssocReq(_adapter *padapt
+ 		return _FAIL;
+ 
+ 	if (rtw_check_invalid_mac_address(get_addr2_ptr(pframe), _FALSE)) {
+-		RTW_INFO("%s : reject invalid ASSOC-req "MAC_FMT"\n", 
++		RTW_INFO("%s : reject invalid ASSOC-req "MAC_FMT"\n",
+ 			__func__, MAC_ARG(get_addr2_ptr(pframe)));
+ 		return _FAIL;
+ 	}
+@@ -3065,7 +3067,7 @@ unsigned int OnAssocReq(_adapter *padapt
+ 	/* RTW_INFO("==================%s, %d,  (%x), bpairwise_key_installed=%d, MAC:"MAC_FMT"\n"
+ 	, __func__, __LINE__, pstat->state, pstat->bpairwise_key_installed, MAC_ARG(pstat->cmn.mac_addr)); */
+ #ifdef CONFIG_IEEE80211W
+-	if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++	if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 		|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 	{
+@@ -3095,7 +3097,7 @@ unsigned int OnAssocReq(_adapter *padapt
+ 	if (pstat && (pstat->state & WIFI_FW_ASSOC_SUCCESS) && (_STATS_SUCCESSFUL_ == status)) {
+ #ifdef CONFIG_NATIVEAP_MLME
+ #ifdef CONFIG_IEEE80211W
+-		if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++		if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 			|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 		{
+@@ -3129,7 +3131,7 @@ unsigned int OnAssocReq(_adapter *padapt
+ 		_exit_critical_bh(&pstat->lock, &irqL);
+ #endif /* CONFIG_IOCTL_CFG80211 */
+ #ifdef CONFIG_IEEE80211W
+-		if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP)) 
++		if ((pstat->bpairwise_key_installed != _TRUE && (pstat->flags & WLAN_STA_MFP))
+ 			|| !(pstat->flags & WLAN_STA_MFP))
+ #endif /* CONFIG_IEEE80211W */
+ 		{
+@@ -3178,7 +3180,7 @@ void rtw_roam_nb_discover(_adapter *pada
+ {
+ 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+ 	struct mlme_ext_priv *pmlmeext = &padapter->mlmeextpriv;
+-	struct mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);	
++	struct mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
+ 	struct sta_priv *pstapriv = &padapter->stapriv;
+ 	struct sta_info *psta;
+ 	u8 nb_req_issue = _FALSE;
+@@ -3192,11 +3194,11 @@ void rtw_roam_nb_discover(_adapter *pada
+ 	psta = rtw_get_stainfo(pstapriv, pmlmeinfo->network.MacAddress);
+ 	if (!psta)
+ 		return;
+-	
++
+ 	if (bfroce || (!pmlmepriv->nb_info.nb_rpt_is_same))
+ 		nb_req_issue = _TRUE;
+-	
+-	if (nb_req_issue && (psta->rm_en_cap[0] & RTW_RRM_NB_RPT_EN)) 
++
++	if (nb_req_issue && (psta->rm_en_cap[0] & RTW_RRM_NB_RPT_EN))
+ 		rm_add_nb_req(padapter, psta);
+ }
+ #endif
+@@ -3248,7 +3250,7 @@ unsigned int OnAssocRsp(_adapter *padapt
+ 
+ 	/* AID */
+ 	res = pmlmeinfo->aid = (int)(le16_to_cpu(*(unsigned short *)(pframe + WLAN_HDR_A3_LEN + 4)) & 0x3fff);
+-	
++
+ 	/* check aid value */
+ 	if (res < 1 || res > 2007) {
+ 		RTW_INFO("assoc reject, aid: %d\n", res);
+@@ -3662,7 +3664,7 @@ unsigned int on_action_wnm(_adapter *ada
+ 	u8 *frame = rframe->u.hdr.rx_data;
+ 	u32 frame_len = rframe->u.hdr.len;
+ 	u8 *frame_body = (u8 *)(frame + sizeof(struct rtw_ieee80211_hdr_3addr));
+-	u32 frame_body_len = frame_len - sizeof(struct rtw_ieee80211_hdr_3addr);	
++	u32 frame_body_len = frame_len - sizeof(struct rtw_ieee80211_hdr_3addr);
+ 	u8 category, action;
+ 	int cnt = 0;
+ 	char msg[16];
+@@ -3763,12 +3765,12 @@ u8 rtw_rx_ampdu_size(_adapter *adapter)
+ 		max_rx_ampdu_factor = (HT_CAP_AMPDU_FACTOR)adapter->driver_rx_ampdu_factor;
+ 	else
+ 		rtw_hal_get_def_var(adapter, HW_VAR_MAX_RX_AMPDU_FACTOR, &max_rx_ampdu_factor);
+-	
++
+ 	/* In Maximum A-MPDU Length Exponent subfield of A-MPDU Parameters field of HT Capabilities element,
+ 		the unit of max_rx_ampdu_factor are octets. 8K, 16K, 32K, 64K is right.
+ 		But the buffer size subfield of Block Ack Parameter Set field in ADDBA action frame indicates
+-		the number of buffers available for this particular TID. Each buffer is equal to max. size of 
+-		MSDU or AMSDU. 
++		the number of buffers available for this particular TID. Each buffer is equal to max. size of
++		MSDU or AMSDU.
+ 		The size variable means how many MSDUs or AMSDUs, it's not Kbytes.
+ 	*/
+ 	if (MAX_AMPDU_FACTOR_64K == max_rx_ampdu_factor)
+@@ -7454,7 +7456,7 @@ exit:
+ void rtw_issue_action_token_rel(_adapter *padapter)
+ {
+ 
+-	// Todo: 
++	// Todo:
+ 	// gen token
+ 	/* Token Release Format
+ 		Category code : 	1 Byte
+@@ -7474,21 +7476,21 @@ void rtw_issue_action_token_rel(_adapter
+ 	//struct sta_info			*psta;
+ 	//struct sta_priv			*pstapriv = &padapter->stapriv;
+ 	//struct registry_priv		*pregpriv = &padapter->registrypriv;
+-	
++
+ 	if (rtw_rfctl_is_tx_blocked_by_ch_waiting(adapter_to_rfctl(padapter)))
+ 		return;
+ 
+ 	pmgntframe = alloc_mgtxmitframe(pxmitpriv);
+ 	if (pmgntframe == NULL)
+ 		return;
+-	
++
+ 	/*update attribute */
+ 	pattrib = &pmgntframe->attrib;
+ 	update_mgntframe_attrib(padapter, pattrib);
+-	pattrib->rate = MGN_24M; /* issue action release using OFDM rate? 20190716 Bruce add */ 
++	pattrib->rate = MGN_24M; /* issue action release using OFDM rate? 20190716 Bruce add */
+ 
+ 	_rtw_memset(pmgntframe->buf_addr, 0, WLANHDR_OFFSET + TXDESC_OFFSET);
+-	
++
+ 	pframe = (u8 *)(pmgntframe->buf_addr) + TXDESC_OFFSET;
+ 	pwlanhdr = (struct rtw_ieee80211_hdr *)pframe;
+ 
+@@ -8153,7 +8155,7 @@ void issue_beacon(_adapter *padapter, in
+ 		pattrib->pktlen += rtw_build_vendor_ie(padapter , &pframe , WIFI_BEACON_VENDOR_IE_BIT);
+ #endif
+ 
+-#ifdef CONFIG_RTL8812A 
++#ifdef CONFIG_RTL8812A
+ 		pframe = rtw_hal_set_8812a_vendor_ie(padapter, pframe, &pattrib->pktlen );
+ #endif/*CONFIG_RTL8812A*/
+ 
+@@ -8504,7 +8506,7 @@ void issue_probersp(_adapter *padapter,
+ 	}
+ #endif /* CONFIG_AUTO_AP_MODE */
+ 
+-#ifdef CONFIG_RTL8812A 
++#ifdef CONFIG_RTL8812A
+ 	pframe = rtw_hal_set_8812a_vendor_ie(padapter, pframe, &pattrib->pktlen);
+ #endif/*CONFIG_RTL8812A*/
+ 
+@@ -8638,7 +8640,7 @@ int _issue_probereq(_adapter *padapter,
+ 	pattrib->pktlen += rtw_build_vendor_ie(padapter , &pframe , WIFI_PROBEREQ_VENDOR_IE_BIT);
+ #endif
+ 
+-#ifdef CONFIG_RTL8812A 
++#ifdef CONFIG_RTL8812A
+ 	pframe = rtw_hal_set_8812a_vendor_ie(padapter, pframe, &pattrib->pktlen );
+ #endif/*CONFIG_RTL8812A*/
+ 
+@@ -9102,7 +9104,7 @@ void issue_asocrsp(_adapter *padapter, u
+ 	pattrib->pktlen += rtw_build_vendor_ie(padapter , &pframe , WIFI_ASSOCRESP_VENDOR_IE_BIT);
+ #endif
+ 
+-#ifdef CONFIG_RTL8812A 
++#ifdef CONFIG_RTL8812A
+ 	pframe = rtw_hal_set_8812a_vendor_ie(padapter, pframe, &pattrib->pktlen );
+ #endif/*CONFIG_RTL8812A*/
+ 
+@@ -9347,8 +9349,8 @@ void _issue_assocreq(_adapter *padapter,
+ 	rtw_ft_build_assoc_req_ies(padapter, is_reassoc, pattrib, &pframe);
+ #endif
+ #ifdef CONFIG_RTW_80211K
+-	pframe = rtw_set_ie(pframe, _EID_RRM_EN_CAP_IE_, 5, 
+-			(u8 *)padapter->rmpriv.rm_en_cap_def, 
++	pframe = rtw_set_ie(pframe, _EID_RRM_EN_CAP_IE_, 5,
++			(u8 *)padapter->rmpriv.rm_en_cap_def,
+ 			&(pattrib->pktlen));
+ #endif /* CONFIG_RTW_80211K */
+ 
+@@ -9597,7 +9599,7 @@ void _issue_assocreq(_adapter *padapter,
+ 	/* OWE */
+ 	{
+ 	u32 owe_ie_len;
+-	
++
+ 	owe_ie_len = rtw_append_assoc_req_owe_ie(padapter, pframe);
+ 	pframe += owe_ie_len;
+ 	pattrib->pktlen += owe_ie_len;
+@@ -9610,7 +9612,7 @@ void _issue_assocreq(_adapter *padapter,
+ 	pattrib->pktlen += rtw_build_vendor_ie(padapter , &pframe , WIFI_ASSOCREQ_VENDOR_IE_BIT);
+ #endif
+ 
+-#ifdef CONFIG_RTL8812A 
++#ifdef CONFIG_RTL8812A
+ 	pframe = rtw_hal_set_8812a_vendor_ie(padapter, pframe, &pattrib->pktlen );
+ #endif/*CONFIG_RTL8812A*/
+ 
+@@ -10249,7 +10251,7 @@ static int issue_action_ba(_adapter *pad
+ 	u16	start_seq;
+ 	u16	BA_para_set;
+ 	u16	BA_timeout_value;
+-	u16	BA_starting_seqctrl;
++	u16	BA_starting_seqctrl = 0;
+ 	struct xmit_frame		*pmgntframe;
+ 	struct pkt_attrib		*pattrib;
+ 	u8					*pframe;
+@@ -10997,7 +10999,7 @@ unsigned int send_beacon(_adapter *padap
+ #endif
+ 
+ /* CONFIG_PCI_BCN_POLLING is for pci interface beacon polling mode */
+-#if defined(CONFIG_USB_HCI) || defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)|| defined(CONFIG_PCI_BCN_POLLING) 
++#if defined(CONFIG_USB_HCI) || defined(CONFIG_SDIO_HCI) || defined(CONFIG_GSPI_HCI)|| defined(CONFIG_PCI_BCN_POLLING)
+ 	u8 bxmitok = _FALSE;
+ 	int issue = 0;
+ 	int poll = 0;
+@@ -11031,14 +11033,14 @@ unsigned int send_beacon(_adapter *padap
+ 		rtw_hal_set_hwreg(padapter, HW_VAR_BCN_HEAD_SEL, &vap_id);
+ 		#endif
+ 		do {
+-			#if defined(CONFIG_PCI_BCN_POLLING) 
++			#if defined(CONFIG_PCI_BCN_POLLING)
+ 			issue_beacon(padapter, 0);
+ 			#else
+ 			issue_beacon(padapter, 100);
+ 			#endif
+ 			issue++;
+ 			do {
+-				#if defined(CONFIG_PCI_BCN_POLLING) 
++				#if defined(CONFIG_PCI_BCN_POLLING)
+ 				rtw_msleep_os(1);
+ 				#else
+ 				rtw_yield_os();
+@@ -11046,7 +11048,7 @@ unsigned int send_beacon(_adapter *padap
+ 				rtw_hal_get_hwreg(padapter, HW_VAR_BCN_VALID, (u8 *)(&bxmitok));
+ 				poll++;
+ 			} while ((poll % 10) != 0 && _FALSE == bxmitok && !RTW_CANNOT_RUN(padapter));
+-			#if defined(CONFIG_PCI_BCN_POLLING) 
++			#if defined(CONFIG_PCI_BCN_POLLING)
+ 			rtw_hal_unmap_beacon_icf(padapter);
+ 			#endif
+ 		} while (bxmitok == _FALSE && (issue < 100) && !RTW_CANNOT_RUN(padapter));
+@@ -11677,7 +11679,7 @@ static void rtw_hidden_ssid_bss_count(_a
+ 	chset_idx = rtw_chset_search_ch(chset, bss->Configuration.DSConfig);
+ 	if (chset_idx < 0)
+ 		return;
+-	
++
+ 	chset[chset_idx].hidden_bss_cnt++;
+ }
+ 
+@@ -12531,9 +12533,9 @@ void rtw_delba_check(_adapter *padapter,
+ 	*/
+ 	if (pmlmeinfo->assoc_AP_vendor == HT_IOT_PEER_BROADCOM) {
+ 		for (i = 0; i < TID_NUM ; i++) {
+-			if ((psta->recvreorder_ctrl[i].enable) && 
+-                        (sta_rx_data_qos_pkts(psta, i) == sta_last_rx_data_qos_pkts(psta, i)) ) {			
+-					if (_TRUE == rtw_inc_and_chk_continual_no_rx_packet(psta, i)) {					
++			if ((psta->recvreorder_ctrl[i].enable) &&
++                        (sta_rx_data_qos_pkts(psta, i) == sta_last_rx_data_qos_pkts(psta, i)) ) {
++					if (_TRUE == rtw_inc_and_chk_continual_no_rx_packet(psta, i)) {
+ 						/* send a DELBA frame to the peer STA with the Reason Code field set to TIMEOUT */
+ 						if (!from_timer)
+ 							ret = issue_del_ba_ex(padapter, psta->cmn.mac_addr, i, 39, 0, 3, 1);
+@@ -12543,7 +12545,7 @@ void rtw_delba_check(_adapter *padapter,
+ 						if (ret != _FAIL)
+ 							psta->recvreorder_ctrl[i].ampdu_size = RX_AMPDU_SIZE_INVALID;
+ 						rtw_reset_continual_no_rx_packet(psta, i);
+-					}				
++					}
+ 			} else {
+ 				/* The inactivity timer is reset when MPDUs to the TID is received. */
+ 				rtw_reset_continual_no_rx_packet(psta, i);
+@@ -12750,7 +12752,7 @@ void linked_status_chk(_adapter *padapte
+ 
+ 	if (padapter->registrypriv.mp_mode == _TRUE)
+ 		return;
+-		
++
+ 	if (check_fwstate(pmlmepriv, WIFI_CSA_UPDATE_BEACON))
+ 		return;
+ 
+@@ -12835,7 +12837,7 @@ void linked_status_chk(_adapter *padapte
+ 			is_p2p_enable = !rtw_p2p_chk_state(&padapter->wdinfo, P2P_STATE_NONE);
+ #endif
+ 
+-#ifdef CONFIG_ISSUE_DELBA_WHEN_NO_TRAFFIC 
++#ifdef CONFIG_ISSUE_DELBA_WHEN_NO_TRAFFIC
+ 			/*issue delba when ap does not tx data packet that is Broadcom ap */
+ 			rtw_delba_check(padapter, psta, from_timer);
+ #endif
+@@ -12852,7 +12854,7 @@ void linked_status_chk(_adapter *padapte
+ 				u8 union_ch = 0, union_bw = 0, union_offset = 0;
+ 				u8 switch_channel_by_drv = _TRUE;
+ 
+-				
++
+ #ifdef CONFIG_MCC_MODE
+ 				if (MCC_EN(padapter)) {
+ 					/* driver doesn't switch channel under MCC */
+@@ -13069,7 +13071,7 @@ void rtw_tbtx_token_dispatch_timer_hdl(v
+ 		goto exit;
+ 
+ 	// dispatch token
+-	
++
+ 	nr_send = RTW_DIV_ROUND_UP(pstapriv->tbtx_asoc_list_cnt, NR_TBTX_SLOT);
+ 
+ 	phead = &pstapriv->asoc_list;
+@@ -13090,7 +13092,7 @@ void rtw_tbtx_token_dispatch_timer_hdl(v
+ 		plist = get_next(plist);
+ 	}
+ outof_loop:
+-	
++
+ 	RTW_DBG("rtw_tbtx_token_dispatch_timer_hdl()   th_idx=%d,  nr_send=%d, phead=%p, plist=%p, found=%d\n ", th_idx ,  nr_send, phead, plist, found);
+ 	if (!found) {
+ 		plist = get_next(phead);
+@@ -13113,7 +13115,7 @@ outof_loop:
+ 			plist = get_next(plist);
+ 		psta = LIST_CONTAINOR(plist, struct sta_info, asoc_list);
+ 		if ((!psta) || (!psta->tbtx_enable))
+-			RTW_DBG("sta tbtx_enable is false\n");		
++			RTW_DBG("sta tbtx_enable is false\n");
+ 		else {
+ 			pstapriv->token_holder[th_idx] = psta;
+ 			rtw_issue_action_token_req(padapter, pstapriv->token_holder[th_idx++]);
+@@ -13121,12 +13123,12 @@ outof_loop:
+ 		}
+ 	}
+ 	ATOMIC_SET(&pstapriv->nr_token_keeper, nr_send);
+-	
++
+ 
+ exit:
+ 	// set_timer
+ 	_exit_critical_bh(&pstapriv->asoc_list_lock, &irqL);
+-	_set_timer(&pmlmeext->tbtx_token_dispatch_timer, TBTX_TX_DURATION); 
++	_set_timer(&pmlmeext->tbtx_token_dispatch_timer, TBTX_TX_DURATION);
+ }
+ #endif /* CONFIG_AP_MODE */
+ #endif /* CONFIG_RTW_TOKEN_BASED_XMIT */
+@@ -13832,7 +13834,7 @@ u8 disconnect_hdl(_adapter *padapter, un
+ #endif
+ 
+ 	rtw_sta_mstatus_report(padapter);
+-	
++
+ 	rtw_mlmeext_disconnect(padapter);
+ 
+ 	rtw_free_uc_swdec_pending_queue(padapter);
+@@ -14028,7 +14030,7 @@ u32 rtw_scan_timeout_decision(_adapter *
+ 	struct ss_res *ss = &pmlmeext->sitesurvey_res;
+ 
+ 	if (is_supported_5g(padapter->registrypriv.wireless_mode)
+-		&& IsSupported24G(padapter->registrypriv.wireless_mode)) 
++		&& IsSupported24G(padapter->registrypriv.wireless_mode))
+ 		max_chan_num = MAX_CHANNEL_NUM;/* dual band */
+ 	else
+ 		max_chan_num = MAX_CHANNEL_NUM_2G;/*single band*/
+@@ -14879,7 +14881,9 @@ operation_by_state:
+ 
+ #ifdef CONFIG_SCAN_BACKOP
+ 	case SCAN_BACKING_OP: {
+-		u8 back_ch, back_bw, back_ch_offset;
++		u8 back_ch = 0;
++    u8 back_bw = 0;
++    u8 back_ch_offset = 0;
+ 		u8 need_ch_setting_union = _TRUE;
+ 
+ #ifdef CONFIG_MCC_MODE
+@@ -15192,7 +15196,7 @@ u8 setkey_hdl(_adapter *padapter, u8 *pb
+ 	if (pparm->algorithm & _SEC_TYPE_256_)  {
+ 		RTW_INFO_DUMP("GTK : ", pparm->key, sizeof(pparm->key));
+ 		ctrl |= BIT(9);
+-	}	
++	}
+ 
+ 	write_cam(padapter, cam_id, ctrl, addr, pparm->key);
+ 
+@@ -15510,7 +15514,7 @@ u8 set_tx_beacon_cmd(_adapter *padapter,
+ 			ph2c->sctx = NULL;
+ 		_exit_critical_mutex(&pcmdpriv->sctx_mutex, NULL);
+ 	}
+-	
++
+ 
+ exit:
+ 
+@@ -16100,7 +16104,7 @@ u8 rtw_set_chbw_hdl(_adapter *padapter,
+ 			iface = dvobj->padapters[i];
+ 			if (!iface || !(ifbmp_s & BIT(iface->iface_id)))
+ 				continue;
+-			
++
+ 			/* update STA mode ch/bw/offset */
+ 			iface->mlmeextpriv.cur_channel = set_ch_parm->ch;
+ 			iface->mlmeextpriv.cur_bwmode = set_ch_parm->bw;
+@@ -16109,15 +16113,15 @@ u8 rtw_set_chbw_hdl(_adapter *padapter,
+ 			iface->mlmepriv.cur_network.network.Configuration.DSConfig = set_ch_parm->ch;
+ 		}
+ 	}
+-	
++
+ 	LeaveAllPowerSaveModeDirect(padapter);
+-	
++
+ 	set_channel_bwmode(padapter, set_ch_parm->ch, set_ch_parm->ch_offset, set_ch_parm->bw);
+ 
+ 	rtw_mi_get_ch_setting_union(padapter, &u_ch, &u_bw, &u_offset);
+ 	rtw_mi_update_union_chan_inf(padapter, u_ch, u_offset, u_bw);
+ 	rtw_rfctl_update_op_mode(dvobj_to_rfctl(dvobj), 0, 0);
+-	
++
+ 	return	H2C_SUCCESS;
+ }
+ 
+@@ -16188,7 +16192,7 @@ u8 rtw_get_chplan_hdl(_adapter *padapter
+ 		resp->has_country = 1;
+ 	} else
+ 		resp->has_country = 0;
+-	
++
+ 	resp->channel_plan = rfctl->ChannelPlan;
+ #if CONFIG_TXPWR_LIMIT
+ 	resp->regd_name = rfctl->regd_name;
+@@ -16240,18 +16244,18 @@ void csa_timer_hdl(void *FunctionContext
+ 			update_beacon = _TRUE;
+ 		}
+ 	}
+-	
++
+ 	/* wait beacons more than 70 seconds */
+ 	if(update_beacon == _TRUE) {
+ 		RTW_INFO("wait beacons more than 70 seconds\n");
+ 		return ;
+ 	}
+-	
++
+ 	if(rfctl->csa_ch == 0) {
+ 		RTW_INFO("channel switch done\n");
+ 		return ;
+ 	}
+-	
++
+ 	/* channel switch */
+ 	if (rtw_set_csa_cmd(padapter) != _SUCCESS) {
+ 			rfctl->csa_ch = 0;
+@@ -16433,7 +16437,7 @@ u8 tdls_hdl(_adapter *padapter, unsigned
+ 			pchsw_info->ch_offset, (pchsw_info->ch_offset) ? CHANNEL_WIDTH_40 : CHANNEL_WIDTH_20, ptdls_sta->ch_switch_time) == _SUCCESS) {
+ 			pchsw_info->ch_sw_state &= ~(TDLS_PEER_AT_OFF_STATE);
+ 			if (pchsw_info->ch_sw_state & TDLS_CH_SW_INITIATOR_STATE) {
+-				if (issue_nulldata_to_TDLS_peer_STA(ptdls_sta->padapter, ptdls_sta->cmn.mac_addr, 0, 1, 
++				if (issue_nulldata_to_TDLS_peer_STA(ptdls_sta->padapter, ptdls_sta->cmn.mac_addr, 0, 1,
+ 					(padapter->registrypriv.wifi_spec == 0) ? 3 : 0) == _FAIL)
+ 					rtw_tdls_cmd(padapter, ptdls_sta->cmn.mac_addr, TDLS_CH_SW_TO_BASE_CHNL);
+ 			}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_odm.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_odm.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_odm.c
+@@ -160,9 +160,10 @@ void rtw_odm_acquirespinlock(_adapter *a
+ 	switch (type) {
+ 	case RT_IQK_SPINLOCK:
+ 		_enter_critical_bh(&pHalData->IQKSpinLock, &irqL);
++    break;
+ 	default:
+-		break;
+-	}
++	  break;
++  }
+ }
+ 
+ void rtw_odm_releasespinlock(_adapter *adapter,	enum rt_spinlock_type type)
+@@ -173,8 +174,9 @@ void rtw_odm_releasespinlock(_adapter *a
+ 	switch (type) {
+ 	case RT_IQK_SPINLOCK:
+ 		_exit_critical_bh(&pHalData->IQKSpinLock, &irqL);
++    break;
+ 	default:
+-		break;
++    break;
+ 	}
+ }
+ 
+@@ -495,7 +497,7 @@ debug_IQK(
+ 	if (idx == TX_IQK) {//TXCFIR
+ 		odm_set_bb_reg(dm, R_0x1b20, BIT(31) | BIT(30), 0x3);
+ 	} else {//RXCFIR
+-		odm_set_bb_reg(dm, R_0x1b20, BIT(31) | BIT(30), 0x1);		
++		odm_set_bb_reg(dm, R_0x1b20, BIT(31) | BIT(30), 0x1);
+ 	}
+ 	odm_set_bb_reg(dm, R_0x1bd4, BIT(21), 0x1);
+ 	odm_set_bb_reg(dm, R_0x1bd4, bit_mask_20_16, 0x10);
+@@ -506,7 +508,7 @@ debug_IQK(
+ 		//iqk_info->iqk_cfir_real[ch][path][idx][i] =
+ 		//				(tmp & 0x0fff0000) >> 16;
+ 		RTW_INFO("iqk_cfir_imag[%d][%d][%d] = 0x%x\n", path, idx, i, (tmp & 0x0fff));
+-		//iqk_info->iqk_cfir_imag[ch][path][idx][i] = tmp & 0x0fff;		
++		//iqk_info->iqk_cfir_imag[ch][path][idx][i] = tmp & 0x0fff;
+ 	}
+ 	odm_set_bb_reg(dm, R_0x1b20, BIT(31) | BIT(30), 0x0);
+ 	//odm_set_bb_reg(dm, R_0x1bd8, MASKDWORD, 0x0);
+@@ -542,7 +544,7 @@ extern void _dpk_get_coef_8822c(void *dm
+ __odm_func__ void
+ debug_reload_data_8822c(
+ 	void *dm_void)
+-{	
++{
+ 	struct dm_struct *dm = (struct dm_struct *)dm_void;
+ 	struct dm_dpk_info *dpk_info = &dm->dpk_info;
+ 
+@@ -567,7 +569,7 @@ debug_reload_data_8822c(
+ 
+ 		u32tmp = odm_get_bb_reg(dm, R_0x1b64, MASKBYTE3);
+ 		RTW_INFO("[DPK] dpk_txagc = 0x%08x\n", u32tmp);
+-		
++
+ 		//debug_coef_write_8822c(dm, path, dpk_info->dpk_path_ok & BIT(path) >> path);
+ 		_dpk_get_coef_8822c(dm, path);
+ 
+@@ -577,11 +579,11 @@ debug_reload_data_8822c(
+ 
+ 		if (path == RF_PATH_A)
+ 			u32tmp = odm_get_bb_reg(dm, R_0x1b04, 0x0fffffff);
+-		else 
++		else
+ 			u32tmp = odm_get_bb_reg(dm, R_0x1b5c, 0x0fffffff);
+ 
+ 		RTW_INFO("[DPK] dpk_gs = 0x%08x\n", u32tmp);
+-		
++
+ 	}
+ }
+ 
+@@ -593,7 +595,7 @@ void odm_lps_pg_debug_8822c(void *dm_voi
+ 	debug_IQK(dm, TX_IQK, RF_PATH_A);
+ 	debug_IQK(dm, RX_IQK, RF_PATH_A);
+ 	debug_IQK(dm, TX_IQK, RF_PATH_B);
+-	debug_IQK(dm, RX_IQK, RF_PATH_B);	
++	debug_IQK(dm, RX_IQK, RF_PATH_B);
+ 	debug_reload_data_8822c(dm);
+ }
+ #endif /* defined(CONFIG_RTL8822C) && defined(CONFIG_LPS_PG) */
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_sta_mgt.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_sta_mgt.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/core/rtw_sta_mgt.c
+@@ -388,8 +388,7 @@ void rtw_mfree_stainfo(struct sta_info *
+ void rtw_mfree_stainfo(struct sta_info *psta)
+ {
+ 
+-	if (&psta->lock != NULL)
+-		_rtw_spinlock_free(&psta->lock);
++	_rtw_spinlock_free(&psta->lock);
+ 
+ 	_rtw_free_sta_xmit_priv_lock(&psta->sta_xmitpriv);
+ 	_rtw_free_sta_recv_priv_lock(&psta->sta_recvpriv);
+@@ -775,7 +774,7 @@ u32	rtw_free_stainfo(_adapter *padapter
+ 
+ 		preorder_ctrl = &psta->recvreorder_ctrl[i];
+ 		rtw_clear_bit(RTW_RECV_ACK_OR_TIMEOUT, &preorder_ctrl->rec_abba_rsp_ack);
+-		
++
+ 		_cancel_timer_ex(&preorder_ctrl->reordering_ctrl_timer);
+ 
+ 
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_dm.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_dm.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_dm.c
+@@ -435,7 +435,7 @@ void Init_ODM_ComInfo(_adapter *adapter)
+ 	odm_cmn_info_init(pDM_Odm, ODM_CMNINFO_EFUSE0X3D8, pHalData->efuse0x3d8);
+ 
+ 	/* waiting for PhyDMV034 support*/
+-	odm_cmn_info_hook(pDM_Odm, ODM_CMNINFO_MANUAL_SUPPORTABILITY, &(adapter->registrypriv.phydm_ability)); 
++	odm_cmn_info_hook(pDM_Odm, ODM_CMNINFO_MANUAL_SUPPORTABILITY, &(adapter->registrypriv.phydm_ability));
+ 	/*Add by YuChen for adaptivity init*/
+ 	odm_cmn_info_hook(pDM_Odm, ODM_CMNINFO_ADAPTIVITY, &(adapter->registrypriv.adaptivity_en));
+ 	phydm_adaptivity_info_init(pDM_Odm, PHYDM_ADAPINFO_CARRIER_SENSE_ENABLE, (adapter->registrypriv.adaptivity_mode != 0) ? TRUE : FALSE);
+@@ -553,20 +553,20 @@ struct turbo_edca_setting{
+ static struct turbo_edca_setting rtw_turbo_edca[TURBO_EDCA_MODE_NUM] = {
+ 	TURBO_EDCA_ENT(0xa42b, 0xa42b), /* mode 0 */
+ 	TURBO_EDCA_ENT(0x431c, 0x431c), /* mode 1 */
+-	TURBO_EDCA_ENT(0x4319, 0x4319), /* mode 2 */	
+-	
++	TURBO_EDCA_ENT(0x4319, 0x4319), /* mode 2 */
++
+ 	TURBO_EDCA_ENT(0x5ea42b, 0x5ea42b), /* mode 3 */
+ 	TURBO_EDCA_ENT(0x5e431c, 0x5e431c), /* mode 4 */
+-	TURBO_EDCA_ENT(0x5e4319, 0x5e4319), /* mode 5 */	
+-	
++	TURBO_EDCA_ENT(0x5e4319, 0x5e4319), /* mode 5 */
++
+ 	TURBO_EDCA_ENT(0x6ea42b, 0x6ea42b), /* mode 6 */
+ 	TURBO_EDCA_ENT(0x6e431c, 0x6e431c), /* mode 7 */
+ 	TURBO_EDCA_ENT(0x6e4319, 0x6e4319), /* mode 8 */
+-	
++
+ 	TURBO_EDCA_ENT(0x5ea42b, 0xa42b), /* mode 9 */
+ 	TURBO_EDCA_ENT(0x5e431c, 0x431c), /* mode 10 */
+ 	TURBO_EDCA_ENT(0x5e4319, 0x4319), /* mode 11 */
+-	
++
+ 	TURBO_EDCA_ENT(0x6ea42b, 0xa42b), /* mode 12 */
+ 	TURBO_EDCA_ENT(0x6e431c, 0x431c), /* mode 13 */
+ 	TURBO_EDCA_ENT(0x6e4319, 0x4319), /* mode 14 */
+@@ -583,18 +583,18 @@ static struct turbo_edca_setting rtw_tur
+ 	/* { UL, DL } */
+ 	TURBO_EDCA_ENT(0x5e431c, 0x431c), /* mode 0 */
+ 
+-	TURBO_EDCA_ENT(0x431c, 0x431c), /* mode 1 */	
+-	
++	TURBO_EDCA_ENT(0x431c, 0x431c), /* mode 1 */
++
+ 	TURBO_EDCA_ENT(0x5e431c, 0x5e431c), /* mode 2 */
+ 
+ 	TURBO_EDCA_ENT(0x5ea42b, 0x5ea42b), /* mode 3 */
+-	
++
+ 	TURBO_EDCA_ENT(0x5ea42b, 0x431c), /* mode 4 */
+-	
++
+ 	TURBO_EDCA_ENT(0x6ea42b, 0x6ea42b), /* mode 5 */
+ 
+ 	TURBO_EDCA_ENT(0xa42b, 0xa42b), /* mode 6 */
+-	
++
+ 	TURBO_EDCA_ENT(0x5e431c, 0xa42b), /* mode 7 */
+ };
+ #endif
+@@ -639,7 +639,7 @@ void rtw_hal_turbo_edca(_adapter *adapte
+ 		return;
+ 	}
+ 
+-	if ((pregpriv->wifi_spec == 1)) { /* || (pmlmeinfo->HT_enable == 0)) */
++	if (pregpriv->wifi_spec == 1) { /* || (pmlmeinfo->HT_enable == 0)) */
+ 		precvpriv->is_any_non_be_pkts = _FALSE;
+ 		return;
+ 	}
+@@ -731,15 +731,15 @@ void rtw_hal_turbo_edca(_adapter *adapte
+ 				EDCA_BE_DL = 0x00431c;
+ 
+ #ifdef CONFIG_RTW_TPT_MODE
+-			if ( dvobj->tpt_mode > 0 ) {				
++			if ( dvobj->tpt_mode > 0 ) {
+ 				EDCA_BE_UL = dvobj->edca_be_ul;
+ 				EDCA_BE_DL = dvobj->edca_be_dl;
+ 			}
+ #endif /* CONFIG_RTW_TPT_MODE */
+ 
+ 			/* keep this condition at last check */
+-			if (hal_data->dis_turboedca == 2) {					
+-				
++			if (hal_data->dis_turboedca == 2) {
++
+ 					if (hal_data->edca_param_mode < TURBO_EDCA_MODE_NUM) {
+ 
+ 						struct turbo_edca_setting param;
+@@ -748,12 +748,12 @@ void rtw_hal_turbo_edca(_adapter *adapte
+ 
+ 						EDCA_BE_UL = param.edca_ul;
+ 						EDCA_BE_DL = param.edca_dl;
+-						
++
+ 					} else {
+-					
++
+ 						EDCA_BE_UL = hal_data->edca_param_mode;
+ 						EDCA_BE_DL = hal_data->edca_param_mode;
+-					}				
++					}
+ 			}
+ 
+ 			if (traffic_index == DOWN_LINK)
+@@ -771,7 +771,7 @@ void rtw_hal_turbo_edca(_adapter *adapte
+ 			struct sta_info *psta;
+ 			struct macid_ctl_t *macid_ctl = dvobj_to_macidctl(dvobj);
+ 			u8 mac_id, role, current_rate_id;
+-			
++
+ 			/*	search all used & connect2AP macid	*/
+ 			for (mac_id = 0; mac_id < macid_ctl->num; mac_id++) {
+ 				if (rtw_macid_is_used(macid_ctl, mac_id))  {
+@@ -816,7 +816,7 @@ void rtw_hal_turbo_edca(_adapter *adapte
+ #endif
+ 
+ 			if ( edca_param != hal_data->ac_param_be) {
+-				
++
+ 				rtw_hal_set_hwreg(adapter, HW_VAR_AC_PARAM_BE, (u8 *)(&edca_param));
+ 
+ 				RTW_INFO("Turbo EDCA =0x%x\n", edca_param);
+@@ -1237,7 +1237,7 @@ void rtw_phydm_wd_lps_lclk_hdl(_adapter
+ #ifdef CONFIG_LPS_PG
+ 	if (pwrpriv->lps_level == LPS_PG) {
+ 		 if (rtw_hal_set_lps_pg_info_cmd(adapter) == _FAIL)
+-		 	RTW_INFO(FUNC_ADPT_FMT": Send PG H2C command Fail! \n", 
++		 	RTW_INFO(FUNC_ADPT_FMT": Send PG H2C command Fail! \n",
+ 		 			 FUNC_ADPT_ARG(adapter));
+ 	}
+ #endif /* CONFIG_LPS_PG */
+@@ -1321,7 +1321,7 @@ void dump_sta_traffic(void *sel, _adapte
+ 	else
+ 		_RTW_PRINT_SEL(sel, "Tx : %d(Kbps) ", psta->sta_stats.tx_tp_kbits);
+ 
+-	if (rx_tp_mbips) 
++	if (rx_tp_mbips)
+ 		_RTW_PRINT_SEL(sel, "Rx : %d(Mbps) ", rx_tp_mbips);
+ 	else
+ 		_RTW_PRINT_SEL(sel, "Rx : %d(Kbps) ", psta->sta_stats.rx_tp_kbits);
+@@ -1341,7 +1341,7 @@ void dump_sta_traffic(void *sel, _adapte
+ 	else
+ 		_RTW_PRINT_SEL(sel, "Tx : %d(Kbps) ", psta->sta_stats.smooth_tx_tp_kbits);
+ 
+-	if (rx_tp_mbips) 
++	if (rx_tp_mbips)
+ 		_RTW_PRINT_SEL(sel, "Rx : %d(Mbps) ", rx_tp_mbips);
+ 	else
+ 		_RTW_PRINT_SEL(sel, "Rx : %d(Kbps) ", psta->sta_stats.smooth_rx_tp_kbits);
+@@ -1496,7 +1496,7 @@ u8 rtw_hal_runtime_trx_path_decision(_ad
+ 			rtw_warn_on(1);
+ 			goto exit;
+ 		}
+-	} else 
++	} else
+ 		txpath_1ss = txpath;
+ 
+ 	if (hal_data->txpath_nss[0] != txpath_1ss) {
+@@ -1672,7 +1672,7 @@ static u8 _rtw_phydm_rfk_condition_check
+ 
+ 	#ifdef CONFIG_MCC_MODE
+ 	/*not in MCC State*/
+-	if (MCC_EN(adapter) && 
++	if (MCC_EN(adapter) &&
+ 		rtw_hal_check_mcc_status(adapter, MCC_STATUS_DOING_MCC)) {
+ 		rfk_allowed = _FALSE;
+ 		if (0)
+@@ -1788,15 +1788,15 @@ void rtw_dyn_soml_config(_adapter *adapt
+ 		RTW_INFO("dyn_soml_en = 1\n");
+ 	} else {
+ 		if (adapter->registrypriv.dyn_soml_en == 2) {
+-			rtw_dyn_soml_para_set(adapter, 
+-				adapter->registrypriv.dyn_soml_train_num, 
+-				adapter->registrypriv.dyn_soml_interval, 
++			rtw_dyn_soml_para_set(adapter,
++				adapter->registrypriv.dyn_soml_train_num,
++				adapter->registrypriv.dyn_soml_interval,
+ 				adapter->registrypriv.dyn_soml_period,
+ 				adapter->registrypriv.dyn_soml_delay);
+ 			RTW_INFO("dyn_soml_en = 2\n");
+ 			RTW_INFO("dyn_soml_en, param = %d, %d, %d, %d\n",
+ 				adapter->registrypriv.dyn_soml_train_num,
+-				adapter->registrypriv.dyn_soml_interval, 
++				adapter->registrypriv.dyn_soml_interval,
+ 				adapter->registrypriv.dyn_soml_period,
+ 				adapter->registrypriv.dyn_soml_delay);
+ 		} else if (adapter->registrypriv.dyn_soml_en == 0) {
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_halmac.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_halmac.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_halmac.c
+@@ -628,7 +628,7 @@ static inline u8 is_valid_id_status(enum
+ 		if (status == HALMAC_CMD_PROCESS_RCVD)
+ 			return _FALSE;
+ 		if ((status != HALMAC_CMD_PROCESS_DONE)
+-		    || (status != HALMAC_CMD_PROCESS_ERROR))
++		    && (status != HALMAC_CMD_PROCESS_ERROR))
+ 			RTW_WARN("%s: %s unexpected status(0x%x)!\n",
+ 				 __FUNCTION__, RTW_HALMAC_FEATURE_NAME[id],
+ 				 status);
+@@ -2747,7 +2747,7 @@ int rtw_halmac_poweron(struct dvobj_priv
+ 		addr = 0x3F3;
+ 		v8 = rtw_read8(a, addr);
+ 		RTW_PRINT("%s: 0x%X = 0x%02x\n", __FUNCTION__, addr, v8);
+-		
++
+ 		/* are we in pcie debug mode? */
+ 		if (!(v8 & BIT(2))) {
+ 			RTW_PRINT("%s: Enable pcie debug mode\n", __FUNCTION__);
+@@ -3109,6 +3109,7 @@ static int _send_general_info(struct dvo
+ 		RTW_WARN("%s: halmac_send_general_info() fail because fw not dl!\n",
+ 			 __FUNCTION__);
+ 		/* fall through */
++    __attribute__((__fallthrough__));
+ 	default:
+ 		return -1;
+ 	}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_intf.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_intf.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_intf.c
+@@ -87,7 +87,7 @@ static void rtw_init_wireless_mode(_adap
+ 	struct hal_spec_t *hal_spec = GET_HAL_SPEC(padapter);
+ 	if(hal_spec->proto_cap & PROTO_CAP_11B)
+ 		proto_wireless_mode |= WIRELESS_11B;
+-	
++
+ 	if(hal_spec->proto_cap & PROTO_CAP_11G)
+ 		proto_wireless_mode |= WIRELESS_11G;
+ #ifdef CONFIG_80211AC_VHT
+@@ -106,7 +106,7 @@ static void rtw_init_wireless_mode(_adap
+ #endif
+ 
+ #ifdef CONFIG_80211AC_VHT
+-	if(hal_spec->proto_cap & PROTO_CAP_11AC) 
++	if(hal_spec->proto_cap & PROTO_CAP_11AC)
+ 		proto_wireless_mode |= WIRELESS_11AC;
+ #endif
+ 	padapter->registrypriv.wireless_mode &= proto_wireless_mode;
+@@ -122,7 +122,7 @@ void rtw_hal_def_value_init(_adapter *pa
+ 		padapter->hal_func.init_default_value(padapter);
+ 
+ 		rtw_init_hal_com_default_value(padapter);
+-		
++
+ 		#ifdef CONFIG_FW_MULTI_PORT_SUPPORT
+ 		adapter_to_dvobj(padapter)->dft.port_id = 0xFF;
+ 		adapter_to_dvobj(padapter)->dft.mac_id = 0xFF;
+@@ -319,7 +319,7 @@ if (IS_HARDWARE_TYPE_8814A(adapter)) {
+ 	int i;
+ 
+ 	trx_path_bmp = hal_spec->rf_reg_trx_path_bmp;
+-	
++
+ 	if (regsty->trx_path_bmp != 0x00) {
+ 		/* restrict trx_path_bmp with regsty.trx_path_bmp */
+ 		trx_path_bmp &= regsty->trx_path_bmp;
+@@ -1361,7 +1361,7 @@ s32 c2h_handler(_adapter *adapter, u8 id
+ 	case C2H_LPS_STATUS_RPT:
+ 		c2h_lps_status_rpt(adapter, payload, plen);
+ 		break;
+-#endif	
++#endif
+ #ifdef CONFIG_FW_OFFLOAD_SET_TXPWR_IDX
+ 	case C2H_SET_TXPWR_FINISH:
+ 		c2h_txpwr_idx_offload_done(adapter, payload, plen);
+@@ -1371,7 +1371,7 @@ s32 c2h_handler(_adapter *adapter, u8 id
+ 		sub_id = payload[0];
+ 		/* no handle, goto default */
+ 		/* fall through */
+-
++    __attribute__((__fallthrough__));
+ 	default:
+ 		if (phydm_c2H_content_parsing(adapter_to_phydm(adapter), id, plen, payload) != TRUE)
+ 			ret = _FAIL;
+@@ -1737,7 +1737,7 @@ static s32 _rtw_hal_macid_drop(_adapter
+ 			, ADPT_ARG(adapter), drop ? "drop" : "undrop" , macid);
+ 		goto exit;
+ 	}
+-	
++
+ 	if(_rtw_macid_ctl_chk_cap(adapter, MACID_DROP)) {
+ 		if (macid < 32) {
+ #ifndef CONFIG_PROTSEL_MACSLEEP
+@@ -1817,13 +1817,13 @@ static s32 _rtw_hal_macid_drop(_adapter
+ 			, ADPT_ARG(adapter), drop ? "drop" : "undrop"
+ 			, macid, reg_drop_info, val32);
+ #endif /* CONFIG_PROTSEL_MACSLEEP */
+-		
+-		
++
++
+ 	} else if(_rtw_macid_ctl_chk_cap(adapter, MACID_DROP_INDIRECT)) {
+ 		u16 start_addr = macid_ctl->macid_txrpt/8;
+ 		u32 txrpt_h4b = 0;
+ 		u8 i;
+-		
++
+ 		/* each address means 1 byte */
+ 		start_addr += macid*(macid_ctl->macid_txrpt_pgsz/8);
+ 		/* select tx report buffer */
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_mp.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_mp.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/hal_mp.c
+@@ -180,7 +180,7 @@ void hal_mpt_CCKTxPowerAdjust(PADAPTER A
+ 	} else if (IS_HARDWARE_TYPE_8723D(Adapter)) {
+ 		/* 2.4G CCK TX DFIR */
+ 		/* 2016.01.20 Suggest from RS BB mingzhi*/
+-		if ((u1Channel == 14)) {
++		if (u1Channel == 14) {
+ 			phy_set_bb_reg(Adapter, rCCK0_TxFilter2, bMaskDWord, 0x0000B81C);
+ 			phy_set_bb_reg(Adapter, rCCK0_DebugPort, bMaskDWord, 0x00000000);
+ 			phy_set_bb_reg(Adapter, 0xAAC, bMaskDWord, 0x00003667);
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/halmac/halmac_88xx/halmac_mimo_88xx.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/halmac/halmac_88xx/halmac_mimo_88xx.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/halmac/halmac_88xx/halmac_mimo_88xx.c
+@@ -64,9 +64,11 @@ cfg_txbf_88xx(struct halmac_adapter *ada
+ 		case HALMAC_BW_80:
+ 			tmp42c |= BIT_R_TXBF0_80M;
+ 			/* fall through */
++      __attribute__((__fallthrough__));
+ 		case HALMAC_BW_40:
+ 			tmp42c |= BIT_R_TXBF0_40M;
+ 			/* fall through */
++      __attribute__((__fallthrough__));
+ 		case HALMAC_BW_20:
+ 			tmp42c |= BIT_R_TXBF0_20M;
+ 			break;
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/led/hal_led.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/led/hal_led.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/led/hal_led.c
+@@ -63,7 +63,7 @@ void rtw_led_set_strategy(_adapter *adap
+ 	rtw_hal_sw_led_deinit(pri_adapter);
+ #endif
+ 
+-	rtw_led_control(pri_adapter, RTW_LED_OFF);
++	rtw_led_control(pri_adapter, (enum _LED_CTL_MODE) RTW_LED_OFF);
+ }
+ 
+ #ifdef CONFIG_RTW_SW_LED
+@@ -102,7 +102,7 @@ void rtw_sw_led_blink_uc_trx_only(LED_DA
+ 				led->BlinkingLedState = RTW_LED_OFF;
+ 			else
+ 				led->BlinkingLedState = RTW_LED_ON;
+-			
++
+ 			if (bStopBlinking) {
+ 				led->CurrLedState = RTW_LED_OFF;
+ 				led->bLedBlinkInProgress = _FALSE;
+@@ -225,7 +225,7 @@ void rtw_led_set_iface_en_mask(_adapter
+ void rtw_led_set_ctl_en_mask(_adapter *adapter, u32 ctl_mask)
+ {
+ 	struct led_priv *ledpriv = adapter_to_led(adapter);
+-	
++
+ #if CONFIG_RTW_SW_LED_TRX_DA_CLASSIFY
+ 	if (ctl_mask & BIT(LED_CTL_TX))
+ 		ctl_mask |= BIT(LED_CTL_UC_TX) | BIT(LED_CTL_BMC_TX);
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/phydm.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/phydm.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/phydm.c
+@@ -137,7 +137,7 @@ void phydm_cck_new_agc_chk(struct dm_str
+ 	dm->cck_new_agc = (boolean)odm_get_bb_reg(dm, new_agc_addr, BIT(17));
+ #endif
+ #if (RTL8723F_SUPPORT)
+-	if (dm->support_ic_type & (ODM_RTL8723F)) 
++	if (dm->support_ic_type & (ODM_RTL8723F))
+ 		dm->cck_new_agc = true;
+ #endif
+ }
+@@ -1675,7 +1675,7 @@ void phydm_fwoffload_ability_clear(struc
+ 
+ 	case PHYDM_RF_DPK_OFFLOAD:
+ 		dm->fw_offload_ability &= (~PHYDM_RF_DPK_OFFLOAD);
+-		break;	
++		break;
+ 
+ 	default:
+ 		PHYDM_DBG(dm, ODM_COMP_INIT, "fwofflad, wrong init type!!\n");
+@@ -1772,7 +1772,7 @@ void phydm_tx_collsion_th_set(void *dm_v
+ 	if (dm->support_ic_type & ODM_RTL8812F)
+ 		phydm_tx_collsion_th_set_8812f(dm, val_r2t, val_t2r);
+ #endif
+-	
++
+ }
+ #endif
+ 
+@@ -2881,6 +2881,7 @@ void odm_cmn_info_hook(struct dm_struct
+ 		break;
+ 	case ODM_CMNINFO_EN_DYM_BW_INDICATION:
+ 		dm->dis_dym_bw_indication = (u8 *)value;
++    break;
+ 	default:
+ 		/*do nothing*/
+ 		break;
+@@ -3721,7 +3722,7 @@ void phydm_dc_cancellation(struct dm_str
+ 		    || (offset_q_hex[0] > 0xF && offset_q_hex[0] < 0x1F1)) {
+ 		    	/*@Discard outliers*/
+ 		   	 offset_i_hex[0] = 0x0;
+-		   	 offset_q_hex[0] = 0x0;	
++		   	 offset_q_hex[0] = 0x0;
+ 		} else {
+ 			/*@Before filling into registers,
+ 		 	*offset should be multiplexed (-1)
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/phydm_dfs.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/phydm_dfs.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/phydm_dfs.c
+@@ -1503,7 +1503,7 @@ void phydm_dfs_histogram_radar_distingui
+ 			dfs->pri_cond3 = 1;
+ 
+ 		/*@Cancel the condition that the abs between pri and pw*/
+-			dfs->pri_cond4 = 1;
++		dfs->pri_cond4 = 1;
+ 
+ 		if (dfs->pri_hold_sum[5] <= dfs->pri_sum_g5_th)
+ 			dfs->pri_cond5 = 1;
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/include/rtw_mlme_ext.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/include/rtw_mlme_ext.h
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/include/rtw_mlme_ext.h
+@@ -274,7 +274,7 @@ enum TDLS_option {
+ #if defined(CONFIG_ATMEL_RC_PATCH)
+ 	#define RTW_SCAN_NUM_OF_CH 2
+ 	#define RTW_BACK_OP_CH_MS 200
+-#elseif defined(CONFIG_CUSTOMER_EZVIZ_CHIME2)
++#elif defined(CONFIG_CUSTOMER_EZVIZ_CHIME2)
+ 	#define RTW_SCAN_NUM_OF_CH 1
+ 	#define RTW_BACK_OP_CH_MS 200
+ #else
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/os_dep/linux/ioctl_cfg80211.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/os_dep/linux/ioctl_cfg80211.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/os_dep/linux/ioctl_cfg80211.c
+@@ -87,7 +87,7 @@
+ #define WIFI_CIPHER_SUITE_BIP_CMAC_256	0x000FAC0D
+ 
+ /*
+- * If customer need, defining this flag will make driver 
++ * If customer need, defining this flag will make driver
+  * always return -EBUSY at the condition of scan deny.
+  */
+ /* #define CONFIG_NOTIFY_SCAN_ABORT_WITH_BUSY */
+@@ -229,7 +229,7 @@ static u8 rtw_chbw_to_cfg80211_chan_def(
+ 	if (!chan)
+ 		goto exit;
+ 
+-	if (bw == CHANNEL_WIDTH_20) 
++	if (bw == CHANNEL_WIDTH_20)
+ 		chdef->width = ht ? NL80211_CHAN_WIDTH_20 : NL80211_CHAN_WIDTH_20_NOHT;
+ 	else if (bw == CHANNEL_WIDTH_40)
+ 		chdef->width = NL80211_CHAN_WIDTH_40;
+@@ -295,7 +295,7 @@ static void rtw_get_chbw_from_cfg80211_c
+ 		rtw_warn_on(1);
+ 		*ch = 0;
+ 		return;
+-	}		
++	}
+ 
+ 	switch (chdef->width) {
+ 	case NL80211_CHAN_WIDTH_20_NOHT:
+@@ -1809,8 +1809,8 @@ static int rtw_cfg80211_set_encryption(s
+ 						_rtw_memcpy(padapter->securitypriv.dot118021XGrptxmickey[param->u.crypt.idx].skey, &(param->u.crypt.key[16]), 8);
+ 						_rtw_memcpy(padapter->securitypriv.dot118021XGrprxmickey[param->u.crypt.idx].skey, &(param->u.crypt.key[24]), 8);
+ 						padapter->securitypriv.binstallGrpkey = _TRUE;
+-						if (param->u.crypt.idx < 4) 
+-							_rtw_memcpy(padapter->securitypriv.iv_seq[param->u.crypt.idx], param->u.crypt.seq, 8);							
++						if (param->u.crypt.idx < 4)
++							_rtw_memcpy(padapter->securitypriv.iv_seq[param->u.crypt.idx], param->u.crypt.seq, 8);
+ 						padapter->securitypriv.dot118021XGrpKeyid = param->u.crypt.idx;
+ 						rtw_set_key(padapter, &padapter->securitypriv, param->u.crypt.idx, 1, _TRUE);
+ 					} else if (strcmp(param->u.crypt.alg, "GCMP_256") == 0
+@@ -2117,7 +2117,7 @@ static int cfg80211_rtw_get_key(struct w
+ 		#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
+ 		|| (MLME_IS_STA(adapter) && !pairwise)
+ 		#endif
+-	) {	
++	) {
+ 		/* WEP key, TX GTK/IGTK, RX GTK/IGTK(for STA mode) */
+ 		if (is_wep_enc(sec->dot118021XGrpPrivacy)) {
+ 			if (keyid >= WEP_KEYS)
+@@ -2229,7 +2229,7 @@ static int cfg80211_rtw_get_key(struct w
+ 	}
+ 
+ 	ret = 0;
+-	
++
+ exit:
+ 	RTW_INFO(FUNC_NDEV_FMT
+ 		GET_KEY_PARAM_FMT_S
+@@ -3519,7 +3519,7 @@ check_need_indicate_scan_done:
+ 		info.aborted = 0;
+ #endif
+ 		/* the process time of scan results must be over at least 1ms in the newly Android */
+-		rtw_msleep_os(1); 
++		rtw_msleep_os(1);
+ 
+ 		_rtw_cfg80211_surveydone_event_callback(padapter, request);
+ #if (KERNEL_VERSION(4, 8, 0) <= LINUX_VERSION_CODE)
+@@ -3779,8 +3779,8 @@ static int rtw_cfg80211_set_key_mgt(stru
+ 		psecuritypriv->rsn_akm_suite_type = 4;
+ 	}
+ #endif
+-	else if (key_mgt == WLAN_AKM_SUITE_SAE) { 
+-		psecuritypriv->rsn_akm_suite_type = 8; 
++	else if (key_mgt == WLAN_AKM_SUITE_SAE) {
++		psecuritypriv->rsn_akm_suite_type = 8;
+ 	} else {
+ 		RTW_INFO("Invalid key mgt: 0x%x\n", key_mgt);
+ 		/* return -EINVAL; */
+@@ -6011,7 +6011,7 @@ static int	cfg80211_rtw_dump_station(str
+ 	else
+ 		_rtw_memcpy(mac, plink->addr, ETH_ALEN);
+ 	#endif
+-	
++
+ 	sinfo->filled = 0;
+ 
+ 	if (psta) {
+@@ -6802,6 +6802,7 @@ static void rtw_get_chbwoff_from_cfg8021
+ 	case NL80211_CHAN_WIDTH_20_NOHT:
+ 		*ht = 0;
+ 		/* fall through */
++    __attribute__((__fallthrough__));
+ 	case NL80211_CHAN_WIDTH_20:
+ 		*bw = CHANNEL_WIDTH_20;
+ 		*offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
+@@ -8728,7 +8729,7 @@ void dump_mesh_config(void *sel, const s
+ 	RTW_PRINT_SEL(sel, "path_refresh_time:%u\n", conf->path_refresh_time);
+ 	RTW_PRINT_SEL(sel, "min_discovery_timeout:%u\n", conf->min_discovery_timeout);
+ 	RTW_PRINT_SEL(sel, "dot11MeshHWMPactivePathTimeout:%u\n", conf->dot11MeshHWMPactivePathTimeout);
+-	RTW_PRINT_SEL(sel, "dot11MeshHWMPpreqMinInterval:%u\n", conf->dot11MeshHWMPpreqMinInterval);	
++	RTW_PRINT_SEL(sel, "dot11MeshHWMPpreqMinInterval:%u\n", conf->dot11MeshHWMPpreqMinInterval);
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0))
+ 	RTW_PRINT_SEL(sel, "dot11MeshHWMPperrMinInterval:%u\n", conf->dot11MeshHWMPperrMinInterval);
+ #endif
+@@ -8743,11 +8744,11 @@ void dump_mesh_config(void *sel, const s
+ 	RTW_PRINT_SEL(sel, "dot11MeshForwarding:%d\n", conf->dot11MeshForwarding);
+ 	RTW_PRINT_SEL(sel, "rssi_threshold:%d\n", conf->rssi_threshold);
+ #endif
+-	
++
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0))
+ 	RTW_PRINT_SEL(sel, "ht_opmode:0x%04x\n", conf->ht_opmode);
+ #endif
+-	
++
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+ 	RTW_PRINT_SEL(sel, "dot11MeshHWMPactivePathToRootTimeout:%u\n", conf->dot11MeshHWMPactivePathToRootTimeout);
+ 	RTW_PRINT_SEL(sel, "dot11MeshHWMProotInterval:%u\n", conf->dot11MeshHWMProotInterval);
+@@ -8758,7 +8759,7 @@ void dump_mesh_config(void *sel, const s
+ 	RTW_PRINT_SEL(sel, "power_mode:%s\n", nl80211_mesh_power_mode_str(conf->power_mode));
+ 	RTW_PRINT_SEL(sel, "dot11MeshAwakeWindowDuration:%u\n", conf->dot11MeshAwakeWindowDuration);
+ #endif
+-	
++
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
+ 	RTW_PRINT_SEL(sel, "plink_timeout:%u\n", conf->plink_timeout);
+ #endif
+@@ -8894,14 +8895,14 @@ static void rtw_cfg80211_mesh_cfg_set(_a
+ 	if (chk_mesh_attr(NL80211_MESHCONF_HT_OPMODE, mask));
+ #endif
+ #endif
+-	
++
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+ 	if (chk_mesh_attr(NL80211_MESHCONF_HWMP_PATH_TO_ROOT_TIMEOUT, mask))
+ 		mcfg->dot11MeshHWMPactivePathToRootTimeout = conf->dot11MeshHWMPactivePathToRootTimeout;
+ 	if (chk_mesh_attr(NL80211_MESHCONF_HWMP_ROOT_INTERVAL, mask))
+ 		mcfg->dot11MeshHWMProotInterval = conf->dot11MeshHWMProotInterval;
+ 	if (chk_mesh_attr(NL80211_MESHCONF_HWMP_CONFIRMATION_INTERVAL, mask))
+-		mcfg->dot11MeshHWMPconfirmationInterval = conf->dot11MeshHWMPconfirmationInterval;	
++		mcfg->dot11MeshHWMPconfirmationInterval = conf->dot11MeshHWMPconfirmationInterval;
+ #endif
+ 
+ #if 0 /* TBD */
+@@ -8959,7 +8960,7 @@ u8 *rtw_cfg80211_construct_mesh_beacon_i
+ #endif
+ 	if (!ch)
+ 		goto exit;
+-	
++
+ #if defined(CONFIG_80211AC_VHT) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+ 	vht = ht && ch > 14 && bw >= CHANNEL_WIDTH_80; /* VHT40/VHT20? */
+ #endif
+@@ -9290,7 +9291,7 @@ static int cfg80211_rtw_join_mesh(struct
+ 		ret = -EINVAL;
+ 		goto exit;
+ 	}
+-	
++
+ 	rtw_mesh_work(&adapter->mesh_work);
+ 
+ exit:
+@@ -9370,7 +9371,7 @@ static int cfg80211_rtw_del_mpath(struct
+ 		}
+ 	} else {
+ 		rtw_mesh_path_flush_by_iface(adapter);
+-	}	
++	}
+ 
+ exit:
+ 	return ret;
+@@ -9671,13 +9672,13 @@ int	cfg80211_rtw_resume(struct wiphy *wi
+ 		//rtw_sitesurvey_cmd(padapter, NULL);
+ 		rtw_sitesurvey_cmd(padapter, &parm);
+ 		_exit_critical_bh(&pmlmepriv->lock, &irqL);
+-		
++
+ 		for (PNOWakeupScanWaitCnt = 0; PNOWakeupScanWaitCnt < 10; PNOWakeupScanWaitCnt++) {
+ 			if(check_fwstate(pmlmepriv, WIFI_UNDER_SURVEY) == _FALSE)
+ 				break;
+ 			rtw_msleep_os(1000);
+ 		}
+-		
++
+ 		_enter_critical_bh(&pmlmepriv->lock, &irqL);
+ 		cfg80211_sched_scan_results(padapter->rtw_wdev->wiphy);
+ 		_exit_critical_bh(&pmlmepriv->lock, &irqL);
+@@ -9685,7 +9686,7 @@ int	cfg80211_rtw_resume(struct wiphy *wi
+ 	}
+ 	RTW_DBG("<== %s\n",__func__);
+ 	return 0;
+-	
++
+ }
+ #endif /* CONFIG_PNO_SUPPORT */
+ 
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/os_dep/linux/ioctl_mp.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/os_dep/linux/ioctl_mp.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/os_dep/linux/ioctl_mp.c
+@@ -1848,7 +1848,7 @@ int rtw_mp_get_tsside(struct net_device
+ 
+ 	u8 legal_param_num = 1;
+ 	int param_num;
+-	char pout_str_buf[7];
++	char pout_str_buf[8];
+ 	u8 signed_flag = 0;
+ 	int integer_num;
+ 	u32 decimal_num;
+@@ -3075,7 +3075,7 @@ int rtw_mp_link(struct net_device *dev,
+ 		/* tmp[0],[1],[2] */
+ 		/* txdata,00e04c871200........... */
+ 		if (strcmp(tmp[0], "txdata") == 0) {
+-			if ((tmp[1] == NULL)) {
++			if (tmp[1] == NULL) {
+ 				err = -EINVAL;
+ 				goto exit;
+ 			}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/os_dep/linux/ioctl_mp.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/os_dep/linux/ioctl_mp.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/os_dep/linux/ioctl_mp.c
+@@ -504,7 +504,7 @@ int rtw_mp_rate(struct net_device *dev,
+ 
+ 	pextra += sprintf(pextra, "Set data rate to %s index %d\n" , input, padapter->mppriv.rateidx);
+ 	RTW_INFO("%s: %s rate index=%d\n", __func__, input, padapter->mppriv.rateidx);
+-	pextra += sprintf(pextra, "PPDU Type %s\n", 
++	pextra += sprintf(pextra, "PPDU Type %s\n",
+ 								PPDU_TYPE_STR(pmp_priv->rtw_mp_pmact_ppdu_type));
+ 	pextra += sprintf(pextra, "CMD: [mp_plcp_datappdu=%%d]\nPLCP (PPDU Type):\n");
+ 	for (i = pmp_priv->rtw_mp_pmact_ppdu_type; i <= RTW_MP_TYPE_HE_TB; i++)
+@@ -600,7 +600,7 @@ int rtw_mp_trxsc_offset(struct net_devic
+ 	pmp_priv->rtw_mp_trxsc = trxsc_offset;
+ 	rtw_mp_update_trxsc(padapter);
+ 	_rtw_memset(extra, 0, wrqu->length);
+-	sprintf(extra, "change TRXSC to %d, current Bandwidth=%d\n", 
++	sprintf(extra, "change TRXSC to %d, current Bandwidth=%d\n",
+ 						pmp_priv->rtw_mp_trxsc, pmp_priv->bandwidth);
+ 
+ 	wrqu->length = strlen(extra);
+@@ -724,7 +724,7 @@ int rtw_mp_txpower(struct net_device *de
+ {
+ 	u32 idx_a = 0, idx_b = 0, idx_c = 0, idx_d = 0;
+ 	int MsetPower = 1;
+-	char pout_str_buf[7];
++	char pout_str_buf[8];
+ 	u8		input[RTW_IWD_MAX_LEN];
+ 	u8 rfpath_i = 0;
+ 	u16 agc_cw_val = 0;
+@@ -1143,7 +1143,7 @@ int rtw_mp_arx(struct net_device *dev,
+ 			RTW_INFO("%s: cnts=%d\n", __func__, cnts);
+ 			RTW_INFO("%s: data=%s\n", __func__, tmp[1]);
+ 			for (jj = 0, kk = 0; jj < cnts ; jj++, kk += 2) {
+-				pmppriv->network_macaddr[jj] = 
++				pmppriv->network_macaddr[jj] =
+ 					key_2char2num(tmp[1][kk], tmp[1][kk + 1]);
+ 				RTW_INFO("network_macaddr[%d]=%x\n",
+ 					jj, pmppriv->network_macaddr[jj]);
+@@ -1195,7 +1195,7 @@ int rtw_mp_arx(struct net_device *dev,
+ 				pmppriv->rx_pktcount, pmppriv->rx_crcerrpktcount);
+ 		} else
+ 			RTW_WARN("phl_query_rx Fail !!!");
+-	
++
+ 		pmppriv->bmac_filter = _FALSE;
+ 		pmppriv->bSetRxBssid = _FALSE;
+ 		sprintf(extra, "Received packet OK:%d CRC error:%d ,Filter out:%d",
+@@ -1321,7 +1321,7 @@ int rtw_mp_arx(struct net_device *dev,
+ 		if (all_path_num > 1) {
+ 			rssi_path = 0;
+ 			all_path_num = all_path_num - 1;
+-		} else 
++		} else
+ 			all_path_num = rssi_path;
+ 
+ 		RTW_INFO("%s:Query RSSI Path:%d to %d\n", __func__, rssi_path, all_path_num);
+@@ -1901,8 +1901,8 @@ int rtw_mp_get_tsside(struct net_device
+ 	char input[RTW_IWD_MAX_LEN];
+ 	u8 rfpath = 0xff;
+ 	s8 tssi_de = 0;
+-	char pout_str_buf[7];
+-	char tgr_str_buf[7];
++	char pout_str_buf[8];
++	char tgr_str_buf[8];
+ 	u8 pout_signed_flag = 0 , tgrpwr_signed_flag = 0;
+ 	int int_num = 0;
+ 	u32 dec_num = 0;
+@@ -2054,7 +2054,7 @@ int rtw_mp_set_tsside(struct net_device
+ 
+ 	if ((sscanf(input+5, "=0x%x", &tsside_val) == 1) ||
+ 		(sscanf(input+5, "=%d", &tsside_val) == 1)) {
+-		
++
+ 		RTW_INFO("%s:got tsside val =[%d] 0x%x\n", __func__, tsside_val, (u32)tsside_val);
+ 		if (tsside_val > 255)
+ 			sprintf(extra, "Error TSSI DE value: %d" , tsside_val);
+@@ -2177,7 +2177,7 @@ int rtw_mp_pretx_proc(_adapter *padapter
+ 	case MP_SINGLE_TONE_TX:
+ 		if (bstart != 0)
+ 			strcat(extra, "\nStart continuous DA=ffffffffffff len=1500\n infinite=yes.");
+-		
++
+ 		rtw_mp_singletone_tx(padapter, (u8)bstart);
+ 		break;
+ 	case MP_CONTINUOUS_TX:
+@@ -2249,7 +2249,7 @@ int rtw_mp_tx(struct net_device *dev,
+ 	if (copy_from_user(extra, wrqu->data.pointer, wrqu->data.length))
+ 		return -EFAULT;
+ 	RTW_INFO("extra = %s\n", extra);
+-#if 0	
++#if 0
+ #ifdef CONFIG_CONCURRENT_MODE
+ 	if (!is_primary_adapter(padapter)) {
+ 		sprintf(extra, "Error: MP mode can't support Virtual adapter, Please to use main adapter.\n");
+@@ -2670,7 +2670,7 @@ int rtw_mp_rx(struct net_device *dev,
+ 		strcat(extra, "\nstart Rx");
+ 		SetPacketRx(padapter, bStartRx, _FALSE);
+ 	}
+-#endif	
++#endif
+ 	wrqu->data.length = strlen(extra);
+ 	return 0;
+ }
+@@ -2723,12 +2723,12 @@ int rtw_mp_pwrlmt(struct net_device *dev
+ 	if (strncmp(extra, "off", 3) == 0 && strlen(extra) < 4) {
+ 		if (rtw_mpt_set_power_limit_en(padapter, _FALSE))
+ 			sprintf(extra, "Turn off Power Limit\n");
+-		else 
++		else
+ 			sprintf(extra, "Turn off Power Limit Fail\n");
+ 	} else if (strncmp(extra, "on", 2) == 0 && strlen(extra) < 3) {
+ 		if (rtw_mpt_set_power_limit_en(padapter, _TRUE))
+ 			sprintf(extra, "Turn on Power Limit\n");
+-		else 
++		else
+ 			sprintf(extra, "Turn on Power Limit Fail\n");
+ 	} else
+ #endif
+@@ -2879,7 +2879,7 @@ int rtw_mp_tx_plcp_tx_data(struct net_de
+ 				RTW_INFO("%s: ppdu_type=%d\n", __func__, ppdu_type);
+ 				_rtw_memset(extra, 0, wrqu->data.length);
+ 
+-				pextra += sprintf(pextra, "Config PPDU Type %s to %s\n", 
++				pextra += sprintf(pextra, "Config PPDU Type %s to %s\n",
+ 						PPDU_TYPE_STR(pmp_priv->rtw_mp_pmact_ppdu_type), PPDU_TYPE_STR(ppdu_type));
+ 				pmp_priv->rtw_mp_pmact_ppdu_type = ppdu_type;
+ 
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/core/rtw_vht.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852bu/core/rtw_vht.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/core/rtw_vht.c
+@@ -360,11 +360,11 @@ void rtw_vht_get_real_setting(_adapter *
+ 	struct role_cap_t *cap = &(wrole->cap);
+ 
+ 	/* Short GI */
+-	pvhtpriv->sgi_80m = ((proto_cap->sgi_80) 
++	pvhtpriv->sgi_80m = ((proto_cap->sgi_80)
+ 		&& rtw_hw_chk_bw_cap(adapter_to_dvobj(padapter), BW_CAP_80M)
+ 		&& TEST_FLAG(pregistrypriv->short_gi, BIT2));
+ 
+-	pvhtpriv->sgi_160m = ((proto_cap->sgi_160) 
++	pvhtpriv->sgi_160m = ((proto_cap->sgi_160)
+ 		&& rtw_hw_chk_bw_cap(adapter_to_dvobj(padapter), BW_CAP_160M)
+ 		&& TEST_FLAG(pregistrypriv->short_gi, BIT3));
+ 
+@@ -1133,7 +1133,7 @@ u32	rtw_build_vht_cap_ie(_adapter *padap
+ 	/* B30 B31 Extended NSS BW Support */
+ 	SET_VHT_CAPABILITY_ELE_EXT_NSS_BW(pcap, pvhtpriv->ext_nss_bw);
+ 
+-	/*  
++	/*
+ 	* Supported VHT-MCS and NSS Set : 8 bytes
+ 	*/
+ 	pcap_mcs = GET_VHT_CAPABILITY_ELE_RX_MCS(pcap);
+@@ -1420,7 +1420,6 @@ void rtw_reattach_vht_ies(_adapter *pada
+ 
+ 	RTW_INFO(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
+ 
+-	if (pnetwork->IEs != NULL) {
+ 		vht_op_ie = rtw_set_ie(vht_cap_ie, EID_VHTCapability, VHT_CAP_IE_LEN,
+ 			pvhtpriv->vht_cap_ie_backup, &(pnetwork->IELength));
+ 
+@@ -1430,7 +1429,6 @@ void rtw_reattach_vht_ies(_adapter *pada
+ 		rtw_add_ext_cap_info(pmlmepriv->ext_capab_ie_data, &(pmlmepriv->ext_capab_ie_len), OP_MODE_NOTIFICATION);
+ 		rtw_update_ext_cap_ie(pmlmepriv->ext_capab_ie_data, pmlmepriv->ext_capab_ie_len, pnetwork->IEs \
+ 		, &(pnetwork->IELength), _BEACON_IE_OFFSET_);
+-	}
+ 
+ 	pmlmepriv->vhtpriv.vht_option = _TRUE;
+ }
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/halrf/rtl8821c/halrf_iqk_8821c.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/halrf/rtl8821c/halrf_iqk_8821c.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8821cu/hal/phydm/halrf/rtl8821c/halrf_iqk_8821c.c
+@@ -1853,7 +1853,7 @@ u32 _txgapk_one_shot_8821c(struct dm_str
+ 	u32 txgap_k_tmp1 = 0x1, txgap_k_tmp2 = 0x2;
+ 	u8 offset;
+ 	u32 reg_1bb8;
+-	u32 rx_dsp_power;
++	u32 rx_dsp_power = 0;
+ 
+ 	reg_1bb8 = odm_read_4byte(dm, 0x1bb8);
+ 	/*clear the flag*/
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/core/rtw_sta_mgt.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/core/rtw_sta_mgt.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/core/rtw_sta_mgt.c
+@@ -386,8 +386,7 @@ void rtw_mfree_stainfo(struct sta_info *
+ void rtw_mfree_stainfo(struct sta_info *psta)
+ {
+ 
+-	if (&psta->lock != NULL)
+-		_rtw_spinlock_free(&psta->lock);
++	_rtw_spinlock_free(&psta->lock);
+ 
+ 	_rtw_free_sta_xmit_priv_lock(&psta->sta_xmitpriv);
+ 	_rtw_free_sta_recv_priv_lock(&psta->sta_recvpriv);
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/core/rtw_vht.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/core/rtw_vht.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/core/rtw_vht.c
+@@ -360,11 +360,11 @@ void rtw_vht_get_real_setting(_adapter *
+ 	struct role_cap_t *cap = &(wrole->cap);
+ 
+ 	/* Short GI */
+-	pvhtpriv->sgi_80m = ((proto_cap->sgi_80) 
++	pvhtpriv->sgi_80m = ((proto_cap->sgi_80)
+ 		&& rtw_hw_chk_bw_cap(adapter_to_dvobj(padapter), BW_CAP_80M)
+ 		&& TEST_FLAG(pregistrypriv->short_gi, BIT2));
+ 
+-	pvhtpriv->sgi_160m = ((proto_cap->sgi_160) 
++	pvhtpriv->sgi_160m = ((proto_cap->sgi_160)
+ 		&& rtw_hw_chk_bw_cap(adapter_to_dvobj(padapter), BW_CAP_160M)
+ 		&& TEST_FLAG(pregistrypriv->short_gi, BIT3));
+ 
+@@ -1133,7 +1133,7 @@ u32	rtw_build_vht_cap_ie(_adapter *padap
+ 	/* B30 B31 Extended NSS BW Support */
+ 	SET_VHT_CAPABILITY_ELE_EXT_NSS_BW(pcap, pvhtpriv->ext_nss_bw);
+ 
+-	/*  
++	/*
+ 	* Supported VHT-MCS and NSS Set : 8 bytes
+ 	*/
+ 	pcap_mcs = GET_VHT_CAPABILITY_ELE_RX_MCS(pcap);
+@@ -1416,7 +1416,6 @@ void rtw_reattach_vht_ies(_adapter *pada
+ 
+ 	RTW_INFO(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
+ 
+-	if (pnetwork->IEs != NULL) {
+ 		vht_op_ie = rtw_set_ie(vht_cap_ie, EID_VHTCapability, VHT_CAP_IE_LEN,
+ 			pvhtpriv->vht_cap_ie_backup, &(pnetwork->IELength));
+ 
+@@ -1426,7 +1425,6 @@ void rtw_reattach_vht_ies(_adapter *pada
+ 		rtw_add_ext_cap_info(pmlmepriv->ext_capab_ie_data, &(pmlmepriv->ext_capab_ie_len), OP_MODE_NOTIFICATION);
+ 		rtw_update_ext_cap_ie(pmlmepriv->ext_capab_ie_data, pmlmepriv->ext_capab_ie_len, pnetwork->IEs \
+ 		, &(pnetwork->IELength), _BEACON_IE_OFFSET_);
+-	}
+ 
+ 	pmlmepriv->vhtpriv.vht_option = _TRUE;
+ }
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_ps.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_ps.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_ps.c
+@@ -279,7 +279,7 @@ phl_ps_ips_cfg(struct phl_info_t *phl_in
+ 	ips_info.en = en;
+ 	ips_info.macid = cfg->macid;
+ 
+-	return rtw_hal_ps_ips_cfg(phl_info->hal, &ips_info);
++	return (enum rtw_phl_status) rtw_hal_ps_ips_cfg(phl_info->hal, &ips_info);
+ }
+ 
+ enum rtw_phl_status
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_sound.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_sound.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_sound.c
+@@ -43,10 +43,6 @@ enum rtw_phl_status _phl_snd_init_snd_gr
+ 	struct phl_sound_param *param = &snd->snd_param;
+ 	u8 i = 0;
+ 	do {
+-		if (param->snd_grp == NULL) {
+-			status = RTW_PHL_STATUS_FAILURE;
+-			break;
+-		}
+ 		for (i = 0; i < MAX_SND_GRP_NUM; i++) {
+ 			__reset_snd_grp(&param->snd_grp[i]);
+ 			param->snd_grp[i].gidx = i;
+@@ -1761,4 +1757,4 @@ rtw_phl_snd_init_ops_send_ndpa(void *phl
+ 		}
+ 	}
+ 	return pstatus;
+-}
+\ No newline at end of file
++}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/core/rtw_sta_mgt.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852bu/core/rtw_sta_mgt.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/core/rtw_sta_mgt.c
+@@ -386,8 +386,7 @@ void rtw_mfree_stainfo(struct sta_info *
+ void rtw_mfree_stainfo(struct sta_info *psta)
+ {
+ 
+-	if (&psta->lock != NULL)
+-		_rtw_spinlock_free(&psta->lock);
++ 	_rtw_spinlock_free(&psta->lock);
+ 
+ 	_rtw_free_sta_xmit_priv_lock(&psta->sta_xmitpriv);
+ 	_rtw_free_sta_recv_priv_lock(&psta->sta_recvpriv);
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/os_dep/linux/ioctl_mp.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852bu/os_dep/linux/ioctl_mp.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/os_dep/linux/ioctl_mp.c
+@@ -456,7 +456,7 @@ int rtw_mp_rate(struct net_device *dev,
+ 
+ 	pextra += sprintf(pextra, "Set data rate to %s index %d\n" , input, padapter->mppriv.rateidx);
+ 	RTW_INFO("%s: %s rate index=%d\n", __func__, input, padapter->mppriv.rateidx);
+-	pextra += sprintf(pextra, "PPDU Type %s\n", 
++	pextra += sprintf(pextra, "PPDU Type %s\n",
+ 								PPDU_TYPE_STR(pmp_priv->rtw_mp_pmact_ppdu_type));
+ 	pextra += sprintf(pextra, "CMD: [mp_plcp_datappdu=%%d]\nPLCP (PPDU Type):\n");
+ 	for (i = pmp_priv->rtw_mp_pmact_ppdu_type; i <= RTW_MP_TYPE_HE_TB; i++)
+@@ -552,7 +552,7 @@ int rtw_mp_trxsc_offset(struct net_devic
+ 	pmp_priv->rtw_mp_trxsc = trxsc_offset;
+ 	rtw_mp_update_trxsc(padapter);
+ 	_rtw_memset(extra, 0, wrqu->length);
+-	sprintf(extra, "change TRXSC to %d, current Bandwidth=%d\n", 
++	sprintf(extra, "change TRXSC to %d, current Bandwidth=%d\n",
+ 						pmp_priv->rtw_mp_trxsc, pmp_priv->bandwidth);
+ 
+ 	wrqu->length = strlen(extra);
+@@ -676,7 +676,7 @@ int rtw_mp_txpower(struct net_device *de
+ {
+ 	u32 idx_a = 0, idx_b = 0, idx_c = 0, idx_d = 0;
+ 	int MsetPower = 1;
+-	char pout_str_buf[7];
++	char pout_str_buf[8];
+ 	u8		input[RTW_IWD_MAX_LEN];
+ 	u8 rfpath_i = 0;
+ 	u16 agc_cw_val = 0;
+@@ -1079,7 +1079,7 @@ int rtw_mp_arx(struct net_device *dev,
+ 			RTW_INFO("%s: cnts=%d\n", __func__, cnts);
+ 			RTW_INFO("%s: data=%s\n", __func__, tmp[1]);
+ 			for (jj = 0, kk = 0; jj < cnts ; jj++, kk += 2) {
+-				pmppriv->network_macaddr[jj] = 
++				pmppriv->network_macaddr[jj] =
+ 					key_2char2num(tmp[1][kk], tmp[1][kk + 1]);
+ 				RTW_INFO("network_macaddr[%d]=%x\n",
+ 					jj, pmppriv->network_macaddr[jj]);
+@@ -1131,7 +1131,7 @@ int rtw_mp_arx(struct net_device *dev,
+ 				pmppriv->rx_pktcount, pmppriv->rx_crcerrpktcount);
+ 		} else
+ 			RTW_WARN("phl_query_rx Fail !!!");
+-	
++
+ 		pmppriv->bmac_filter = _FALSE;
+ 		pmppriv->bSetRxBssid = _FALSE;
+ 		sprintf(extra, "Received packet OK:%d CRC error:%d ,Filter out:%d",
+@@ -1257,7 +1257,7 @@ int rtw_mp_arx(struct net_device *dev,
+ 		if (all_path_num > 1) {
+ 			rssi_path = 0;
+ 			all_path_num = all_path_num - 1;
+-		} else 
++		} else
+ 			all_path_num = rssi_path;
+ 
+ 		RTW_INFO("%s:Query RSSI Path:%d to %d\n", __func__, rssi_path, all_path_num);
+@@ -1813,8 +1813,8 @@ int rtw_mp_get_tsside(struct net_device
+ 	char input[RTW_IWD_MAX_LEN];
+ 	u8 rfpath = 0xff;
+ 	s8 tssi_de = 0;
+-	char pout_str_buf[7];
+-	char tgr_str_buf[7];
++	char pout_str_buf[8];
++	char tgr_str_buf[8];
+ 	u8 pout_signed_flag = 0 , tgrpwr_signed_flag = 0;
+ 	int int_num = 0;
+ 	u32 dec_num = 0;
+@@ -2087,7 +2087,7 @@ int rtw_mp_pretx_proc(_adapter *padapter
+ 	case MP_SINGLE_TONE_TX:
+ 		if (bstart != 0)
+ 			strcat(extra, "\nStart continuous DA=ffffffffffff len=1500\n infinite=yes.");
+-		
++
+ 		rtw_mp_singletone_tx(padapter, (u8)bstart);
+ 		break;
+ 	case MP_CONTINUOUS_TX:
+@@ -2159,7 +2159,7 @@ int rtw_mp_tx(struct net_device *dev,
+ 	if (copy_from_user(extra, wrqu->data.pointer, wrqu->data.length))
+ 		return -EFAULT;
+ 	RTW_INFO("extra = %s\n", extra);
+-#if 0	
++#if 0
+ #ifdef CONFIG_CONCURRENT_MODE
+ 	if (!is_primary_adapter(padapter)) {
+ 		sprintf(extra, "Error: MP mode can't support Virtual adapter, Please to use main adapter.\n");
+@@ -2580,7 +2580,7 @@ int rtw_mp_rx(struct net_device *dev,
+ 		strcat(extra, "\nstart Rx");
+ 		SetPacketRx(padapter, bStartRx, _FALSE);
+ 	}
+-#endif	
++#endif
+ 	wrqu->data.length = strlen(extra);
+ 	return 0;
+ }
+@@ -2633,12 +2633,12 @@ int rtw_mp_pwrlmt(struct net_device *dev
+ 	if (strncmp(extra, "off", 3) == 0 && strlen(extra) < 4) {
+ 		if (rtw_mpt_set_power_limit_en(padapter, _FALSE))
+ 			sprintf(extra, "Turn off Power Limit\n");
+-		else 
++		else
+ 			sprintf(extra, "Turn off Power Limit Fail\n");
+ 	} else if (strncmp(extra, "on", 2) == 0 && strlen(extra) < 3) {
+ 		if (rtw_mpt_set_power_limit_en(padapter, _TRUE))
+ 			sprintf(extra, "Turn on Power Limit\n");
+-		else 
++		else
+ 			sprintf(extra, "Turn on Power Limit Fail\n");
+ 	} else
+ #endif
+@@ -2789,7 +2789,7 @@ int rtw_mp_tx_plcp_tx_data(struct net_de
+ 				RTW_INFO("%s: ppdu_type=%d\n", __func__, ppdu_type);
+ 				_rtw_memset(extra, 0, wrqu->data.length);
+ 
+-				pextra += sprintf(pextra, "Config PPDU Type %s to %s\n", 
++				pextra += sprintf(pextra, "Config PPDU Type %s to %s\n",
+ 						PPDU_TYPE_STR(pmp_priv->rtw_mp_pmact_ppdu_type), PPDU_TYPE_STR(ppdu_type));
+ 				pmp_priv->rtw_mp_pmact_ppdu_type = ppdu_type;
+ 
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/phl_sound.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/phl_sound.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/phl_sound.c
+@@ -43,10 +43,6 @@ enum rtw_phl_status _phl_snd_init_snd_gr
+ 	struct phl_sound_param *param = &snd->snd_param;
+ 	u8 i = 0;
+ 	do {
+-		if (param->snd_grp == NULL) {
+-			status = RTW_PHL_STATUS_FAILURE;
+-			break;
+-		}
+ 		for (i = 0; i < MAX_SND_GRP_NUM; i++) {
+ 			__reset_snd_grp(&param->snd_grp[i]);
+ 			param->snd_grp[i].gidx = i;
+@@ -1761,4 +1757,4 @@ rtw_phl_snd_init_ops_send_ndpa(void *phl
+ 		}
+ 	}
+ 	return pstatus;
+-}
+\ No newline at end of file
++}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/hal_api_mac.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/hal_api_mac.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/hal_api_mac.c
+@@ -2640,7 +2640,7 @@ rtw_hal_mac_lv1_rcvy(struct hal_info_t *
+ 	u32 mac_err = 0;
+ 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
+ 
+-	mac_err = mac->ops->lv1_rcvy(mac, step);
++	mac_err = mac->ops->lv1_rcvy(mac, (enum mac_ax_lv1_rcvy_step) step);
+ 	if (mac_err != MACSUCCESS) {
+ 		PHL_ERR("%s : mac status %d.\n", __func__, mac_err);
+ 		return RTW_HAL_STATUS_FAILURE;
+@@ -5837,9 +5837,9 @@ rtw_hal_mac_lps_cfg(struct hal_info_t *h
+ 		ax_ps_mode = MAC_AX_PS_MODE_ACTIVE;
+ 	}
+ 
+-	ax_lps_info.listen_bcn_mode = lps_info->listen_bcn_mode;
++	ax_lps_info.listen_bcn_mode = (enum mac_ax_listern_bcn_mode) lps_info->listen_bcn_mode;
+ 	ax_lps_info.awake_interval = lps_info->awake_interval;
+-	ax_lps_info.smart_ps_mode = lps_info->smart_ps_mode;
++	ax_lps_info.smart_ps_mode = (enum mac_ax_smart_ps_mode) lps_info->smart_ps_mode;
+ 
+ 	if (mac->ops->cfg_lps(mac, (u8)lps_info->macid, ax_ps_mode,
+ 		&ax_lps_info) == MACSUCCESS)
+@@ -9115,4 +9115,4 @@ rtw_hal_mac_stop_tx_duty(struct hal_info
+ 	}
+ 
+ 	return hal_status;
+-}
+\ No newline at end of file
++}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/rtl8852b/pci/rtl8852be_halinit.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/rtl8852b/pci/rtl8852be_halinit.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/rtl8852b/pci/rtl8852be_halinit.c
+@@ -48,9 +48,9 @@ static enum rtw_hal_status _hal_aspm_dis
+ 	/* set ignore to others */
+ 	pcicfg.wake_ctrl = MAC_AX_PCIE_IGNORE;
+ 	pcicfg.crq_ctrl = MAC_AX_PCIE_IGNORE;
+-	pcicfg.clkdly_ctrl = MAC_AX_PCIE_IGNORE;
+-	pcicfg.l0sdly_ctrl = MAC_AX_PCIE_IGNORE;
+-	pcicfg.l1dly_ctrl = MAC_AX_PCIE_IGNORE;
++	pcicfg.clkdly_ctrl = (enum mac_ax_pcie_clkdly) MAC_AX_PCIE_IGNORE;
++	pcicfg.l0sdly_ctrl = (enum mac_ax_pcie_l0sdly) MAC_AX_PCIE_IGNORE;
++	pcicfg.l1dly_ctrl = (enum mac_ax_pcie_l1dly) MAC_AX_PCIE_IGNORE;
+ 
+ 
+ 	PHL_TRACE(COMP_PHL_DBG, _PHL_INFO_,
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/test/mp/hal_test_mp_efuse.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/test/mp/hal_test_mp_efuse.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/hal_g6/test/mp/hal_test_mp_efuse.c
+@@ -192,10 +192,10 @@ enum rtw_hal_status rtw_hal_mp_efuse_sha
+ 	enum rtw_hal_status hal_status = RTW_HAL_STATUS_FAILURE;
+ 
+ 	PHL_INFO("%s\n", __FUNCTION__);
+-	if (arg->poutbuf != NULL && arg->buf_len != 0)
++	if (arg && arg->buf_len)
+ 		hal_status = rtw_hal_efuse_shadow2buf(mp->hal, arg->poutbuf, arg->buf_len);
+ 	else
+-		PHL_INFO("%s: buf null, buf len = %d\n", __FUNCTION__, arg->buf_len);
++		PHL_INFO("%s: buf null\n", __FUNCTION__);
+ 
+ 	PHL_INFO("%s: status = %d\n", __FUNCTION__, hal_status);
+ 	return hal_status;
+@@ -210,7 +210,7 @@ enum rtw_hal_status rtw_hal_mp_efuse_fil
+ 
+ 	if (pfilepath)
+ 		hal_status = rtw_hal_efuse_file_map_load(mp->hal, pfilepath, true);
+-	else 
++	else
+ 		PHL_INFO("%s: pfilepath null\n", __FUNCTION__);
+ 
+ 	PHL_INFO("%s: status = %d\n", __FUNCTION__, hal_status);
+@@ -377,10 +377,10 @@ enum rtw_hal_status rtw_hal_mp_efuse_bt_
+ 	enum rtw_hal_status hal_status = RTW_HAL_STATUS_FAILURE;
+ 
+ 	PHL_INFO("%s\n", __FUNCTION__);
+-	if (arg->poutbuf != NULL && arg->buf_len != 0)
++	if (arg && arg->buf_len)
+ 		hal_status = rtw_hal_efuse_bt_shadow2buf(mp->hal, arg->poutbuf, arg->buf_len);
+ 	else
+-		PHL_INFO("%s: buf null, buf len = %d\n", __FUNCTION__, arg->buf_len);
++		PHL_INFO("%s: buf null \n", __FUNCTION__);
+ 
+ 	PHL_INFO("%s: status = %d\n", __FUNCTION__, hal_status);
+ 	return hal_status;
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/hal_api_mac.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/hal_api_mac.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/hal_api_mac.c
+@@ -2660,7 +2660,7 @@ rtw_hal_mac_lv1_rcvy(struct hal_info_t *
+ 	u32 mac_err = 0;
+ 	struct mac_ax_adapter *mac = hal_to_mac(hal_info);
+ 
+-	mac_err = mac->ops->lv1_rcvy(mac, step);
++	mac_err = mac->ops->lv1_rcvy(mac, (enum mac_ax_lv1_rcvy_step) step);
+ 	if (mac_err != MACSUCCESS) {
+ 		PHL_ERR("%s : mac status %d.\n", __func__, mac_err);
+ 		return RTW_HAL_STATUS_FAILURE;
+@@ -5679,9 +5679,9 @@ rtw_hal_mac_lps_cfg(struct hal_info_t *h
+ 		ax_ps_mode = MAC_AX_PS_MODE_ACTIVE;
+ 	}
+ 
+-	ax_lps_info.listen_bcn_mode = lps_info->listen_bcn_mode;
++	ax_lps_info.listen_bcn_mode = (enum mac_ax_listern_bcn_mode) lps_info->listen_bcn_mode;
+ 	ax_lps_info.awake_interval = lps_info->awake_interval;
+-	ax_lps_info.smart_ps_mode = lps_info->smart_ps_mode;
++	ax_lps_info.smart_ps_mode = (enum mac_ax_smart_ps_mode) lps_info->smart_ps_mode;
+ 
+ 	if (mac->ops->cfg_lps(mac, (u8)lps_info->macid, ax_ps_mode,
+ 		&ax_lps_info) == MACSUCCESS)
+@@ -8930,4 +8930,4 @@ rtw_hal_mac_stop_tx_duty(struct hal_info
+ 	}
+ 
+ 	return hal_status;
+-}
+\ No newline at end of file
++}
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/phy/bb/halbb_la_mode.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/phy/bb/halbb_la_mode.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/phy/bb/halbb_la_mode.c
+@@ -289,6 +289,8 @@ void halbb_la_mac_cfg_buf_default(struct
+ 		buf->buffer_size = 0x40000; /*2^18=(2^8)*(2^10)=256K Byte*/
+ 		break;
+ 	default:
++    mode = LA_BUFF_64K;
++    buf->buffer_size = 0x10000;
+ 		BB_WARNING("[%s]\n", __func__);
+ 	}
+ 	la->la_mac_cfg_i.mac_la_buf_sel = mode;
+@@ -444,7 +446,7 @@ void halbb_la_bb_set_dma_type_reset(stru
+ {
+ 	struct bb_la_mode_info *la = &bb->bb_cmn_hooker->bb_la_mode_i;
+ 	struct la_dma_info	*dma = &la->la_dma_i;
+-	
++
+ 	dma->dma_dbgport_base_n = 31;
+ 	dma->dma_a_path_sel = 0;
+ 	dma->dma_b_path_sel = 1;
+@@ -549,7 +551,7 @@ void halbb_la_bb_set_trig(struct bb_info
+ 	}
+ 
+ 	BB_TRACE(" *Set dbg_port[BIT] = %d\n", trig_sel);
+-	
++
+ 	/*===== [And-1~7 Trigger] ============================================*/
+ 	if (!adv_trig_en) { /*normal LA mode & back to default*/
+ 		/*AND1*/
+@@ -627,7 +629,7 @@ void halbb_la_bb_set_trig(struct bb_info
+ 
+ void halbb_la_bb_set_dbg_port(struct bb_info *bb, bool not_stop_trig_en)
+ {
+-	
++
+ 	struct bb_la_mode_info *la = &bb->bb_cmn_hooker->bb_la_mode_i;
+ 	u32	trig_sel = la->la_and0_bit_sel;
+ 	u32	dbg_port = la->la_dbg_port;
+@@ -692,7 +694,7 @@ halbb_la_drv_buf_release(struct bb_info
+ bool
+ halbb_la_drv_buf_allocate(struct bb_info *bb)
+ {
+-	
++
+ 	struct bb_la_mode_info *la = &bb->bb_cmn_hooker->bb_la_mode_i;
+ 	struct la_string_info *buf = &la->la_string_i;
+ 	bool ret = true;
+@@ -797,7 +799,7 @@ void halbb_la_main(struct bb_info *bb)
+ 	}
+ 
+ 	halbb_la_stop(bb);
+-	
++
+ 	BB_TRACE("[LA mode] la_count = ((%d))\n", la->la_count);
+ 	if (la->la_count <= 1) {
+ 		BB_TRACE("LA Dump finished ---------->\n\n\n");
+@@ -845,7 +847,7 @@ void halbb_la_run(struct bb_info *bb)
+ 		halbb_la_stop(bb);
+ 		return;
+ 	}
+-	
++
+ 	if (buf->length == 0)
+ 		is_set_success = halbb_la_drv_buf_allocate(bb);
+ 
+@@ -1429,7 +1431,7 @@ void halbb_la_cmd_bb_show_cfg(struct bb_
+ 	struct la_mac_cfg_info	*cfg = &la->la_mac_cfg_i;
+ 
+ 	BB_DBG_CNSL(*_out_len, *_used, output + *_used, *_out_len - *_used,
+-		    "cmn {TrigTime:%d} {TrigCnt:%d} {DbgPort:0x%x} {Edge:P/N:%d} {f_smp:%d M(%d)}\n", 
++		    "cmn {TrigTime:%d} {TrigCnt:%d} {DbgPort:0x%x} {Edge:P/N:%d} {f_smp:%d M(%d)}\n",
+ 		    cfg->la_trigger_time, la->la_trigger_cnt,
+ 		    la->la_dbg_port, la->la_trigger_edge, 80 >> la->la_smp_rate, la->la_smp_rate);
+ 	/*BB DMA*/
+@@ -1461,11 +1463,11 @@ void halbb_la_cmd_bb_show_cfg(struct bb_
+ 		    "bb  {1:And1} {mask:0x%x} {inv:%d} {bitmap_val:0x%x}\n",
+ 		    adv->la_and1_mask, adv->la_and1_inv, adv->la_and1_val);
+ 	BB_DBG_CNSL(*_out_len, *_used, output + *_used, *_out_len - *_used,
+-		    "bb  {2:And2} {en:%d}  {inv:%d} {val:%d} {mask(0x%x)} {sign:%d}\n", 
++		    "bb  {2:And2} {en:%d}  {inv:%d} {val:%d} {mask(0x%x)} {sign:%d}\n",
+ 		    adv->la_and2_en, adv->la_and2_inv, adv->la_and2_val,
+ 		    adv->la_and2_mask, adv->la_and2_sign);
+ 	BB_DBG_CNSL(*_out_len, *_used, output + *_used, *_out_len - *_used,
+-		    "bb  {3:And3} {en:%d}  {inv:%d} {val:%d} {mask(0x%x)} {sign:%d}\n", 
++		    "bb  {3:And3} {en:%d}  {inv:%d} {val:%d} {mask(0x%x)} {sign:%d}\n",
+ 		    adv->la_and3_en, adv->la_and3_inv, adv->la_and3_val,
+ 		    adv->la_and3_mask, adv->la_and3_sign);
+ 
+@@ -1742,12 +1744,12 @@ void halbb_la_cmd_rtl_test(struct bb_inf
+ 	/*Trig Time*/
+ 	trig_time_cca = ((la->la_string_i.smp_number_max >> (bw + 1)) / 10)
+ 			- (2 << (2 - bw)) - (2 - bw);
+-	
++
+ 	/*--- Basic Trigger Setting --------------------------------*/
+ 	la->la_mac_cfg_i.la_trigger_time = trig_time_cca;
+ 	la->la_trigger_edge = LA_P_EDGE;
+ 	la->la_smp_rate = LA_SMP_CLK_20 - bw;
+-	la->la_trigger_cnt = 0;	
++	la->la_trigger_cnt = 0;
+ 
+ 	if (test_case == 0) {
+ 		/*DMA SEL*/
+@@ -1935,7 +1937,7 @@ void halbb_la_cmd_mac_trig(struct bb_inf
+ 		trig_mac->la_mac_trig_en = false;
+ 	else
+ 		trig_mac->la_mac_trig_en = true;
+-	
++
+ }
+ 
+ void halbb_la_cmd_fast(struct bb_info *bb, char input[][16], u32 *_used,
+@@ -1996,7 +1998,7 @@ void halbb_la_cmd_fast(struct bb_info *b
+ 				    "Not Support\n");
+ 			return;
+ 		}
+-		
++
+ 	} else {
+ 		BB_DBG_CNSL(*_out_len, *_used, output + *_used, *_out_len - *_used,
+ 			 "Not Support\n");
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/test/mp/hal_test_mp_efuse.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/test/mp/hal_test_mp_efuse.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852bu/phl/hal_g6/test/mp/hal_test_mp_efuse.c
+@@ -192,10 +192,10 @@ enum rtw_hal_status rtw_hal_mp_efuse_sha
+ 	enum rtw_hal_status hal_status = RTW_HAL_STATUS_FAILURE;
+ 
+ 	PHL_INFO("%s\n", __FUNCTION__);
+-	if (arg->poutbuf != NULL && arg->buf_len != 0)
++	if (arg && arg->buf_len)
+ 		hal_status = rtw_hal_efuse_shadow2buf(mp->hal, arg->poutbuf, arg->buf_len);
+ 	else
+-		PHL_INFO("%s: buf null, buf len = %d\n", __FUNCTION__, arg->buf_len);
++		PHL_INFO("%s: buf null\n", __FUNCTION__);
+ 
+ 	PHL_INFO("%s: status = %d\n", __FUNCTION__, hal_status);
+ 	return hal_status;
+@@ -210,7 +210,7 @@ enum rtw_hal_status rtw_hal_mp_efuse_fil
+ 
+ 	if (pfilepath)
+ 		hal_status = rtw_hal_efuse_file_map_load(mp->hal, pfilepath, true);
+-	else 
++	else
+ 		PHL_INFO("%s: pfilepath null\n", __FUNCTION__);
+ 
+ 	PHL_INFO("%s: status = %d\n", __FUNCTION__, hal_status);
+@@ -377,10 +377,10 @@ enum rtw_hal_status rtw_hal_mp_efuse_bt_
+ 	enum rtw_hal_status hal_status = RTW_HAL_STATUS_FAILURE;
+ 
+ 	PHL_INFO("%s\n", __FUNCTION__);
+-	if (arg->poutbuf != NULL && arg->buf_len != 0)
++	if (arg && arg->buf_len)
+ 		hal_status = rtw_hal_efuse_bt_shadow2buf(mp->hal, arg->poutbuf, arg->buf_len);
+ 	else
+-		PHL_INFO("%s: buf null, buf len = %d\n", __FUNCTION__, arg->buf_len);
++		PHL_INFO("%s: buf null\n", __FUNCTION__);
+ 
+ 	PHL_INFO("%s: status = %d\n", __FUNCTION__, hal_status);
+ 	return hal_status;

@@ -1,0 +1,53 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
+@@ -95,7 +95,7 @@
+ 		status = "okay";
+ 		compatible = "rockchip,hdmi";
+ 		rockchip,mclk-fs = <128>;
+-		rockchip,card-name = "rockchip-hdmi0";
++		rockchip,card-name = "rockchip-HDMI0";
+ 		rockchip,cpu = <&i2s5_8ch>;
+ 		rockchip,codec = <&hdmi0>;
+ 		rockchip,jack-det;
+@@ -105,7 +105,7 @@
+ 		status = "okay";
+ 		compatible = "rockchip,hdmi";
+ 		rockchip,mclk-fs = <128>;
+-		rockchip,card-name = "rockchip-hdmi1";
++		rockchip,card-name = "rockchip-HDMI1";
+ 		rockchip,cpu = <&i2s6_8ch>;
+ 		rockchip,codec = <&hdmi1>;
+ 		rockchip,jack-det;
+@@ -114,7 +114,7 @@
+ 	dp0_sound: dp0-sound {
+ 		status = "okay";
+ 		compatible = "rockchip,hdmi";
+-		rockchip,card-name= "rockchip,dp0";
++		rockchip,card-name= "TYPEC-HDMI";
+ 		rockchip,mclk-fs = <512>;
+ 		rockchip,cpu = <&spdif_tx2>;
+ 		rockchip,codec = <&dp0 1>;
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
+@@ -69,7 +69,7 @@
+ 	dp0_sound: dp0-sound {
+ 		status = "disabled";
+ 		compatible = "rockchip,hdmi";
+-		rockchip,card-name= "rockchip,dp0";
++		rockchip,card-name= "TYPEC-HDMI";
+ 		rockchip,mclk-fs = <512>;
+ 		rockchip,cpu = <&spdif_tx2>;
+ 		rockchip,codec = <&dp0 1>;
+@@ -122,7 +122,7 @@
+ 		compatible = "simple-audio-card";
+ 		simple-audio-card,format = "i2s";
+ 		simple-audio-card,mclk-fs = <128>;
+-		simple-audio-card,name = "rockchip,hdmi0";
++		simple-audio-card,name = "rockchip-HDMI0";
+ 
+ 		simple-audio-card,cpu {
+ 			sound-dai = <&i2s5_8ch>;

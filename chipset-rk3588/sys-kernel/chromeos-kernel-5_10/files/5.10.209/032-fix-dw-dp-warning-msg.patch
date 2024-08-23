@@ -1,0 +1,13 @@
+Index: kernel-rockchip/drivers/gpu/drm/rockchip/dw-dp.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/rockchip/dw-dp.c
++++ kernel-rockchip/drivers/gpu/drm/rockchip/dw-dp.c
+@@ -2696,6 +2696,8 @@ static ssize_t dw_dp_aux_transfer(struct
+ 	u32 status, value;
+ 	ssize_t ret = 0;
+ 
++  if (!dw_dp_detect(dp))
++    return -EIO;
+ 	if (WARN_ON(msg->size > 16))
+ 		return -E2BIG;
+ 

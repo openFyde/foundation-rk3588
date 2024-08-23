@@ -8,89 +8,6 @@ Index: src/media/gpu/v4l2/v4l2.sig
  LIBV4L_PUBLIC int v4l2_fd_open(int fd, int v4l2_flags);
 +LIBV4L_PUBLIC void *v4l2_mmap(void *start, size_t length, int prot, int flags, int fd, int64_t offset);
 +LIBV4L_PUBLIC int v4l2_munmap(void *_start, size_t length);
-Index: src/content/gpu/gpu_sandbox_hook_linux.cc
-===================================================================
---- src.orig/content/gpu/gpu_sandbox_hook_linux.cc
-+++ src/content/gpu/gpu_sandbox_hook_linux.cc
-@@ -88,12 +88,21 @@ static const char kLibGlesPath[] = "/usr
- static const char kLibEglPath[] = "/usr/lib64/libEGL.so.1";
- static const char kLibMaliPath[] = "/usr/lib64/libmali.so";
- static const char kLibTegraPath[] = "/usr/lib64/libtegrav4l2.so";
-+static const char kLibV4l2Path[] = "/usr/lib64/libv4l2.so";
-+static const char kLibV4lEncPluginPath[] =
-+    "/usr/lib64/libv4l/plugins/libv4l-encplugin.so";
-+static const char kLibRkMppPath[] = "/usr/lib64/librockchip_mpp.so.1";
- #else
- static const char kLibGlesPath[] = "/usr/lib/libGLESv2.so.2";
- static const char kLibEglPath[] = "/usr/lib/libEGL.so.1";
- static const char kLibMaliPath[] = "/usr/lib/libmali.so";
- static const char kLibTegraPath[] = "/usr/lib/libtegrav4l2.so";
-+static const char kLibV4l2Path[] = "/usr/lib/libv4l2.so";
-+static const char kLibV4lEncPluginPath[] =
-+     "/usr/lib/libv4l/plugins/libv4l-encplugin.so";
-+static const char kLibRkMppPath[] = "/usr/lib/librockchip_mpp.so.1";
- #endif
-+static const char kDeviceTreeCompatible[]="/proc/device-tree/compatible";
- 
- constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
- 
-@@ -138,7 +147,6 @@ void AddV4L2GpuPermissions(
-           BrokerFilePermission::ReadWrite(mediaDevicePath.str()));
-     }
-   }
--
-   // Image processor used on ARM platforms.
-   static const char kDevImageProc0Path[] = "/dev/image-proc0";
-   permissions->push_back(BrokerFilePermission::ReadWrite(kDevImageProc0Path));
-@@ -156,6 +164,11 @@ void AddV4L2GpuPermissions(
-           BrokerFilePermission::ReadWrite(encoderPath.str()));
-     }
-   }
-+  // Video decoder of rk3588
-+  static const char kDevRkMppPath[] = "/dev/mpp_service";
-+  permissions->push_back(BrokerFilePermission::ReadWrite(kDevRkMppPath));
-+  static const char kDevRkRgaPath[] = "/dev/rga";
-+  permissions->push_back(BrokerFilePermission::ReadWrite(kDevRkRgaPath));
- 
-   // Device node for V4L2 JPEG decode accelerator drivers.
-   static const char kDevJpegDecPath[] = "/dev/jpeg-dec";
-@@ -378,6 +391,8 @@ void AddArmGpuPermissions(std::vector<Br
-   permissions->push_back(BrokerFilePermission::ReadOnly(kLdSoCache));
-   permissions->push_back(BrokerFilePermission::ReadOnly(kLibGlesPath));
-   permissions->push_back(BrokerFilePermission::ReadOnly(kLibEglPath));
-+  permissions->push_back(BrokerFilePermission::ReadOnly(kLibRkMppPath));
-+  permissions->push_back(BrokerFilePermission::ReadOnly(kDeviceTreeCompatible));
- 
-   AddArmMaliGpuPermissions(permissions);
- }
-@@ -623,6 +638,18 @@ void LoadChromecastV4L2Libraries() {
-   }
- }
- 
-+void LoadV4L2Libraries(
-+    const sandbox::policy::SandboxSeccompBPF::Options& options) {
-+  DCHECK(UseV4L2Codec());
-+
-+  if (!dlopen(kLibV4l2Path, dlopen_flag))
-+    LOG(WARNING) << "dlopen:" << kLibV4l2Path << " failed with error: " << dlerror();
-+  if (!dlopen(kLibV4lEncPluginPath, dlopen_flag))
-+    LOG(WARNING) << "dlopen:" << kLibV4lEncPluginPath << " failed with error: " << dlerror();
-+  if (!dlopen(kLibRkMppPath, dlopen_flag))
-+    LOG(WARNING) << "dlopen:" << kLibRkMppPath << " failed with error: " << dlerror();
-+}
-+
- bool LoadLibrariesForGpu(
-     const sandbox::policy::SandboxSeccompBPF::Options& options) {
-   LoadVulkanLibraries();
-@@ -630,6 +657,8 @@ bool LoadLibrariesForGpu(
-     LoadArmGpuLibraries();
-   }
-   if (IsChromeOS()) {
-+    if (UseV4L2Codec())
-+      LoadV4L2Libraries(options);
-     if (options.use_amd_specific_policies) {
-       if (!LoadAmdGpuLibraries())
-         return false;
 Index: src/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
 ===================================================================
 --- src.orig/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
@@ -137,7 +54,7 @@ Index: src/media/gpu/v4l2/v4l2_device.cc
  
  namespace media {
  
-@@ -319,7 +325,7 @@ gfx::Size V4L2Device::AllocatedSizeFromV
+@@ -323,7 +329,7 @@ gfx::Size V4L2Device::AllocatedSizeFromV
  
  int V4L2Device::Ioctl(int request, void* arg) {
    DCHECK(device_fd_.is_valid());
@@ -146,7 +63,7 @@ Index: src/media/gpu/v4l2/v4l2_device.cc
  }
  
  bool V4L2Device::Poll(bool poll_device, bool* event_pending) {
-@@ -353,11 +359,11 @@ void* V4L2Device::Mmap(void* addr,
+@@ -357,11 +363,11 @@ void* V4L2Device::Mmap(void* addr,
                         int flags,
                         unsigned int offset) {
    DCHECK(device_fd_.is_valid());
@@ -160,7 +77,7 @@ Index: src/media/gpu/v4l2/v4l2_device.cc
  }
  
  bool V4L2Device::SetDevicePollInterrupt() {
-@@ -900,11 +906,20 @@ bool V4L2Device::OpenDevicePath(const st
+@@ -840,11 +846,20 @@ bool V4L2Device::OpenDevicePath(const st
  
    device_fd_.reset(
        HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC)));
@@ -181,7 +98,7 @@ Index: src/media/gpu/v4l2/v4l2_device.cc
    device_fd_.reset();
  }
  
-@@ -995,4 +1010,14 @@ std::string V4L2Device::GetDevicePathFor
+@@ -935,4 +950,14 @@ std::string V4L2Device::GetDevicePathFor
    return std::string();
  }
  
@@ -200,10 +117,10 @@ Index: src/media/gpu/v4l2/BUILD.gn
 ===================================================================
 --- src.orig/media/gpu/v4l2/BUILD.gn
 +++ src/media/gpu/v4l2/BUILD.gn
-@@ -9,10 +9,18 @@ import("//media/gpu/args.gni")
+@@ -8,10 +8,18 @@ import("//build/config/ui.gni")
+ import("//media/gpu/args.gni")
  import("//media/media_options.gni")
  import("//testing/test.gni")
- import("//third_party/libgav1/options.gni")
 +import("//tools/generate_stubs/rules.gni")
  import("//ui/gl/features.gni")
  
@@ -219,19 +136,19 @@ Index: src/media/gpu/v4l2/BUILD.gn
  source_set("v4l2") {
    defines = [ "MEDIA_GPU_IMPLEMENTATION" ]
    sources = [
-@@ -106,6 +114,7 @@ source_set("v4l2") {
+@@ -113,6 +121,7 @@ source_set("v4l2") {
    public_deps = [ "//ui/gl" ]
  
    deps = [
 +    ":libv4l2_stubs",
      ":v4l2_status",
      "//base",
-     "//gpu/command_buffer/service:gles2",
+     "//build/config/linux/libdrm",
 Index: src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
 +++ src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
-@@ -878,7 +878,9 @@ bool V4L2VideoDecodeAccelerator::TryToSe
+@@ -755,7 +755,9 @@ bool V4L2VideoDecodeAccelerator::TryToSe
  // static
  VideoDecodeAccelerator::SupportedProfiles
  V4L2VideoDecodeAccelerator::GetSupportedProfiles() {
@@ -242,7 +159,7 @@ Index: src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
    return device->GetSupportedDecodeProfiles(kSupportedInputFourCCs);
  }
  
-@@ -2344,7 +2346,9 @@ bool V4L2VideoDecodeAccelerator::SetupFo
+@@ -2220,7 +2222,9 @@ bool V4L2VideoDecodeAccelerator::SetupFo
          VLOGF(1) << "Can't find a usable output format from image processor";
          return false;
        }
@@ -253,7 +170,7 @@ Index: src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
      }
    } else {
      egl_image_format_fourcc_ = output_format_fourcc_;
-@@ -2387,7 +2391,9 @@ bool V4L2VideoDecodeAccelerator::CreateI
+@@ -2263,7 +2267,9 @@ bool V4L2VideoDecodeAccelerator::CreateI
  
    // Start with a brand new image processor device, since the old one was
    // already opened and attempting to open it again is not supported.
@@ -268,7 +185,7 @@ Index: src/media/gpu/v4l2/v4l2_device.h
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_device.h
 +++ src/media/gpu/v4l2/v4l2_device.h
-@@ -95,6 +95,13 @@ class MEDIA_GPU_EXPORT V4L2Device
+@@ -96,6 +96,13 @@ class MEDIA_GPU_EXPORT V4L2Device
  
    V4L2Device();
  
@@ -301,9 +218,9 @@ Index: src/media/gpu/v4l2/v4l2_video_decoder.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_video_decoder.cc
 +++ src/media/gpu/v4l2/v4l2_video_decoder.cc
-@@ -153,7 +153,9 @@ std::unique_ptr<VideoDecoderMixin> V4L2V
+@@ -155,7 +155,9 @@ std::unique_ptr<VideoDecoderMixin> V4L2V
  // static
- absl::optional<SupportedVideoDecoderConfigs>
+ std::optional<SupportedVideoDecoderConfigs>
  V4L2VideoDecoder::GetSupportedConfigs() {
 -  auto device = base::MakeRefCounted<V4L2Device>();
 +  auto device = V4L2Device::Create();
@@ -311,8 +228,8 @@ Index: src/media/gpu/v4l2/v4l2_video_decoder.cc
 +    return absl::nullopt;
    auto configs = device->GetSupportedDecodeProfiles(kSupportedInputFourccs);
    if (configs.empty())
-     return absl::nullopt;
-@@ -300,7 +302,9 @@ void V4L2VideoDecoder::Initialize(const
+     return std::nullopt;
+@@ -302,7 +304,9 @@ void V4L2VideoDecoder::Initialize(const
        can_use_decoder_ = false;
      }
  
@@ -327,7 +244,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
 +++ src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
-@@ -648,7 +648,9 @@ bool V4L2VideoEncodeAccelerator::IsFlush
+@@ -647,7 +647,9 @@ bool V4L2VideoEncodeAccelerator::IsFlush
  
  VideoEncodeAccelerator::SupportedProfiles
  V4L2VideoEncodeAccelerator::GetSupportedProfiles() {
@@ -342,7 +259,7 @@ Index: src/media/gpu/v4l2/v4l2_image_processor_backend.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_image_processor_backend.cc
 +++ src/media/gpu/v4l2/v4l2_image_processor_backend.cc
-@@ -467,20 +467,26 @@ void V4L2ImageProcessorBackend::Initiali
+@@ -409,20 +409,26 @@ std::unique_ptr<ImageProcessorBackend> V
  
  // static
  bool V4L2ImageProcessorBackend::IsSupported() {
@@ -372,7 +289,7 @@ Index: src/media/gpu/v4l2/v4l2_image_processor_backend.cc
    return device->GetSupportedImageProcessorPixelformats(
        V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
  }
-@@ -495,8 +501,8 @@ bool V4L2ImageProcessorBackend::TryOutpu
+@@ -437,8 +443,8 @@ bool V4L2ImageProcessorBackend::TryOutpu
              << " input_size=" << input_size.ToString()
              << " output_format=" << FourccToString(output_pixelformat)
              << " output_size=" << output_size->ToString();
@@ -387,7 +304,7 @@ Index: src/media/gpu/v4l2/v4l2_mjpeg_decode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_mjpeg_decode_accelerator.cc
 +++ src/media/gpu/v4l2/v4l2_mjpeg_decode_accelerator.cc
-@@ -489,7 +489,9 @@ void V4L2MjpegDecodeAccelerator::Decode(
+@@ -496,7 +496,9 @@ void V4L2MjpegDecodeAccelerator::Decode(
  
  // static
  bool V4L2MjpegDecodeAccelerator::IsSupported() {
@@ -402,7 +319,7 @@ Index: src/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
 +++ src/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
-@@ -759,7 +759,9 @@ bool V4L2StatefulVideoDecoderBackend::Is
+@@ -762,7 +762,9 @@ bool V4L2StatefulVideoDecoderBackend::Is
        V4L2_PIX_FMT_VP8,
        V4L2_PIX_FMT_VP9,
      };
@@ -417,7 +334,7 @@ Index: src/media/gpu/v4l2/v4l2_video_decoder_backend_stateless.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_video_decoder_backend_stateless.cc
 +++ src/media/gpu/v4l2/v4l2_video_decoder_backend_stateless.cc
-@@ -715,7 +715,9 @@ bool V4L2StatelessVideoDecoderBackend::I
+@@ -704,7 +704,9 @@ bool V4L2StatelessVideoDecoderBackend::I
        V4L2_PIX_FMT_VP9_FRAME,
        V4L2_PIX_FMT_AV1_FRAME,
      };

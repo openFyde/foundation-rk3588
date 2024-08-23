@@ -16,7 +16,7 @@ list_current_wireless_devices() {
 wpa_cli_run() {
   local cmd="$1"
   local dev=${2:-$_CURRENT_WLAN}
-  sudo runuser -u wpa -- wpa_cli -i $dev $cmd
+  sudo -u wpa -- wpa_cli -i $dev $cmd
 }
 
 get_wireless_device_ip4() {
@@ -80,8 +80,8 @@ main() {
     scan_result_ssid_from_device
     read -p "Input network label for connecting with:" ssid
     read -p "Input password for network:" psk
-  fi 
-  connect_ssid_from_dev $ssid $psk 
+  fi
+  connect_ssid_from_dev $ssid $psk
   sleep 3
   get_wireless_device_ip4
 }
