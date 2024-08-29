@@ -1,8 +1,8 @@
-diff --git a/src/libv4l-rkmpp.c b/src/libv4l-rkmpp.c
-index 6d9f718f9bd1..4f8c689c0f7f 100644
---- a/src/libv4l-rkmpp.c
-+++ b/src/libv4l-rkmpp.c
-@@ -770,6 +770,12 @@ static void *plugin_init(int fd)
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -927,6 +927,12 @@ static void *plugin_init(int fd)
  		goto err_free_ctx;
  	}
  

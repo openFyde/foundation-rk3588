@@ -109,16 +109,14 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
  static int rkmpp_enc_queryctrl(struct rkmpp_enc_context *enc,
  			       struct v4l2_queryctrl *query_ctrl)
  {
-@@ -848,6 +912,12 @@ static int rkmpp_enc_queryctrl(struct rk
- 		query_ctrl->maximum = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR;
+@@ -855,6 +919,10 @@ static int rkmpp_enc_queryctrl(struct rk
+ 		query_ctrl->minimum = V4L2_MPEG_VIDEO_VP8_PROFILE_0;
+ 		query_ctrl->maximum = query_ctrl->minimum;
  		break;
- 	/* TODO: fill info for other supported ctrls */
-+  case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
-+    query_ctrl->minimum = 0;
-+    query_ctrl->maximum = 2; /*max index of support_h264_profiles*/
-+    break;
 +  case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
++    query_ctrl->minimum = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
++    query_ctrl->maximum = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_STILL_PICTURE;
 +    break;
+ 		/* TODO: fill info for other supported ctrls */
  	default:
  		LOGV(1, "unsupported ctrl: %x\n", query_ctrl->id);
- 		RETURN_ERR(EINVAL, -1);

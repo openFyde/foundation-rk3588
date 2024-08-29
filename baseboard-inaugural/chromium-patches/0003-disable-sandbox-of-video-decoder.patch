@@ -1,0 +1,18 @@
+diff --git a/sandbox/policy/sandbox_type.cc b/sandbox/policy/sandbox_type.cc
+index d059429cd25db..77d3217cd2f7c 100644
+--- a/sandbox/policy/sandbox_type.cc
++++ b/sandbox/policy/sandbox_type.cc
+@@ -394,11 +394,11 @@ sandbox::mojom::Sandbox UtilitySandboxTypeFromString(
+ #endif
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_ASH)
+   if (sandbox_string == switches::kHardwareVideoDecodingSandbox)
+-    return Sandbox::kHardwareVideoDecoding;
++    return Sandbox::kNoSandbox;
+ #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS_ASH)
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+   if (sandbox_string == switches::kHardwareVideoEncodingSandbox)
+-    return Sandbox::kHardwareVideoEncoding;
++    return Sandbox::kNoSandbox;
+ #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+ #if BUILDFLAG(IS_CHROMEOS_ASH)
+   if (sandbox_string == switches::kImeSandbox)

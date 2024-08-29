@@ -143,7 +143,7 @@ Index: libv4l-rkmpp/include/libv4l-rkmpp.h
 ===================================================================
 --- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
 +++ libv4l-rkmpp/include/libv4l-rkmpp.h
-@@ -39,11 +39,11 @@ extern int rkmpp_log_level;
+@@ -64,11 +64,11 @@ extern int rkmpp_log_level;
  
  #define gettid() syscall(SYS_gettid)
  
@@ -158,7 +158,7 @@ Index: libv4l-rkmpp/include/libv4l-rkmpp.h
  	} while (0)
  
  #define LOGV(level, fmt, ...) \
-@@ -453,9 +453,9 @@ void rkmpp_finish_flushing(struct rkmpp_
+@@ -478,9 +478,9 @@ void rkmpp_finish_flushing(struct rkmpp_
  
  int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
  			 struct rkmpp_buffer *rkmpp_buffer,

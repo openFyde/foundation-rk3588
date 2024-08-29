@@ -2,7 +2,7 @@ Index: libv4l-rkmpp/include/libv4l-rkmpp.h
 ===================================================================
 --- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
 +++ libv4l-rkmpp/include/libv4l-rkmpp.h
-@@ -39,13 +39,11 @@ extern int rkmpp_log_level;
+@@ -64,13 +64,11 @@ extern int rkmpp_log_level;
  
  #define gettid() syscall(SYS_gettid)
  
