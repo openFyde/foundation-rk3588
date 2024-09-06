@@ -10,7 +10,7 @@ get_miniloader=false
 
 declare -A LINK_MAP=(
   [inaugural]="v1.04.106"
-  [fydetab_duo]="v1.06.111"
+  [fydetab_duo]="v1.17.114"
 )
 
 die() {
