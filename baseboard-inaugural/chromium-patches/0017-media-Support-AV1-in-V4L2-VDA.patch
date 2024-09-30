@@ -22,8 +22,8 @@ Index: src/media/gpu/v4l2/v4l2_video_decoder_backend_stateful.cc
        V4L2_PIX_FMT_VP9,
 +      V4L2_PIX_FMT_AV1,
      };
-     auto device = V4L2Device::Create();
-     if (!device)
+     auto device = base::MakeRefCounted<V4L2Device>();
+     VideoDecodeAccelerator::SupportedProfiles profiles =
 Index: src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc

@@ -1,0 +1,13 @@
+Index: v4l-utils/lib/libv4l2/libv4l2.c
+===================================================================
+--- v4l-utils.orig/lib/libv4l2/libv4l2.c
++++ v4l-utils/lib/libv4l2/libv4l2.c
+@@ -675,7 +675,7 @@ int v4l2_fd_open(int fd, int v4l2_flags)
+ 	long page_size;
+ 
+ 	v4l2_plugin_init(fd, &plugin_library, &dev_ops_priv, &dev_ops);
+-
++  V4L2_LOG_ERR("init fd:%d, ctx:%p, plugin_lib:%p, dev_ops:%p\n", fd, dev_ops_priv, plugin_library, dev_ops);
+ 	/* If no log file was set by the app, see if one was specified through the
+ 	   environment */
+ 	if (!v4l2_log_file) {

@@ -1,0 +1,14 @@
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -49,8 +49,8 @@ static int rkmpp_copy_buffer(struct rkmp
+ 
+ 	/* Prepare access */
+ 	for (i = 0; i < buffer->length; i++) {
+-		sizes[i] = rkmpp_buffer->planes[i].plane_size;
+ 		offsets[i] = rkmpp_buffer->planes[i].data_offset;
++		sizes[i] = rkmpp_buffer->planes[i].bytesused - offsets[i];
+ 
+ 		if (!sizes[i]) {
+       LOGV(3, "index:%d,planes[%u].size :%u, offset:%u, buffer->length:%u, bytesused:%u\n", rkmpp_buffer->index, i, sizes[i], offsets[i], buffer->length, rkmpp_buffer->planes[i].bytesused);

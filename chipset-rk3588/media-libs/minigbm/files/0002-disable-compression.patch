@@ -1,15 +1,29 @@
-diff --git a/drv.c b/drv.c
-index 7fd2250..5ee60f9 100644
---- a/drv.c
-+++ b/drv.c
-@@ -121,8 +121,8 @@ struct driver *drv_create(int fd)
+Index: minigbm/drv.c
+===================================================================
+--- minigbm.orig/drv.c
++++ minigbm/drv.c
+@@ -121,8 +121,7 @@ struct driver *drv_create(int fd)
  
  	const char *minigbm_debug;
  	minigbm_debug = drv_get_os_option(MINIGBM_DEBUG);
 -	drv->compression =
 -	    (minigbm_debug == NULL) || (strstr(minigbm_debug, "nocompression") == NULL);
-+	drv->compression = false;
-+	//    (minigbm_debug == NULL) || (strstr(minigbm_debug, "nocompression") == NULL);
++	drv->compression = false; // The compression isn't supported well by rk3588 soc
  	drv->log_bos = (minigbm_debug && strstr(minigbm_debug, "log_bos") != NULL);
  
  	drv->fd = fd;
+Index: minigbm/rockchip.c
+===================================================================
+--- minigbm.orig/rockchip.c
++++ minigbm/rockchip.c
+@@ -134,6 +134,10 @@ static int rockchip_bo_create_with_modif
+ 
+ 		uint32_t aligned_width = w_mbs * 16;
+ 		uint32_t aligned_height = h_mbs * 16;
++    if (height == 360 || height == 1080) {
++      h_mbs = DIV_ROUND_UP(height, 8);
++      aligned_height = h_mbs * 8;
++    }
+ 
+ 		drv_bo_from_format(bo, aligned_width, 1, aligned_height, format);
+ 		/*

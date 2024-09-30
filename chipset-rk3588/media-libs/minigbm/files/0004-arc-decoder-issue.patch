@@ -1,0 +1,79 @@
+Index: minigbm/rockchip.c
+===================================================================
+--- minigbm.orig/rockchip.c
++++ minigbm/rockchip.c
+@@ -97,7 +97,7 @@ static int rockchip_init(struct driver *
+ 	/* NV12 format for camera, display, decoding and encoding. */
+ 	/* Camera ISP supports only NV12 output. */
+ 	drv_modify_combination(drv, DRM_FORMAT_NV12, &metadata,
+-			       BO_USE_CAMERA_READ | BO_USE_CAMERA_WRITE | BO_USE_SCANOUT |
++			       BO_USE_CAMERA_READ | BO_USE_CAMERA_WRITE | BO_USE_SCANOUT | BO_USE_TEXTURE |
+ 				   BO_USE_HW_VIDEO_DECODER | BO_USE_HW_VIDEO_ENCODER);
+ 
+ 	drv_modify_linear_combinations(drv);
+@@ -276,6 +276,36 @@ static int rockchip_bo_flush(struct bo *
+ 	return 0;
+ }
+ 
++void rockchip_resolve_format_and_use_flags(struct driver *drv, uint32_t format,
++               uint64_t use_flags, uint32_t *out_format,
++               uint64_t *out_use_flags)
++{
++  *out_format = format;
++  *out_use_flags = use_flags;
++  switch (format) {
++  case DRM_FORMAT_FLEX_IMPLEMENTATION_DEFINED:
++    /* Common camera implementation defined format. */
++    if (use_flags & (BO_USE_CAMERA_READ | BO_USE_CAMERA_WRITE)) {
++      *out_format = DRM_FORMAT_NV12;
++    } else {
++      /* HACK: See b/28671744 */
++      *out_format = DRM_FORMAT_XBGR8888;
++      *out_use_flags &= ~BO_USE_HW_VIDEO_ENCODER;
++    }
++    break;
++  case DRM_FORMAT_FLEX_YCbCr_420_888:
++    /* Common flexible video format. */
++    *out_format = DRM_FORMAT_NV12;
++		*out_use_flags |= BO_USE_SCANOUT | BO_USE_TEXTURE | BO_USE_HW_VIDEO_DECODER;
++    break;
++  case DRM_FORMAT_YVU420_ANDROID:
++    *out_use_flags &= ~BO_USE_SCANOUT;
++    break;
++  default:
++    break;
++  }
++}
++
+ const struct backend backend_rockchip = {
+ 	.name = "rockchip",
+ 	.init = rockchip_init,
+@@ -287,7 +317,7 @@ const struct backend backend_rockchip =
+ 	.bo_unmap = rockchip_bo_unmap,
+ 	.bo_invalidate = rockchip_bo_invalidate,
+ 	.bo_flush = rockchip_bo_flush,
+-	.resolve_format_and_use_flags = drv_resolve_format_and_use_flags_helper,
++	.resolve_format_and_use_flags = rockchip_resolve_format_and_use_flags,
+ };
+ 
+ #endif
+Index: minigbm/cros_gralloc/cros_gralloc_driver.cc
+===================================================================
+--- minigbm.orig/cros_gralloc/cros_gralloc_driver.cc
++++ minigbm/cros_gralloc/cros_gralloc_driver.cc
+@@ -196,8 +196,14 @@ bool cros_gralloc_driver::get_resolved_f
+ 		resolved_use_flags |= BO_USE_LINEAR;
+ 		combo = drv_get_combination(drv_.get(), resolved_format, resolved_use_flags);
+ 	}
+-	if (!combo)
++	if (!combo) {
++  #ifdef __aarch64__
++    ALOGE("No combo found, resolved_format:%s, resoloved_flags:%lu", (char *) &resolved_format, resolved_use_flags);
++  #else
++    ALOGE("No combo found, resolved_format:%s, resoloved_flags:%llu", (char *) &resolved_format, resolved_use_flags);
++  #endif
+ 		return false;
++  }
+ 
+ 	*out_format = resolved_format;
+ 	*out_use_flags = resolved_use_flags;

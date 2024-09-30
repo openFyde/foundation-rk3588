@@ -46,6 +46,14 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
  static void rkmpp_apply_info_change(struct rkmpp_dec_context *dec,
  				    MppFrame frame)
  {
+@@ -462,7 +492,6 @@ static int rkmpp_dec_g_fmt(struct rkmpp_
+ 		LOGV(1, "cannot provide resolution yet\n");
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+-
+ 	ret = rkmpp_g_fmt(dec->ctx, f);
+ 
+ 	LEAVE();
 Index: libv4l-rkmpp/src/libv4l-rkmpp.c
 ===================================================================
 --- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
@@ -97,13 +105,11 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	return ret;
  }
  
-@@ -945,8 +948,12 @@ static void *plugin_init(int fd)
- 	if (ctx->is_decoder) {
+@@ -946,7 +949,11 @@ static void *plugin_init(int fd)
  		if (ctx->codecs)
  			free(ctx->codecs);
--		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1");
+ 		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1");
 -	}
-+		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1:JPEG");
 +	} else {
 +    if (ctx->codecs)
 +      free(ctx->codecs);

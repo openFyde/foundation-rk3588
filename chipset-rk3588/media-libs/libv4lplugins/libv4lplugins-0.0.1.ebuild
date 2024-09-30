@@ -33,6 +33,7 @@ src_prepare() {
   eapply -p1 ${FILESDIR}/0003-Hack-codec-while-parse-options.patch
   eapply -p1 ${FILESDIR}/0004-fix-pixelformat-for-chromium.patch
   eapply -p1 ${FILESDIR}/0005-fix-encoder-for-chromium.patch
+#  eapply -p1 ${FILESDIR}/0006-fix-mmap-issue.patch
   default
 }
 

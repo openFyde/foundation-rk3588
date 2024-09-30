@@ -783,7 +783,7 @@ Index: kernel-rockchip/include/linux/syscalls.h
 ===================================================================
 --- kernel-rockchip.orig/include/linux/syscalls.h
 +++ kernel-rockchip/include/linux/syscalls.h
-@@ -1372,4 +1372,25 @@ int __sys_getsockopt(int fd, int level,
+@@ -1372,4 +1372,27 @@ int __sys_getsockopt(int fd, int level,
  		int __user *optlen);
  int __sys_setsockopt(int fd, int level, int optname, char __user *optval,
  		int optlen);
@@ -799,6 +799,8 @@ Index: kernel-rockchip/include/linux/syscalls.h
 +int ksys_perf_event_open(
 +		struct perf_event_attr __user *attr_uptr,
 +		pid_t pid, int cpu, int group_fd, unsigned long flags);
++int ksys_kcmp(pid_t pid1, pid_t pid2, int type,
++    unsigned long idx1, unsigned long idx2);
 +int ksys_clock_adjtime(const clockid_t which_clock, struct __kernel_timex __user * utx);
 +int ksys_adjtimex(struct __kernel_timex __user *txc_p);
 +int ksys_getcpu(unsigned __user *cpu, unsigned __user *node,
@@ -887,7 +889,7 @@ Index: kernel-rockchip/security/chromiumos/alt-syscall.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/alt-syscall.c
-@@ -0,0 +1,538 @@
+@@ -0,0 +1,560 @@
 +/*
 + * Chromium OS alt-syscall tables
 + *
@@ -903,6 +905,7 @@ Index: kernel-rockchip/security/chromiumos/alt-syscall.c
 +#include <linux/fs.h>
 +#include <linux/init.h>
 +#include <linux/kernel.h>
++#include <linux/kcmp.h>
 +#include <linux/module.h>
 +#include <linux/prctl.h>
 +#include <linux/sched/types.h>
@@ -1041,6 +1044,27 @@ Index: kernel-rockchip/security/chromiumos/alt-syscall.c
 +	return -EACCES;
 +}
 +
++#ifdef CONFIG_KCMP
++static asmlinkage long android_kcmp(struct pt_regs *regs)
++{
++	struct task_struct *task = current;
++	unsigned long args[6];
++	pid_t pid1, pid2;
++	int type;
++	unsigned long idx1, idx2;
++
++	syscall_get_arguments(task, regs, args);
++	type = args[2];
++	if (type == KCMP_SYSVSEM)
++		return -ENOSYS;
++
++	pid1 = args[0];
++	pid2 = args[1];
++	idx1 = args[3];
++	idx2 = args[4];
++	return ksys_kcmp(pid1, pid2, type, idx1, idx2);
++}
++#endif
 +
 +static asmlinkage long android_setpriority(struct pt_regs *regs)
 +{
@@ -1430,7 +1454,7 @@ Index: kernel-rockchip/security/chromiumos/alt-syscall.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/alt-syscall.h
-@@ -0,0 +1,385 @@
+@@ -0,0 +1,387 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -1645,6 +1669,7 @@ Index: kernel-rockchip/security/chromiumos/alt-syscall.h
 +#define __NR_compat_lsetxattr   __NR_ia32_lsetxattr
 +#define __NR_compat_lstat       __NR_ia32_lstat
 +#define __NR_compat_madvise     __NR_ia32_madvise
++#define __NR_compat_membarrier  __NR_ia32_membarrier
 +#define __NR_compat_memfd_create        __NR_ia32_memfd_create
 +#define __NR_compat_mincore     __NR_ia32_mincore
 +#define __NR_compat_mkdir       __NR_ia32_mkdir
@@ -1692,6 +1717,7 @@ Index: kernel-rockchip/security/chromiumos/alt-syscall.h
 +#define __NR_compat_removexattr __NR_ia32_removexattr
 +#define __NR_compat_rename      __NR_ia32_rename
 +#define __NR_compat_renameat    __NR_ia32_renameat
++#define __NR_compat_renameat2   __NR_ia32_renameat2
 +#define __NR_compat_restart_syscall     __NR_ia32_restart_syscall
 +#define __NR_compat_rmdir       __NR_ia32_rmdir
 +#define __NR_compat_rt_sigaction        __NR_ia32_rt_sigaction
@@ -1820,7 +1846,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/android_whitelists.h
-@@ -0,0 +1,639 @@
+@@ -0,0 +1,655 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -1862,6 +1888,10 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +static asmlinkage long android_getpriority(struct pt_regs *regs);
 +/* Android does not get to call keyctl. */
 +static asmlinkage long android_keyctl(struct pt_regs *regs);
++#ifdef CONFIG_KCMP
++/* Android does not get to call kcmp with type==KCMP_SYSVEM. */
++static asmlinkage long android_kcmp(struct pt_regs *regs);
++#endif
 +/* Make sure nothing sets a nice value more favorable than -10. */
 +static asmlinkage long android_setpriority(struct pt_regs *regs);
 +static asmlinkage long android_sched_setscheduler(struct pt_regs *regs);
@@ -1948,7 +1978,11 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +        SYSCALL_ENTRY(io_submit),
 +	SYSCALL_ENTRY(ioprio_set),
 +        SYSCALL_ENTRY_ALT(keyctl, android_keyctl),
++#ifdef CONFIG_KCMP
++	SYSCALL_ENTRY_ALT(kcmp, android_kcmp),
++#else
 +	SYSCALL_ENTRY(kcmp),
++#endif
 +	SYSCALL_ENTRY(kill),
 +	SYSCALL_ENTRY(lgetxattr),
 +	SYSCALL_ENTRY(linkat),
@@ -1959,6 +1993,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	SYSCALL_ENTRY(lseek),
 +	SYSCALL_ENTRY(lsetxattr),
 +	SYSCALL_ENTRY(madvise),
++	SYSCALL_ENTRY(membarrier),
 +        SYSCALL_ENTRY(memfd_create),
 +	SYSCALL_ENTRY(mincore),
 +	SYSCALL_ENTRY(mkdirat),
@@ -2000,6 +2035,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	SYSCALL_ENTRY(remap_file_pages),
 +	SYSCALL_ENTRY(removexattr),
 +	SYSCALL_ENTRY(renameat),
++	SYSCALL_ENTRY(renameat2),
 +	SYSCALL_ENTRY(restart_syscall),
 +	SYSCALL_ENTRY(rt_sigaction),
 +	SYSCALL_ENTRY(rt_sigpending),
@@ -2224,7 +2260,11 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +        COMPAT_SYSCALL_ENTRY(io_submit),
 +	COMPAT_SYSCALL_ENTRY(ioprio_set),
 +        COMPAT_SYSCALL_ENTRY_ALT(keyctl, android_keyctl),
++#ifdef CONFIG_KCMP
++	COMPAT_SYSCALL_ENTRY_ALT(kcmp, android_kcmp),
++#else
 +	COMPAT_SYSCALL_ENTRY(kcmp),
++#endif
 +	COMPAT_SYSCALL_ENTRY(kill),
 +	COMPAT_SYSCALL_ENTRY(lgetxattr),
 +	COMPAT_SYSCALL_ENTRY(link),
@@ -2236,6 +2276,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	COMPAT_SYSCALL_ENTRY(lsetxattr),
 +	COMPAT_SYSCALL_ENTRY(lstat),
 +	COMPAT_SYSCALL_ENTRY(madvise),
++	COMPAT_SYSCALL_ENTRY(membarrier),
 +        COMPAT_SYSCALL_ENTRY(memfd_create),
 +	COMPAT_SYSCALL_ENTRY(mincore),
 +	COMPAT_SYSCALL_ENTRY(mkdir),
@@ -2282,6 +2323,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	COMPAT_SYSCALL_ENTRY(removexattr),
 +	COMPAT_SYSCALL_ENTRY(rename),
 +	COMPAT_SYSCALL_ENTRY(renameat),
++	COMPAT_SYSCALL_ENTRY(renameat2),
 +	COMPAT_SYSCALL_ENTRY(restart_syscall),
 +	COMPAT_SYSCALL_ENTRY(rmdir),
 +	COMPAT_SYSCALL_ENTRY(rt_sigaction),
@@ -3252,7 +3294,7 @@ Index: kernel-rockchip/security/chromiumos/lsm.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/lsm.c
-@@ -0,0 +1,274 @@
+@@ -0,0 +1,282 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -3275,6 +3317,8 @@ Index: kernel-rockchip/security/chromiumos/lsm.c
 +#define pr_fmt(fmt) "Chromium OS LSM: " fmt
 +
 +#include <asm/syscall.h>
++#include <linux/audit.h>
++#include <linux/binfmts.h>
 +#include <linux/cred.h>
 +#include <linux/fs.h>
 +#include <linux/fs_parser.h>
@@ -3288,10 +3332,20 @@ Index: kernel-rockchip/security/chromiumos/lsm.c
 +#include <linux/sched/task_stack.h>
 +#include <linux/sched.h>	/* current and other task related stuff */
 +#include <linux/security.h>
++#include <linux/shmem_fs.h>
 +#include <uapi/linux/mount.h>
 +
 +#include "inode_mark.h"
 +#include "utils.h"
++
++static int allow_overlayfs = 1;
++
++static int __init allow_overlayfs_set(char *__unused)
++{
++	allow_overlayfs = 1;
++	return 1;
++}
++__setup("chromiumos.allow_overlayfs", allow_overlayfs_set);
 +
 +#if defined(CONFIG_SECURITY_CHROMIUMOS_NO_UNPRIVILEGED_UNSAFE_MOUNTS) || \
 +	defined(CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT)
@@ -3334,6 +3388,13 @@ Index: kernel-rockchip/security/chromiumos/lsm.c
 +					const char *type, unsigned long flags,
 +					void *data)
 +{
++	if (!allow_overlayfs && type && !strcmp(type, "overlay")) {
++		report("sb_mount", path, "Overlayfs mounts prohibited");
++		pr_notice("sb_mount dev=%s type=%s flags=%#lx\n",
++			  dev_name, type, flags);
++		return -EPERM;
++	}
++
 +#ifdef CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT
 +	if (!(path->link_count & PATH_LINK_COUNT_VALID)) {
 +		WARN(1, "No link count available");
@@ -3463,46 +3524,34 @@ Index: kernel-rockchip/security/chromiumos/lsm.c
 +	return policy == CHROMIUMOS_INODE_POLICY_BLOCK ? -EACCES : 0;
 +}
 +
-+int chromiumos_sb_eat_lsm_opts(char *options, void **mnt_opts)
++static int chromiumos_bprm_creds_for_exec(struct linux_binprm *bprm)
 +{
-+	char *from = options, *to = options;
-+	bool found = false;
-+	bool first = true;
++	struct file *file = bprm->file;
 +
-+	while (1) {
-+		char *next = strchr(from, ',');
-+		int len;
++	if (shmem_file(file)) {
++		char *cmdline = printable_cmdline(current);
 +
-+		if (next)
-+			len = next - from;
-+		else
-+			len = strlen(from);
++		audit_log(
++			audit_context(),
++			GFP_ATOMIC,
++			AUDIT_AVC,
++			"ChromeOS LSM: memfd execution attempt, cmd=%s, pid=%d",
++			cmdline ? cmdline : "(null)",
++			task_pid_nr(current));
++		kfree(cmdline);
 +
-+		/*
-+		 * Remove the option so that filesystems won't see it.
-+		 * do_mount() has already forced the MS_NOSYMFOLLOW flag on
-+		 * if it found this option, so no other action is needed.
-+		 */
-+		if (len == strlen("nosymfollow") && !strncmp(from, "nosymfollow", len)) {
-+			found = true;
-+		} else {
-+			if (!first) {   /* copy with preceding comma */
-+				from--;
-+				len++;
-+			}
-+			if (to != from)
-+				memmove(to, from, len);
-+			to += len;
-+			first = false;
-+		}
-+		if (!next)
-+			break;
-+		from += len + 1;
++		pr_notice_ratelimited("memfd execution blocked\n");
++		return -EACCES;
 +	}
-+	*to = '\0';
++	return 0;
++}
 +
-+	if (found)
-+		pr_notice("nosymfollow option should be changed to MS_NOSYMFOLLOW flag.");
++static int chromiumos_locked_down(enum lockdown_reason what)
++{
++	if (what == LOCKDOWN_BPF_WRITE_USER) {
++		pr_notice_ratelimited("BPF_WRITE_USER blocked\n");
++		return -EACCES;
++	}
 +
 +	return 0;
 +}
@@ -3511,7 +3560,8 @@ Index: kernel-rockchip/security/chromiumos/lsm.c
 +	LSM_HOOK_INIT(sb_mount, chromiumos_security_sb_mount),
 +	LSM_HOOK_INIT(inode_follow_link, chromiumos_security_inode_follow_link),
 +	LSM_HOOK_INIT(file_open, chromiumos_security_file_open),
-+	LSM_HOOK_INIT(sb_eat_lsm_opts, chromiumos_sb_eat_lsm_opts),
++	LSM_HOOK_INIT(bprm_creds_for_exec, chromiumos_bprm_creds_for_exec),
++	LSM_HOOK_INIT(locked_down, chromiumos_locked_down),
 +};
 +
 +static int __init chromiumos_security_init(void)
@@ -3531,7 +3581,7 @@ Index: kernel-rockchip/security/chromiumos/read_write_test_whitelists.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/read_write_test_whitelists.h
-@@ -0,0 +1,56 @@
+@@ -0,0 +1,60 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -3562,7 +3612,9 @@ Index: kernel-rockchip/security/chromiumos/read_write_test_whitelists.h
 +#include "alt-syscall.h"
 +
 +static struct syscall_whitelist_entry read_write_test_whitelist[] = {
++	/* Some tests use `exit`, while others use `exit_group`. */
 +	SYSCALL_ENTRY(exit),
++	SYSCALL_ENTRY(exit_group),
 +	SYSCALL_ENTRY(openat),
 +	SYSCALL_ENTRY(close),
 +	SYSCALL_ENTRY(read),
@@ -3577,7 +3629,9 @@ Index: kernel-rockchip/security/chromiumos/read_write_test_whitelists.h
 +
 +#ifdef CONFIG_COMPAT
 +static struct syscall_whitelist_entry read_write_test_compat_whitelist[] = {
++	/* Some tests use `exit`, while others use `exit_group`. */
 +	COMPAT_SYSCALL_ENTRY(exit),
++	COMPAT_SYSCALL_ENTRY(exit_group),
 +	COMPAT_SYSCALL_ENTRY(open),
 +	COMPAT_SYSCALL_ENTRY(openat),
 +	COMPAT_SYSCALL_ENTRY(close),
@@ -3592,7 +3646,7 @@ Index: kernel-rockchip/security/chromiumos/securityfs.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/securityfs.c
-@@ -0,0 +1,241 @@
+@@ -0,0 +1,247 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -3712,6 +3766,12 @@ Index: kernel-rockchip/security/chromiumos/securityfs.c
 +	ret = kern_path(filename, 0, path);
 +	if (ret)
 +		goto out;
++
++	/* Make sure exception directory is not a symlink. */
++	if (d_is_symlink(path->dentry)) {
++		ret = -EMLINK;
++		goto out;
++	}
 +
 +	/*
 +	 * Make sure the path is canonical, i.e. it didn't contain symlinks. To
@@ -4529,7 +4589,16 @@ Index: kernel-rockchip/include/linux/security.h
 ===================================================================
 --- kernel-rockchip.orig/include/linux/security.h
 +++ kernel-rockchip/include/linux/security.h
-@@ -254,13 +254,13 @@ extern int security_init(void);
+@@ -133,6 +133,8 @@ enum lockdown_reason {
+ 	LOCKDOWN_CONFIDENTIALITY_MAX,
+ };
+ 
++extern const char *const lockdown_reasons[LOCKDOWN_CONFIDENTIALITY_MAX+1];
++
+ /* These functions are in security/commoncap.c */
+ extern int cap_capable(const struct cred *cred, struct user_namespace *ns,
+ 		       int cap, unsigned int opts);
+@@ -254,13 +256,13 @@ extern int security_init(void);
  extern int early_security_init(void);
  
  /* Security operations */
@@ -4550,7 +4619,7 @@ Index: kernel-rockchip/include/linux/security.h
  int security_ptrace_access_check(struct task_struct *child, unsigned int mode);
  int security_ptrace_traceme(struct task_struct *parent);
  int security_capget(struct task_struct *target,
-@@ -496,25 +496,25 @@ static inline int early_security_init(vo
+@@ -496,25 +498,25 @@ static inline int early_security_init(vo
  	return 0;
  }
  
@@ -4583,7 +4652,7 @@ Index: kernel-rockchip/include/linux/security.h
  						struct file *file)
  {
  	return 0;
-@@ -1013,11 +1013,6 @@ static inline void security_transfer_cre
+@@ -1013,11 +1015,6 @@ static inline void security_transfer_cre
  {
  }
  
@@ -4599,7 +4668,44 @@ Index: kernel-rockchip/security/security.c
 ===================================================================
 --- kernel-rockchip.orig/security/security.c
 +++ kernel-rockchip/security/security.c
-@@ -689,25 +689,25 @@ static void __init lsm_early_task(struct
+@@ -35,6 +35,36 @@
+ /* How many LSMs were built into the kernel? */
+ #define LSM_COUNT (__end_lsm_info - __start_lsm_info)
+ 
++const char *const lockdown_reasons[LOCKDOWN_CONFIDENTIALITY_MAX+1] = {
++  [LOCKDOWN_NONE] = "none",
++  [LOCKDOWN_MODULE_SIGNATURE] = "unsigned module loading",
++  [LOCKDOWN_DEV_MEM] = "/dev/mem,kmem,port",
++  [LOCKDOWN_EFI_TEST] = "/dev/efi_test access",
++  [LOCKDOWN_KEXEC] = "kexec of unsigned images",
++  [LOCKDOWN_HIBERNATION] = "hibernation",
++  [LOCKDOWN_PCI_ACCESS] = "direct PCI access",
++  [LOCKDOWN_IOPORT] = "raw io port access",
++  [LOCKDOWN_MSR] = "raw MSR access",
++  [LOCKDOWN_ACPI_TABLES] = "modifying ACPI tables",
++  [LOCKDOWN_PCMCIA_CIS] = "direct PCMCIA CIS storage",
++  [LOCKDOWN_TIOCSSERIAL] = "reconfiguration of serial port IO",
++  [LOCKDOWN_MODULE_PARAMETERS] = "unsafe module parameters",
++  [LOCKDOWN_MMIOTRACE] = "unsafe mmio",
++  [LOCKDOWN_DEBUGFS] = "debugfs access",
++  [LOCKDOWN_XMON_WR] = "xmon write access",
++  [LOCKDOWN_BPF_WRITE_USER] = "use of bpf to write user RAM",
++  [LOCKDOWN_DBG_WRITE_KERNEL] = "use of kgdb/kdb to write kernel RAM",
++  [LOCKDOWN_INTEGRITY_MAX] = "integrity",
++  [LOCKDOWN_KCORE] = "/proc/kcore access",
++  [LOCKDOWN_KPROBES] = "use of kprobes",
++  [LOCKDOWN_BPF_READ] = "use of bpf to read kernel RAM",
++  [LOCKDOWN_DBG_READ_KERNEL] = "use of kgdb/kdb to read kernel RAM",
++  [LOCKDOWN_PERF] = "unsafe use of perf",
++  [LOCKDOWN_TRACEFS] = "use of tracefs",
++  [LOCKDOWN_XMON_RW] = "xmon read and write access",
++  [LOCKDOWN_CONFIDENTIALITY_MAX] = "confidentiality",
++};
++
+ struct security_hook_heads security_hook_heads __lsm_ro_after_init;
+ static BLOCKING_NOTIFIER_HEAD(blocking_lsm_notifier_chain);
+ 
+@@ -689,25 +719,25 @@ static void __init lsm_early_task(struct
  
  /* Security operations */
  
@@ -4632,7 +4738,7 @@ Index: kernel-rockchip/security/security.c
  {
  	return call_int_hook(binder_transfer_file, 0, from, to, file);
  }
-@@ -1146,6 +1146,7 @@ int security_path_chown(const struct pat
+@@ -1146,6 +1176,7 @@ int security_path_chown(const struct pat
  		return 0;
  	return call_int_hook(path_chown, 0, path, uid, gid);
  }
@@ -4644,7 +4750,7 @@ Index: kernel-rockchip/kernel/events/core.c
 ===================================================================
 --- kernel-rockchip.orig/kernel/events/core.c
 +++ kernel-rockchip/kernel/events/core.c
-@@ -11718,9 +11718,8 @@ again:
+@@ -11759,9 +11759,8 @@ again:
   * @cpu:		target cpu
   * @group_fd:		group leader event fd
   */
@@ -4656,7 +4762,7 @@ Index: kernel-rockchip/kernel/events/core.c
  {
  	struct perf_event *group_leader = NULL, *output_event = NULL;
  	struct perf_event *event, *sibling;
-@@ -12181,6 +12180,13 @@ err_fd:
+@@ -12222,6 +12221,13 @@ err_fd:
  	return err;
  }
  
@@ -4772,7 +4878,7 @@ Index: kernel-rockchip/drivers/android/binder.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/android/binder.c
 +++ kernel-rockchip/drivers/android/binder.c
-@@ -3273,7 +3273,7 @@ static void binder_transaction(struct bi
+@@ -3285,7 +3285,7 @@ static void binder_transaction(struct bi
  		size_t added_size;
  		int max_retries = 100;
  
@@ -4793,3 +4899,221 @@ Index: kernel-rockchip/include/trace/hooks/syscall_check.h
  #endif /* _TRACE_HOOK_SYSCALL_CHECK_H */
  /* This part must be outside protection */
  #include <trace/define_trace.h>
+Index: kernel-rockchip/kernel/kcmp.c
+===================================================================
+--- kernel-rockchip.orig/kernel/kcmp.c
++++ kernel-rockchip/kernel/kcmp.c
+@@ -149,8 +149,8 @@ static int kcmp_epoll_target(struct task
+ }
+ #endif
+ 
+-SYSCALL_DEFINE5(kcmp, pid_t, pid1, pid_t, pid2, int, type,
+-		unsigned long, idx1, unsigned long, idx2)
++int ksys_kcmp(pid_t pid1, pid_t pid2, int type,
++    unsigned long idx1, unsigned long idx2)
+ {
+ 	struct task_struct *task1, *task2;
+ 	int ret;
+@@ -242,6 +242,12 @@ err_no_task:
+ 	return -ESRCH;
+ }
+ 
++SYSCALL_DEFINE5(kcmp, pid_t, pid1, pid_t, pid2, int, type,
++    unsigned long, idx1, unsigned long, idx2)
++{
++  return ksys_kcmp(pid1, pid2, type, idx1, idx2);
++}
++
+ static __init int kcmp_cookies_init(void)
+ {
+ 	int i;
+Index: kernel-rockchip/include/linux/path.h
+===================================================================
+--- kernel-rockchip.orig/include/linux/path.h
++++ kernel-rockchip/include/linux/path.h
+@@ -5,9 +5,14 @@
+ struct dentry;
+ struct vfsmount;
+ 
++#define PATH_LINK_COUNT_VALID 0x80000000
++
+ struct path {
+ 	struct vfsmount *mnt;
+ 	struct dentry *dentry;
++#ifdef CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT
++  int link_count;
++#endif /* CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT */
+ } __randomize_layout;
+ 
+ extern void path_get(const struct path *);
+Index: kernel-rockchip/include/linux/lsm_audit.h
+===================================================================
+--- kernel-rockchip.orig/include/linux/lsm_audit.h
++++ kernel-rockchip/include/linux/lsm_audit.h
+@@ -74,6 +74,7 @@ struct common_audit_data {
+ #define LSM_AUDIT_DATA_FILE	12
+ #define LSM_AUDIT_DATA_IBPKEY	13
+ #define LSM_AUDIT_DATA_IBENDPORT 14
++#define LSM_AUDIT_DATA_LOCKDOWN 15
+ #define LSM_AUDIT_DATA_NOTIFICATION 16
+ 	union 	{
+ 		struct path path;
+@@ -94,6 +95,7 @@ struct common_audit_data {
+ 		struct file *file;
+ 		struct lsm_ibpkey_audit *ibpkey;
+ 		struct lsm_ibendport_audit *ibendport;
++    int reason;
+ 	} u;
+ 	/* this union contains LSM specific data */
+ 	union {
+Index: kernel-rockchip/security/lockdown/lockdown.c
+===================================================================
+--- kernel-rockchip.orig/security/lockdown/lockdown.c
++++ kernel-rockchip/security/lockdown/lockdown.c
+@@ -16,34 +16,6 @@
+ 
+ static enum lockdown_reason kernel_locked_down;
+ 
+-static const char *const lockdown_reasons[LOCKDOWN_CONFIDENTIALITY_MAX+1] = {
+-	[LOCKDOWN_NONE] = "none",
+-	[LOCKDOWN_MODULE_SIGNATURE] = "unsigned module loading",
+-	[LOCKDOWN_DEV_MEM] = "/dev/mem,kmem,port",
+-	[LOCKDOWN_EFI_TEST] = "/dev/efi_test access",
+-	[LOCKDOWN_KEXEC] = "kexec of unsigned images",
+-	[LOCKDOWN_HIBERNATION] = "hibernation",
+-	[LOCKDOWN_PCI_ACCESS] = "direct PCI access",
+-	[LOCKDOWN_IOPORT] = "raw io port access",
+-	[LOCKDOWN_MSR] = "raw MSR access",
+-	[LOCKDOWN_ACPI_TABLES] = "modifying ACPI tables",
+-	[LOCKDOWN_PCMCIA_CIS] = "direct PCMCIA CIS storage",
+-	[LOCKDOWN_TIOCSSERIAL] = "reconfiguration of serial port IO",
+-	[LOCKDOWN_MODULE_PARAMETERS] = "unsafe module parameters",
+-	[LOCKDOWN_MMIOTRACE] = "unsafe mmio",
+-	[LOCKDOWN_DEBUGFS] = "debugfs access",
+-	[LOCKDOWN_XMON_WR] = "xmon write access",
+-	[LOCKDOWN_BPF_WRITE_USER] = "use of bpf to write user RAM",
+-	[LOCKDOWN_INTEGRITY_MAX] = "integrity",
+-	[LOCKDOWN_KCORE] = "/proc/kcore access",
+-	[LOCKDOWN_KPROBES] = "use of kprobes",
+-	[LOCKDOWN_BPF_READ] = "use of bpf to read kernel RAM",
+-	[LOCKDOWN_PERF] = "unsafe use of perf",
+-	[LOCKDOWN_TRACEFS] = "use of tracefs",
+-	[LOCKDOWN_XMON_RW] = "xmon read and write access",
+-	[LOCKDOWN_CONFIDENTIALITY_MAX] = "confidentiality",
+-};
+-
+ static const enum lockdown_reason lockdown_levels[] = {LOCKDOWN_NONE,
+ 						 LOCKDOWN_INTEGRITY_MAX,
+ 						 LOCKDOWN_CONFIDENTIALITY_MAX};
+Index: kernel-rockchip/security/lsm_audit.c
+===================================================================
+--- kernel-rockchip.orig/security/lsm_audit.c
++++ kernel-rockchip/security/lsm_audit.c
+@@ -215,7 +215,7 @@ static void dump_common_audit_data(struc
+ 	 * start making this union too large!  See struct lsm_network_audit
+ 	 * as an example of how to deal with large data.
+ 	 */
+-	BUILD_BUG_ON(sizeof(a->u) > sizeof(void *)*2);
++	BUILD_BUG_ON(sizeof(a->u) > sizeof(void *)*3);
+ 
+ 	audit_log_format(ab, " pid=%d comm=", task_tgid_nr(current));
+ 	audit_log_untrustedstring(ab, memcpy(comm, current->comm, sizeof(comm)));
+@@ -433,6 +433,10 @@ static void dump_common_audit_data(struc
+ 				 a->u.ibendport->dev_name,
+ 				 a->u.ibendport->port);
+ 		break;
++	case LSM_AUDIT_DATA_LOCKDOWN:
++    audit_log_format(ab, " lockdown_reason=\"%s\"",
++         lockdown_reasons[a->u.reason]);
++    break;
+ 	} /* switch (a->type) */
+ }
+ 
+Index: kernel-rockchip/fs/namei.c
+===================================================================
+--- kernel-rockchip.orig/fs/namei.c
++++ kernel-rockchip/fs/namei.c
+@@ -55,8 +55,8 @@
+  * The new code replaces the old recursive symlink resolution with
+  * an iterative one (in case of non-nested symlink chains).  It does
+  * this with calls to <fs>_follow_link().
+- * As a side effect, dir_namei(), _namei() and follow_link() are now 
+- * replaced with a single function lookup_dentry() that can handle all 
++ * As a side effect, dir_namei(), _namei() and follow_link() are now
++ * replaced with a single function lookup_dentry() that can handle all
+  * the special cases of the former code.
+  *
+  * With the new dcache, the pathname is stored at each inode, at least as
+@@ -2466,6 +2466,9 @@ int filename_lookup(int dfd, struct file
+ 	if (likely(!retval))
+ 		audit_inode(name, path->dentry,
+ 			    flags & LOOKUP_MOUNTPOINT ? AUDIT_INODE_NOEVAL : 0);
++#ifdef CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT
++  path->link_count = nd.total_link_count | PATH_LINK_COUNT_VALID;
++#endif /* CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT */
+ 	restore_nameidata();
+ 	putname(name);
+ 	return retval;
+@@ -2511,6 +2514,9 @@ static struct filename *filename_parenta
+ 		putname(name);
+ 		name = ERR_PTR(retval);
+ 	}
++#ifdef CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT
++  parent->link_count = nd.total_link_count | PATH_LINK_COUNT_VALID;
++#endif /* CONFIG_SECURITY_CHROMIUMOS_NO_SYMLINK_MOUNT */
+ 	restore_nameidata();
+ 	return name;
+ }
+Index: kernel-rockchip/fs/proc/base.c
+===================================================================
+--- kernel-rockchip.orig/fs/proc/base.c
++++ kernel-rockchip/fs/proc/base.c
+@@ -151,6 +151,12 @@ struct pid_entry {
+ 		NULL, &proc_pid_attr_operations,	\
+ 		{ .lsm = LSM })
+ 
++#ifdef CONFIG_SECURITY_CHROMIUMOS_READONLY_PROC_SELF_MEM
++# define PROC_PID_MEM_MODE S_IRUSR
++#else
++# define PROC_PID_MEM_MODE S_IRUSR|S_IWUSR
++#endif
++
+ /*
+  * Count the number of hardlinks for the pid_entry table, excluding the .
+  * and .. links.
+@@ -2649,7 +2655,7 @@ static struct dentry *proc_pident_instan
+ 	return d_splice_alias(inode, dentry);
+ }
+ 
+-static struct dentry *proc_pident_lookup(struct inode *dir, 
++static struct dentry *proc_pident_lookup(struct inode *dir,
+ 					 struct dentry *dentry,
+ 					 const struct pid_entry *p,
+ 					 const struct pid_entry *end)
+@@ -2862,7 +2868,7 @@ static const struct pid_entry attr_dir_s
+ 
+ static int proc_attr_dir_readdir(struct file *file, struct dir_context *ctx)
+ {
+-	return proc_pident_readdir(file, ctx, 
++	return proc_pident_readdir(file, ctx,
+ 				   attr_dir_stuff, ARRAY_SIZE(attr_dir_stuff));
+ }
+ 
+@@ -3232,7 +3238,7 @@ static const struct pid_entry tgid_base_
+ #ifdef CONFIG_NUMA
+ 	REG("numa_maps",  S_IRUGO, proc_pid_numa_maps_operations),
+ #endif
+-	REG("mem",        S_IRUSR|S_IWUSR, proc_mem_operations),
++	REG("mem",        PROC_PID_MEM_MODE, proc_mem_operations),
+ 	LNK("cwd",        proc_cwd_link),
+ 	LNK("root",       proc_root_link),
+ 	LNK("exe",        proc_exe_link),
+@@ -3577,7 +3583,7 @@ static const struct pid_entry tid_base_s
+ #ifdef CONFIG_NUMA
+ 	REG("numa_maps", S_IRUGO, proc_pid_numa_maps_operations),
+ #endif
+-	REG("mem",       S_IRUSR|S_IWUSR, proc_mem_operations),
++	REG("mem",       PROC_PID_MEM_MODE, proc_mem_operations),
+ 	LNK("cwd",       proc_cwd_link),
+ 	LNK("root",      proc_root_link),
+ 	LNK("exe",       proc_exe_link),
