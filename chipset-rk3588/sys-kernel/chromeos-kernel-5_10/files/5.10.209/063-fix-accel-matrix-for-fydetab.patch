@@ -1,0 +1,68 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -456,6 +456,9 @@
+             interrupts = <RK_PD3 IRQ_TYPE_LEVEL_LOW>;
+             pinctrl-names = "default";
+             pinctrl-0 = <&gyr_int_l>;
++            mount-matrix = "0", "-1", "0",
++                           "-1", "0", "0",
++                           "0", "0", "1";
+     };
+ };
+ 
+Index: kernel-rockchip/drivers/iio/accel/st_accel_core.c
+===================================================================
+--- kernel-rockchip.orig/drivers/iio/accel/st_accel_core.c
++++ kernel-rockchip/drivers/iio/accel/st_accel_core.c
+@@ -1069,7 +1069,6 @@ static const struct iio_trigger_ops st_a
+ #define ST_ACCEL_TRIGGER_OPS NULL
+ #endif
+ 
+-#ifdef CONFIG_ACPI
+ static const struct iio_mount_matrix *
+ get_mount_matrix(const struct iio_dev *indio_dev,
+ 		 const struct iio_chan_spec *chan)
+@@ -1084,6 +1083,7 @@ static const struct iio_chan_spec_ext_in
+ 	{ },
+ };
+ 
++#ifdef CONFIG_ACPI
+ /* Read ST-specific _ONT orientation data from ACPI and generate an
+  * appropriate mount matrix.
+  */
+@@ -1222,6 +1222,20 @@ out:
+ static int apply_acpi_orientation(struct iio_dev *indio_dev,
+ 				  struct iio_chan_spec *channels)
+ {
++  int ret;
++  int i;
++  struct st_sensor_data *adata = iio_priv(indio_dev);
++  adata->mount_matrix = devm_kmalloc(&indio_dev->dev,
++               sizeof(*adata->mount_matrix),
++               GFP_KERNEL);
++  if (!adata->mount_matrix)
++     return -ENOMEM;
++  ret = iio_read_mount_matrix(adata->dev, "mount-matrix", adata->mount_matrix);
++  if (ret)
++    return ret;
++  for (i = 0; i < indio_dev->num_channels; i++)
++    channels[i].ext_info = mount_matrix_ext_info;
++  dev_info(&indio_dev->dev, "install mount matrix from device tree.\n");
+ 	return 0;
+ }
+ #endif
+Index: kernel-rockchip/include/linux/iio/iio.h
+===================================================================
+--- kernel-rockchip.orig/include/linux/iio/iio.h
++++ kernel-rockchip/include/linux/iio/iio.h
+@@ -141,7 +141,7 @@ typedef const struct iio_mount_matrix *
+  */
+ #define IIO_MOUNT_MATRIX(_shared, _get) \
+ { \
+-	.name = "mount_matrix", \
++	.name = "in_accel_mount_matrix", \
+ 	.shared = (_shared), \
+ 	.read = iio_show_mount_matrix, \
+ 	.private = (uintptr_t)(_get), \
