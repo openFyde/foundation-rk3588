@@ -1,0 +1,4 @@
+post-start script
+  modprobe rtkm
+  insmod /lib/modules/*/kernel/drivers/net/wireless/rockchip_wlan/rtl8852be/8852be.ko
+end script

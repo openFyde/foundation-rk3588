@@ -41,7 +41,7 @@ Index: kernel-rockchip/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
 +  }
  	ioctl_ret = kbase_kfile_ioctl(kfile, cmd, arg);
 +  if (ioctl_ret < 0)
-+    pr_err("ioctl cmd:%u, arg:%lu ret:%d\n", cmd & 0xFF, arg, ioctl_ret);
++    pr_err("ioctl cmd:%u, arg:%lu ret:%ld\n", cmd & 0xFF, arg, ioctl_ret);
  	kbase_file_dec_fops_count(kfile);
  
  	return ioctl_ret;

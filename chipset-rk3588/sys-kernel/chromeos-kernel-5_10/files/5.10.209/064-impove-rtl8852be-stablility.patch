@@ -1,0 +1,113 @@
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/Makefile
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/Makefile
+@@ -93,7 +93,7 @@ DIRTY_FOR_WORK = y
+ 
+ CONFIG_DRV_FAKE_AP = n
+ 
+-CONFIG_DBG_AX_CAM = y
++CONFIG_DBG_AX_CAM = n
+ 
+ USE_TRUE_PHY = y
+ CONFIG_I386_BUILD_VERIFY = n
+@@ -109,13 +109,13 @@ EXTRA_CFLAGS += -DCONFIG_RTW_ANDROID=$(C
+ endif
+ 
+ ########################## Debug ###########################
+-CONFIG_RTW_DEBUG = y
++CONFIG_RTW_DEBUG = n
+ # default log level is _DRV_INFO_ = 4,
+ # please refer to "How_to_set_driver_debug_log_level.doc" to set the available level.
+-CONFIG_RTW_LOG_LEVEL = 4
++CONFIG_RTW_LOG_LEVEL = 0
+ 
+ # enable /proc/net/rtlxxxx/ debug interfaces
+-CONFIG_PROC_DEBUG = y
++CONFIG_PROC_DEBUG = n
+ 
+ ######################## Wake On Lan ##########################
+ CONFIG_WOWLAN = n
+@@ -131,7 +131,7 @@ CONFIG_WOW_LPS_MODE = default
+ CONFIG_SUSPEND_TYPE = 0
+ CONFIG_WOW_STA_MIX = n
+ CONFIG_GPIO_WAKEUP = n
+-# Please contact with RTK support team first. After getting the agreement from RTK support team, 
++# Please contact with RTK support team first. After getting the agreement from RTK support team,
+ # you are just able to modify the CONFIG_WAKEUP_GPIO_IDX with customized requirement.
+ CONFIG_WAKEUP_GPIO_IDX = default
+ CONFIG_HIGH_ACTIVE_DEV2HST = n
+@@ -192,14 +192,12 @@ ifeq ($(CONFIG_HWSIM), y)
+ else
+ 	HAL = phl
+ endif
+-DRV_PATH = $(S)/drivers/net/wireless/rockchip_wlan/rtl8852be
+ 
+ ifeq ($(CONFIG_PLATFORM_RTL8198D), y)
+ DRV_PATH = $(src)
+ else
+-DRV_PATH ?= $(TopDIR)
+-endif
+ DRV_PATH = $(S)/drivers/net/wireless/rockchip_wlan/rtl8852be
++endif
+ 
+ ########### HAL_RTL8852A #################################
+ ifeq ($(CONFIG_RTL8852A), y)
+@@ -627,7 +625,6 @@ include $(S)/drivers/net/wireless/rockch
+ 
+ 
+ obj-$(CONFIG_RTL8852BE) := $(MODULE_NAME).o
+-obj-$(CONFIG_RTL8852BE) := $(MODULE_NAME).o
+ $(MODULE_NAME)-y = $(OBJS)
+ 
+ ############# MEMORY MANAGMENT #############
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/platform/arm_rk3188.mk
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/platform/arm_rk3188.mk
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/platform/arm_rk3188.mk
+@@ -4,17 +4,14 @@ CONFIG_RTKM = m
+ EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+ EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
+ EXTRA_CFLAGS += -DCONFIG_RADIO_WORK
+-EXTRA_CFLAGS += -DCONFIG_CONCURRENT_MODE
++#EXTRA_CFLAGS += -DCONFIG_CONCURRENT_MODE
++EXTRA_CFLAGS += -DCONFIG_IFACE_NUMBER=1
+ ifeq ($(shell test $(CONFIG_RTW_ANDROID) -ge 11; echo $$?), 0)
+ EXTRA_CFLAGS += -DCONFIG_IFACE_NUMBER=3
+ #EXTRA_CFLAGS += -DCONFIG_SEL_P2P_IFACE=1
+ #EXTRA_CFLAGS += -DCONFIG_PLATFORM_ROCKCHIPS
+ endif
+ 
+-ARCH := arm
+-CROSS_COMPILE := /home/android_sdk/Rockchip/Rk3188/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
+-KSRC := /home/android_sdk/Rockchip/Rk3188/kernel
+-
+ ifeq ($(CONFIG_PCI_HCI), y)
+ EXTRA_CFLAGS += -DCONFIG_PLATFORM_OPS
+ _PLATFORM_FILES := platform/platform_linux_pc_pci.o
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/Kconfig
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/Kconfig
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/Kconfig
+@@ -1,6 +1,5 @@
+ config RTL8852BE
+ 	tristate "Realtek 8852B PCIE WiFi"
+-	depends on PCIE
+-	---help---
++	depends on PCI
++	help
+ 	  Help message of RTL8852BE
+-
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_mr.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_mr.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rtl8852be/phl/phl_mr.c
+@@ -3594,7 +3594,7 @@ _phl_mr_2g_scc_1ap_1sta_btc_disable(stru
+ 	struct rtw_wifi_role_t *ap_wr = NULL;
+ 
+ 	if (!_mr_is_2g_scc_1ap_1sta(phl, band_idx, &ap_wr)) {
+-		PHL_TRACE(COMP_PHL_MCC, _PHL_WARNING_, "%s: It¡¦s not 2g_scc_1ap_1sta\n",
++		PHL_TRACE(COMP_PHL_MCC, _PHL_WARNING_, "%s: It's not 2g_scc_1ap_1sta\n",
+ 			__FUNCTION__);
+ 		goto exit;
+ 	}

@@ -83,10 +83,12 @@ Index: kernel-rockchip/drivers/misc/redriver/pi3dpx1207c.c
  		{0x13 ,0x11 ,0x20 ,0x52 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
  		{0x13 ,0x11 ,0x20 ,0x82 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
  	}
-@@ -75,10 +77,11 @@ static int pi3dpx_notifier_call(struct n
+@@ -74,11 +76,12 @@ static int pi3dpx_notifier_call(struct n
+     return NOTIFY_OK;
    priv->typec_state = val;
    priv->flip = *flip;
-   pr_info("typec state:%ul, flip:%d", priv->typec_state, priv->flip);
+-  pr_info("typec state:%ul, flip:%d", priv->typec_state, priv->flip);
++  pr_info("typec state:%lu, flip:%d", priv->typec_state, priv->flip);
 +  mutex_lock(&priv->i2c_rw_lock);
  	switch (priv->typec_state) {
  		case TYPEC_DP_STATE_E:

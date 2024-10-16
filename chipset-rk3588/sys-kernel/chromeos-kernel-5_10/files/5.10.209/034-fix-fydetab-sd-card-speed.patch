@@ -2,14 +2,25 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-@@ -428,6 +428,7 @@
-   max-frequency = <150000000>;
+@@ -425,14 +425,15 @@
+ };
+ 
+ &sdmmc {
+-  max-frequency = <150000000>;
++  max-frequency = <99000000>;
    no-sdio;
    no-mmc;
 +  bus-width = <4>;
    cap-sd-highspeed;
    cap-mmc-highspeed;
-  // clock-frequency = <100000000>;
+- // clock-frequency = <100000000>;
++//  clock-frequency = <49500000>;
+   disable-wp;
+- // sd-uhs-sdr104;
++// sd-uhs-sdr104;
+   cd-gpios = <&gpio0 RK_PA4 0>;
+   card-detect-delay = <800>;
+   vmmc-supply = <&vcc_3v3_sd_s0>;
 Index: kernel-rockchip/drivers/soc/rockchip/Kconfig
 ===================================================================
 --- kernel-rockchip.orig/drivers/soc/rockchip/Kconfig
