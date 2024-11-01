@@ -1,0 +1,26 @@
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -138,7 +138,7 @@
+                 "RINPUT1", "Headset Mic",
+                 "RINPUT2", "Headset Mic";
+         pinctrl-names = "default";
+-        pinctrl-0 = <&hp_det>;
++        pinctrl-0 = <&hp_det>, <&spk_con>, <&hp_con>;
+         play-pause-key {
+                 label = "playpause";
+                 linux,code = <KEY_PLAYPAUSE>;
+@@ -723,6 +723,12 @@
+         hp_det: hp-det {
+             rockchip,pins = <1 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
+         };
++        spk_con: spk-con {
++            rockchip,pins = <4 RK_PA5 RK_FUNC_GPIO &pcfg_pull_down>;
++        };
++        hp_con: hp-con {
++            rockchip,pins = <4 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>;
++        };
+     };
+ 
+ 	hym8563 {

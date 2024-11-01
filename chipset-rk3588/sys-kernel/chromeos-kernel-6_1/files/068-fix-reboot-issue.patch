@@ -1,0 +1,126 @@
+Index: kernel-rockchip-6_1/net/rfkill/rfkill-wlan.c
+===================================================================
+--- kernel-rockchip-6_1.orig/net/rfkill/rfkill-wlan.c
++++ kernel-rockchip-6_1/net/rfkill/rfkill-wlan.c
+@@ -178,6 +178,10 @@ int rfkill_set_wifi_bt_power(int on)
+ 	struct rksdmmc_gpio *vbat;
+ 
+ 	LOG("%s: %d\n", __func__, on);
++  if (on == wifi_bt_vbat_state) {
++    LOG("%s: bt power is already set to %d\n", __func__, on);
++    return 0;
++  }
+ 
+ 	if (!mrfkill) {
+ 		LOG("%s: rfkill-wlan driver has not Successful initialized\n",
+@@ -234,6 +238,10 @@ int rockchip_wifi_power(int on)
+ 	bool toggle = false;
+ 
+ 	LOG("%s: %d\n", __func__, on);
++  if (wifi_power_state == on) {
++    LOG("%s: wifi power is already set to %d\n", __func__, on);
++    return 0;
++  }
+ 
+ 	if (!mrfkill) {
+ 		LOG("%s: rfkill-wlan driver has not Successful initialized\n",
+Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/input/touchscreen/hxchipset/himax_platform.c
++++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
+@@ -133,7 +133,7 @@ int himax_ts_check_dt(struct device_node
+ 		if (!IS_ERR(panel)) {
+ 			I("%s find drm_panel successfully\n", __func__);
+ 			active_panel = panel;
+-			I("active_panel=%s\n", active_panel);
++			I("active_panel=%s\n", dev_name(active_panel->dev));
+ 			return 0;
+ 		}
+ 	}
+@@ -1258,10 +1258,23 @@ static const struct of_device_id himax_m
+ #define himax_match_table NULL
+ #endif
+ 
++void himax_shutdown(struct i2c_client *client) {
++#if defined(HX_CONFIG_DRM_PANEL)
++  struct himax_ts_data *ts = private_ts;
++  if (active_panel) {
++    drm_panel_notifier_unregister(active_panel,
++      &ts->fb_notif);
++    himax_chip_common_suspend(ts);
++    active_panel = NULL;
++  }
++#endif
++}
++
+ static struct i2c_driver himax_common_driver = {
+ 	.id_table	= himax_common_ts_id,
+ 	.probe		= himax_chip_common_probe,
+ 	.remove		= himax_chip_common_remove,
++  .shutdown = himax_shutdown,
+ 	.driver		= {
+ 		.name = HIMAX_common_NAME,
+ 		.owner = THIS_MODULE,
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -308,8 +308,8 @@
+ 		enable-delay-ms = <120>;
+ 		prepare-delay-ms = <120>;
+ 		init-delay-ms = <120>;
+-		unprepare-delay-ms = <500>;
+-		disable-delay-ms = <120>;
++		unprepare-delay-ms = <0>;
++		disable-delay-ms = <0>;
+ 		compressed-data;
+ 		dsi,flags = <(MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST | MIPI_DSI_MODE_LPM | MIPI_DSI_MODE_NO_EOT_PACKET)>;
+ 		dsi,format = <MIPI_DSI_FMT_RGB888>;
+Index: kernel-rockchip-6_1/drivers/input/sensors/hall/mh248-fyde.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/input/sensors/hall/mh248-fyde.c
++++ kernel-rockchip-6_1/drivers/input/sensors/hall/mh248-fyde.c
+@@ -105,11 +105,19 @@ static int hall_mh248_probe(struct platf
+ 	}
+ 
+ 	enable_irq_wake(mh248->irq);
++  platform_set_drvdata(pdev, mh248);
+ 	dev_info(mh248->dev, "hall_mh248-fyde_probe success.\n");
+ 
+ 	return 0;
+ }
+ 
++void hall_mh248_shutdown(struct platform_device *pdev)
++{
++  struct mh248_para *mh248 = (struct mh248_para*) platform_get_drvdata(pdev);
++  disable_irq_wake(mh248->irq);
++  pr_info("%s end\n", __func__);
++}
++
+ static const struct of_device_id hall_mh248_match[] = {
+ 	{ .compatible = "hall-mh248-fyde" },
+ 	{ /* Sentinel */ }
+@@ -117,6 +125,7 @@ static const struct of_device_id hall_mh
+ 
+ static struct platform_driver hall_mh248_driver = {
+ 	.probe = hall_mh248_probe,
++  .shutdown = hall_mh248_shutdown,
+ 	.driver = {
+ 		.name = "mh248-fyde",
+ 		.owner = THIS_MODULE,
+Index: kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
++++ kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+@@ -325,7 +325,10 @@ static void husb311_shutdown(struct i2c_
+ 
+ 	disable_irq(client->irq);
+ 	cancel_delayed_work_sync(&chip->pm_work);
+-	tcpci_unregister_port(chip->tcpci);
++/*
++  Fydetab need type C port to keep power supply.
++*/
++/*	tcpci_unregister_port(chip->tcpci); */
+ }
+ 
+ static int husb311_pm_suspend(struct device *dev)

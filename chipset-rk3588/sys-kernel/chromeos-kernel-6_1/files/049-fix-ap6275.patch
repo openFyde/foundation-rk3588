@@ -1,0 +1,13 @@
+Index: kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
++++ kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+@@ -40,7 +40,7 @@ CONFIG_BCMDHD_AUTO_SELECT := y
+ #CONFIG_BCMDHD_TIMESTAMP := y
+ #CONFIG_BCMDHD_WAPI := y
+ #CONFIG_BCMDHD_RANDOM_MAC := y
+-CONFIG_BCMDHD_REQUEST_FW := y
++#CONFIG_BCMDHD_REQUEST_FW := y
+ #CONFIG_BCMDHD_FW_SIGNATURE := y
+ #CONFIG_BCMDHD_DWDS := y
+ CONFIG_BCMDHD_TPUT := y

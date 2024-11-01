@@ -1,0 +1,13 @@
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
+@@ -12,7 +12,7 @@
+ 	};
+ 
+ 	chosen: chosen {
+-		bootargs = "earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 irqchip.gicv3_pseudo_nmi=0 root=PARTUUID=614e0000-0000 rw rootwait rcupdate.rcu_expedited=1 rcu_nocbs=all";
++		bootargs = "earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 irqchip.gicv3_pseudo_nmi=0 rcupdate.rcu_expedited=1 rcu_nocbs=all";
+ 	};
+ 
+ 	cspmu: cspmu@fd10c000 {

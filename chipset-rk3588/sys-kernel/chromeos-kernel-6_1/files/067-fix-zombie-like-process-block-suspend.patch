@@ -1,0 +1,22 @@
+Index: kernel-rockchip-6_1/kernel/power/process.c
+===================================================================
+--- kernel-rockchip-6_1.orig/kernel/power/process.c
++++ kernel-rockchip-6_1/kernel/power/process.c
+@@ -37,6 +37,8 @@ static int try_to_freeze_tasks(bool user
+ 	unsigned int elapsed_msecs;
+ 	bool wakeup = false;
+ 	int sleep_usecs = USEC_PER_MSEC;
++  /* zombie like process name */
++  const char *zombie_name = "CachedAppOptimi";
+ 
+ 	pr_info("Freezing %s\n", what);
+ 
+@@ -53,6 +55,8 @@ static int try_to_freeze_tasks(bool user
+ 		for_each_process_thread(g, p) {
+ 			if (p == current || !freeze_task(p))
+ 				continue;
++      if (!strncmp(p->comm, zombie_name, 15))
++        continue;
+ 
+ 			todo++;
+ 		}

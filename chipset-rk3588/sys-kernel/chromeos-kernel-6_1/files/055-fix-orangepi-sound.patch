@@ -1,0 +1,62 @@
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+@@ -126,7 +126,7 @@
+ 	dp0_sound: dp0-sound {
+ 		status = "disabled";
+ 		compatible = "rockchip,hdmi";
+-		rockchip,card-name= "rockchip-dp0";
++		rockchip,card-name= "TYPEC-HDMI";
+ 		rockchip,mclk-fs = <512>;
+ 		rockchip,cpu = <&spdif_tx2>;
+ 		rockchip,codec = <&dp0 1>;
+@@ -137,7 +137,7 @@
+ 		status = "disabled";
+ 		compatible = "rockchip,hdmi";
+ 		rockchip,mclk-fs = <128>;
+-		rockchip,card-name = "rockchip-hdmi0";
++		rockchip,card-name = "rockchip-HDMI";
+ 		rockchip,cpu = <&i2s5_8ch>;
+ 		rockchip,codec = <&hdmi0>;
+ 		rockchip,jack-det;
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+@@ -87,7 +87,7 @@
+ 	dp0_sound: dp0-sound {
+ 		status = "disabled";
+ 		compatible = "rockchip,hdmi";
+-		rockchip,card-name= "rockchip,dp0";
++		rockchip,card-name= "dp0-HDMI";
+ 		rockchip,mclk-fs = <512>;
+ 		rockchip,cpu = <&spdif_tx2>;
+ 		rockchip,codec = <&dp0 1>;
+@@ -97,7 +97,7 @@
+ 	dp1_sound: dp1-sound {
+ 		status = "disabled";
+ 		compatible = "rockchip,hdmi";
+-		rockchip,card-name= "rockchip,dp1";
++		rockchip,card-name= "dp1-HDMI";
+ 		rockchip,mclk-fs = <512>;
+ 		rockchip,cpu = <&spdif_tx5>;
+ 		rockchip,codec = <&dp1 1>;
+@@ -108,7 +108,7 @@
+ 		status = "disabled";
+ 		compatible = "rockchip,hdmi";
+ 		rockchip,mclk-fs = <128>;
+-		rockchip,card-name = "rockchip-hdmi0";
++		rockchip,card-name = "rockchip0-HDMI";
+ 		rockchip,cpu = <&i2s5_8ch>;
+ 		rockchip,codec = <&hdmi0>;
+ 		rockchip,jack-det;
+@@ -118,7 +118,7 @@
+ 		status = "disabled";
+ 		compatible = "rockchip,hdmi";
+ 		rockchip,mclk-fs = <128>;
+-		rockchip,card-name = "rockchip-hdmi1";
++		rockchip,card-name = "rockchip1-HDMI";
+ 		rockchip,cpu = <&i2s6_8ch>;
+ 		rockchip,codec = <&hdmi1>;
+ 		rockchip,jack-det;

@@ -1,3 +1,5 @@
 sys-kernel/chromeos-kernel-5_10::chromiumos
 sys-kernel/chromeos-kernel-5_10::openfyde-patches
+sys-kernel/chromeos-kernel-6_1::chromiumos
+sys-kernel/chromeos-kernel-6_1::openfyde-patches
 media-libs/libv4lplugins::chromiumos

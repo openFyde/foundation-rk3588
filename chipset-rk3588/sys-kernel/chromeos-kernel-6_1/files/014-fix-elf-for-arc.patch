@@ -1,0 +1,13 @@
+Index: kernel-rockchip-6_1/arch/arm64/kernel/vdso/Makefile
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/kernel/vdso/Makefile
++++ kernel-rockchip-6_1/arch/arm64/kernel/vdso/Makefile
+@@ -40,7 +40,7 @@ ccflags-y += -DDISABLE_BRANCH_PROFILING
+ # kernel with CONFIG_WERROR enabled.
+ CFLAGS_REMOVE_vgettimeofday.o = $(CC_FLAGS_FTRACE) -Os $(CC_FLAGS_SCS) \
+ 				$(RANDSTRUCT_CFLAGS) $(GCC_PLUGINS_CFLAGS) \
+-				$(CC_FLAGS_LTO) $(CC_FLAGS_CFI) \
++				$(CC_FLAGS_CFI) \
+ 				-Wmissing-prototypes -Wmissing-declarations
+ KASAN_SANITIZE			:= n
+ KCSAN_SANITIZE			:= n

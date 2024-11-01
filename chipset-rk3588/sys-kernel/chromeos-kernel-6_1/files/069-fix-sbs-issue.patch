@@ -1,0 +1,198 @@
+Index: kernel-rockchip-6_1/drivers/power/supply/sbs-battery.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/power/supply/sbs-battery.c
++++ kernel-rockchip-6_1/drivers/power/supply/sbs-battery.c
+@@ -4,7 +4,6 @@
+  *
+  * Copyright (c) 2010, NVIDIA Corporation.
+  */
+-
+ #include <linux/bits.h>
+ #include <linux/delay.h>
+ #include <linux/devm-helpers.h>
+@@ -106,7 +105,7 @@ static const struct chip_data {
+ 	[REG_TEMPERATURE] =
+ 		SBS_DATA(POWER_SUPPLY_PROP_TEMP, 0x08, 0, 65535),
+ 	[REG_VOLTAGE] =
+-		SBS_DATA(POWER_SUPPLY_PROP_VOLTAGE_NOW, 0x09, 0, 65535),
++		SBS_DATA(POWER_SUPPLY_PROP_VOLTAGE_NOW, 0x09, 0, 20000),
+ 	[REG_CURRENT_NOW] =
+ 		SBS_DATA(POWER_SUPPLY_PROP_CURRENT_NOW, 0x0A, -32768, 32767),
+ 	[REG_CURRENT_AVG] =
+@@ -217,9 +216,9 @@ struct sbs_info {
+ 	struct delayed_work		work;
+ 	struct mutex			mode_lock;
+ 	u32				flags;
+-  struct timer_list timer;
+ 	int				technology;
+ 	char				strings[NR_STRING_BUFFERS][I2C_SMBUS_BLOCK_MAX + 1];
++  struct timer_list timer;
+ };
+ 
+ static char *sbs_get_string_buf(struct sbs_info *chip,
+@@ -656,6 +655,13 @@ static int sbs_get_battery_property(stru
+ 
+ 		sbs_status_correct(client, &val->intval);
+ 
++		if (chip->poll_time == 0)
++			chip->last_state = val->intval;
++		else if (chip->last_state != val->intval) {
++			cancel_delayed_work_sync(&chip->work);
++			power_supply_changed(chip->power_supply);
++			chip->poll_time = 0;
++		}
+ 	} else {
+ 		if (psp == POWER_SUPPLY_PROP_STATUS)
+ 			val->intval = POWER_SUPPLY_STATUS_UNKNOWN;
+@@ -667,13 +673,6 @@ static int sbs_get_battery_property(stru
+ 		else
+ 			val->intval = 0;
+ 	}
+-	if (chip->poll_time == 0)
+-		chip->last_state = val->intval;
+-	else if (chip->last_state != val->intval) {
+-		cancel_delayed_work_sync(&chip->work);
+-		power_supply_changed(chip->power_supply);
+-		chip->poll_time = 0;
+-	}
+ 
+ 	return 0;
+ }
+@@ -864,9 +863,9 @@ static int sbs_get_chemistry(struct sbs_
+ 	else if (!strncasecmp(chemistry, "NiMH", 4))
+ 		chip->technology = POWER_SUPPLY_TECHNOLOGY_NiMH;
+   else if (!strncasecmp(chemistry, "3613", 4))
+-    val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
++    chip->technology = POWER_SUPPLY_TECHNOLOGY_LION;
+   else if (!strncasecmp(chemistry, "1550", 4))
+-    val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
++    chip->technology = POWER_SUPPLY_TECHNOLOGY_LION;
+ 	else
+ 		chip->technology = POWER_SUPPLY_TECHNOLOGY_UNKNOWN;
+ 
+@@ -1047,14 +1046,10 @@ static void sbs_supply_changed(struct sb
+ 	struct power_supply *battery = chip->power_supply;
+ 	int ret;
+ 
+-  if (chip->gpio_detect) {
+-  	ret = gpiod_get_value_cansleep(chip->gpio_detect);
+-  	if (ret < 0)
+-  		return;
+-	  sbs_update_presence(chip, ret);
+-  }else {
+-    sbs_update_presence(chip, 1);
+-  }
++	ret = gpiod_get_value_cansleep(chip->gpio_detect);
++	if (ret < 0)
++		return;
++	sbs_update_presence(chip, ret);
+ 	power_supply_changed(battery);
+ }
+ 
+@@ -1126,7 +1121,8 @@ static const struct power_supply_desc sb
+ 
+ void sbs_timed_poll(struct timer_list * t) {
+   struct sbs_info *chip = from_timer(chip, t, timer);
+-  sbs_external_power_changed(chip->power_supply);
++	schedule_delayed_work(&chip->work, 0);
++	chip->poll_time = 0;
+   mod_timer(t, jiffies + msecs_to_jiffies(SBS_POLL_TIME_OUT));
+ }
+ 
+@@ -1280,8 +1276,8 @@ skip_gpio:
+ 		return dev_err_probe(&client->dev, PTR_ERR(chip->power_supply),
+ 				     "Failed to register power supply\n");
+ 
+-  if (!chip->gpio_detect)
+-    sbs_timed_poll_start(chip);
++	if (!chip->gpio_detect)
++		sbs_timed_poll_start(chip);
+   sbs_init_sysfs(chip);
+ 	dev_info(&client->dev,
+ 		"%s: battery gas gauge device registered\n", client->name);
+@@ -1289,12 +1285,12 @@ skip_gpio:
+ 	return 0;
+ }
+ 
+-void sbs_remove(struct i2c_client *client)
++void sbs_shutdown(struct i2c_client *client)
+ {
+-  struct sbs_info *chip = i2c_get_clientdata(client);
+-  if (!chip->gpio_detect)
+-    sbs_timed_poll_stop(chip);
+-  cancel_delayed_work_sync(&chip->work);
++	struct sbs_info *chip = i2c_get_clientdata(client);
++	if (!chip->gpio_detect)
++		sbs_timed_poll_stop(chip);
++	cancel_delayed_work_sync(&chip->work);
+ }
+ 
+ #if defined CONFIG_PM_SLEEP
+@@ -1351,7 +1347,7 @@ MODULE_DEVICE_TABLE(of, sbs_dt_ids);
+ 
+ static struct i2c_driver sbs_battery_driver = {
+ 	.probe_new	= sbs_probe,
+-	.remove   = sbs_remove,
++	.shutdown = sbs_shutdown,
+ 	.alert		= sbs_alert,
+ 	.id_table	= sbs_id,
+ 	.driver = {
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -491,12 +491,9 @@
+     battery: sbs-battery@b {
+ 			status = "okay";
+       compatible = "sbs,sbs-battery";
+-      pinctrl-names = "default";
+-      pinctrl-0 = <&sbs_battery_det>;
+       reg = <0x0b>;
+       sbs,poll-retry-count = <100>;
+       sbs,i2c-retry-count = <100>;
+-      sbs,battery-detect = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
+     };
+ };
+ 
+@@ -513,6 +510,7 @@
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&usbc0_int>;
+ 		vbus-supply = <&vbus5v0_typec>;
++    wakeup-source;
+ 		status = "okay";
+ 
+ 		ports {
+@@ -762,9 +760,6 @@
+ 		batt_in_en: batt-in-en {
+ 			rockchip,pins = <3 RK_PC4 RK_FUNC_GPIO &pcfg_pull_up>;
+ 		};
+-    sbs_battery_det: sbs-battery-det {
+-      rockchip,pins = <0 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+-    };
+ 	};
+ 
+ 	touch {
+Index: kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
++++ kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+@@ -274,11 +274,6 @@ static int husb311_probe(struct i2c_clie
+ 			return ret;
+ 	}
+ 
+-  if (regulator_get_mode(chip->vbus) == REGULATOR_MODE_INVALID) {
+-          pr_info("[DEBUG] husb311 -> vbus = NULL\n");
+-          chip->vbus = NULL;
+-  }
+-
+ 	ret = husb311_sw_reset(chip);
+ 	if (ret < 0) {
+ 		dev_err(chip->dev, "fail to soft reset, ret = %d\n", ret);
+@@ -303,6 +298,7 @@ static int husb311_probe(struct i2c_clie
+ 
+ 	chip->wakeup = device_property_read_bool(chip->dev, "wakeup-source");
+ 	device_init_wakeup(chip->dev, true);
++  enable_irq_wake(client->irq);
+ 
+ 	return 0;
+ }

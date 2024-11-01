@@ -1,0 +1,98 @@
+Index: kernel-rockchip-6_1/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
++++ kernel-rockchip-6_1/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+@@ -2000,7 +2000,12 @@ struct dma_buf *rockchip_drm_gem_prime_e
+ 
+ DEFINE_DRM_GEM_FOPS(rockchip_drm_driver_fops);
+ 
++static int rockchip_drm_load(struct drm_device *dev, unsigned long flags) {
++  return 0;
++}
++
+ static struct drm_driver rockchip_drm_driver = {
++  .load = rockchip_drm_load,
+ 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC | DRIVER_RENDER,
+ 	.postclose		= rockchip_drm_postclose,
+ 	.lastclose		= rockchip_drm_lastclose,
+Index: kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
++++ kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+@@ -29,18 +29,18 @@ CONFIG_AP6XXX ?= m
+ 
+ CONFIG_BCMDHD_OOB := y
+ #CONFIG_BCMDHD_CUSB := y
+-CONFIG_BCMDHD_NO_POWER_OFF := y
++#CONFIG_BCMDHD_NO_POWER_OFF := y
+ CONFIG_BCMDHD_PROPTXSTATUS := y
+ CONFIG_DHD_USE_STATIC_BUF := y
+ CONFIG_BCMDHD_STATIC_BUF_IN_DHD := y
+ #CONFIG_BCMDHD_ANDROID_VERSION := 14
+ CONFIG_BCMDHD_AUTO_SELECT := y
+-#CONFIG_BCMDHD_DEBUG := y
++CONFIG_BCMDHD_DEBUG := y
+ #CONFIG_BCMDHD_RECONNECT := y
+ #CONFIG_BCMDHD_TIMESTAMP := y
+ #CONFIG_BCMDHD_WAPI := y
+ #CONFIG_BCMDHD_RANDOM_MAC := y
+-#CONFIG_BCMDHD_REQUEST_FW := y
++CONFIG_BCMDHD_REQUEST_FW := y
+ #CONFIG_BCMDHD_FW_SIGNATURE := y
+ #CONFIG_BCMDHD_DWDS := y
+ CONFIG_BCMDHD_TPUT := y
+@@ -474,7 +474,7 @@ BCMDHD_ROOT = $(src)
+ #$(warning "BCMDHD_ROOT=$(BCMDHD_ROOT)")
+ EXTRA_CFLAGS = $(DHDCFLAGS)
+ EXTRA_CFLAGS += -DDHD_COMPILED=\"$(BCMDHD_ROOT)\"
+-EXTRA_CFLAGS += -I$$(BCMDHD_ROOT)/include/ -I$(BCMDHD_ROOT)/
++EXTRA_CFLAGS += -I$(srctree)/$(BCMDHD_ROOT)/include/ -I$(srctree)/$(BCMDHD_ROOT)/
+ ifeq ($(CONFIG_AP6XXX),m)
+ EXTRA_LDFLAGS += --strip-debug
+ endif
+Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/input/sensors/fingerprint/madev.h
++++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
+@@ -184,12 +184,17 @@ extern int mas_do_some_for_probe(struct
+ //#define MALOGD(x) MALOGF(x)																									//debug log
+ //#define MALOGW(x) printk(KERN_WARNING "%s%s: warning log! the function %s's ret = %d\n", MALOG_TAG, __func__,x, ret);			//warning log
+ //use for the log print
+-
++#ifdef DEBUG
+ #define MALOGD(fmt, args...) do{printk(KERN_ERR "<mafp>-dbg-[%04d]-[@%s]" fmt "\n", __LINE__, __FUNCTION__, ##args);}while(0)
+ #define MALOGE(fmt, args...) do{printk(KERN_ERR "<mafp>-err-[%04d]-[@%s]" fmt "\n", __LINE__, __FUNCTION__, ##args);}while(0)
+ #define MALOGF(x)            do{printk(KERN_ERR "<mafp>-fun-[%04d]-[@%s] is called!\n", __LINE__, __FUNCTION__);}while(0)
+ #define MALOGW(fmt, args...) do{printk(KERN_ERR "<mafp>-warn-[%04d]-[@%s]" fmt "\n", __LINE__, __FUNCTION__, ##args);}while(0)
+-
++#else
++#define MALOGD(fmt, args...)
++#define MALOGE(fmt, args...)
++#define MALOGF(x)
++#define MALOGW(fmt, args...)
++#endif
+ 
+ /**
+  *	the old ioctl command, compatible for the old version
+Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/input/sensors/fingerprint/madev.c
++++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.c
+@@ -772,7 +772,7 @@ int mas_probe(struct spi_device *spi) {
+ 
+     int ret = 0;
+ 
+-printk("lipeiyang [%s][%d]\n", __func__, __LINE__);
++MALOGD("lipeiyang [%s][%d]\n", __func__, __LINE__);
+     MALOGD("start");
+ 
+ 	mas_do_some_for_probe(spi);
+@@ -792,7 +792,7 @@ printk("lipeiyang [%s][%d]\n", __func__,
+     mas_disable_spi_clock(smas->spi);
+ 
+ 
+-printk("lipeiyang [%s][%d]ret[%d]\n", __func__, __LINE__,ret);
++MALOGD("lipeiyang [%s][%d]ret[%d]\n", __func__, __LINE__,ret);
+ 	if(ret == 0){//not chip
+         goto err3;
+     } else {

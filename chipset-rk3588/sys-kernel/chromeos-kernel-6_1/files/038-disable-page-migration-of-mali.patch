@@ -1,0 +1,47 @@
+Index: kernel-rockchip-6_1/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
++++ kernel-rockchip-6_1/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
+@@ -334,8 +334,15 @@ static bool kbase_file_inc_fops_count_if
+ 	 * of /dev/malixx file i.e. 'kfile' or disallow file operations if parent
+ 	 * process has closed the file instance.
+ 	 */
+-	if (unlikely(kfile->owner != current->files))
+-		return false;
++
++	if (unlikely(kfile->owner != current->files)) {
++    if (kfile->owner) {
++      pr_info("different owner owner:%p, current:%p\n", kfile->owner, current->files);
++		  return false;
++    } else {
++      kfile->owner = current->files;
++    }
++  }
+ 
+ 	return kbase_file_inc_fops_count_unless_closed(kfile);
+ }
+@@ -767,7 +774,7 @@ static int kbase_open(struct inode *inod
+ 
+ #if (KERNEL_VERSION(6, 0, 0) > LINUX_VERSION_CODE)
+ 	/* Set address space operations for page migration */
+-	kbase_mem_migrate_set_address_space_ops(kbdev, filp);
++	//kbase_mem_migrate_set_address_space_ops(kbdev, filp);
+ #endif
+ 
+ 	/* Device-wide firmware load is moved here from probing to comply with
+@@ -2122,10 +2129,13 @@ static long kbase_ioctl(struct file *fil
+ 	struct kbase_file *const kfile = filp->private_data;
+ 	long ioctl_ret;
+ 
+-	if (unlikely(!kbase_file_inc_fops_count_if_allowed(kfile)))
++	if (unlikely(!kbase_file_inc_fops_count_if_allowed(kfile))) {
++    pr_err("kbase_file_inc_fops_count_if_allowed ret:EPERM\n");
+ 		return -EPERM;
+-
++  }
+ 	ioctl_ret = kbase_kfile_ioctl(kfile, cmd, arg);
++  if (ioctl_ret < 0)
++    pr_err("ioctl cmd:%u, arg:%lu ret:%ld\n", cmd & 0xFF, arg, ioctl_ret);
+ 	kbase_file_dec_fops_count(kfile);
+ 
+ 	return ioctl_ret;

@@ -1,0 +1,57 @@
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+@@ -425,14 +425,15 @@
+ };
+ 
+ &sdmmc {
+-  max-frequency = <150000000>;
++  max-frequency = <99000000>;
+   no-sdio;
+   no-mmc;
++  bus-width = <4>;
+   cap-sd-highspeed;
+   cap-mmc-highspeed;
+- // clock-frequency = <100000000>;
++//  clock-frequency = <49500000>;
+   disable-wp;
+- // sd-uhs-sdr104;
++// sd-uhs-sdr104;
+   cd-gpios = <&gpio0 RK_PA4 0>;
+   card-detect-delay = <800>;
+   vmmc-supply = <&vcc_3v3_sd_s0>;
+Index: kernel-rockchip-6_1/drivers/soc/rockchip/Kconfig
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/soc/rockchip/Kconfig
++++ kernel-rockchip-6_1/drivers/soc/rockchip/Kconfig
+@@ -338,4 +338,9 @@ source "drivers/soc/rockchip/minidump/Kc
+ 
+ endmenu
+ 
++config ROCKCHIP_FYDETAB_GRF
++	bool "initialize grf with specific values on FydeTab"
++	default n
++	help
++	  If unsure, say n.
+ endif
+Index: kernel-rockchip-6_1/drivers/soc/rockchip/grf.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/soc/rockchip/grf.c
++++ kernel-rockchip-6_1/drivers/soc/rockchip/grf.c
+@@ -242,10 +242,15 @@ static const struct rockchip_grf_info rk
+ 	.num_values = ARRAY_SIZE(rk3566_defaults),
+ };
+ 
++#define RK3588_SYS_GRF_SOC_CON6 	0x0318
+ #define RK3588_SYS_GRF_SOC_CON7		0x031c
+ 
+ static const struct rockchip_grf_value rk3588_sys_grf_defaults[] __initconst = {
+ 	{ "Connect EDP hpd to IO", RK3588_SYS_GRF_SOC_CON7, HIWORD_UPDATE(0x3, 0x3, 14) },
++#ifdef CONFIG_ROCKCHIP_FYDETAB_GRF
++	/* Without this, MiscroSD card won't work normally with bus width 4 */
++	{ "jtag switching", RK3588_SYS_GRF_SOC_CON6, HIWORD_UPDATE(0x0, 0x1, 14) },
++#endif
+ };
+ 
+ static const struct rockchip_grf_info rk3588_sys_grf __initconst = {

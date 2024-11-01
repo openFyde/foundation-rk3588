@@ -1,0 +1,85 @@
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+@@ -176,15 +176,36 @@
+     };
+   };
+ 
+-	vcc_lcd_en: vcc-lcd-en {
+-		compatible = "regulator-fixed";
+-		regulator-name = "vcc_lcd_en";
+-		regulator-boot-on;
+-		enable-active-high;
+-		gpio = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&vcc_lcd_en_pin>;
+-	};
++  vcc_lcd_en: vcc-lcd-en {
++    compatible = "regulator-fixed";
++    regulator-name = "vcc_lcd_en";
++    enable-active-high;
++    gpio = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
++    pinctrl-names = "default";
++    pinctrl-0 = <&vcc_lcd_en_pin>;
++  };
++
++  vcc_avdd: vcc-avdd {
++    compatible = "regulator-fixed";
++    regulator-name = "vcc_avdd";
++    enable-active-high;
++    gpio = <&gpio3 RK_PA7 GPIO_ACTIVE_HIGH>;
++    pinctrl-names = "default";
++    startup-delay-us = <3>;
++    pinctrl-0 = <&avdd_lcd_gpio>;
++    vin-supply = <&vcc_lcd_en>;
++  };
++
++  vcc_avee: vcc-avee {
++    compatible = "regulator-fixed";
++    regulator-name = "vcc_avee";
++    enable-active-high;
++    gpio = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
++    pinctrl-names = "default";
++    startup-delay-us = <3>;
++    pinctrl-0 = <&avee_lcd_gpio>;
++    vin-supply = <&vcc_avdd>;
++  };
+ 
+ 	finger_power_test: finger-power-test {
+ 		compatible = "regulator-fixed";
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -282,16 +282,14 @@
+ 	rockchip,lane-rate = <676000>;
+ 	dsi0_panel: panel@0 {
+ 		status = "okay";
+-		compatible = "simple-panel-dsi-fyde";
++		compatible = "simple-panel-dsi";
+ 		reg = <0>;
+ 		backlight = <&backlight>;
+-		power-supply = <&vcc_lcd_en>;
+-		//enable-gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
+-		avdd-gpios = <&gpio3 RK_PA7 GPIO_ACTIVE_HIGH>;
+-		avee-gpios = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
++		power-supply = <&vcc_avee>;
+ 		reset-gpios = <&gpio3 RK_PC6 GPIO_ACTIVE_HIGH>;
++    reset-enable-combined;
+ 		pinctrl-names = "default";
+-		pinctrl-0 = <&avdd_lcd_gpio &avee_lcd_gpio &lcd_rst_gpio>;
++		pinctrl-0 = <&lcd_rst_gpio>;
+ 		reset-delay-ms = <120>;
+ 		enable-delay-ms = <120>;
+ 		prepare-delay-ms = <120>;
+@@ -994,7 +992,8 @@
+ };
+ 
+ &route_dsi0 {
+-	status = "disabled";
++  u-boot-status = "disabled";
++  status = "okay";
+ 	connect = <&vp2_out_dsi0>;
+ };
+ 

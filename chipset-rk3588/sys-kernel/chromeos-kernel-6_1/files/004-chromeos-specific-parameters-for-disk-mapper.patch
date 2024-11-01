@@ -1,0 +1,2640 @@
+Index: kernel-rockchip-6_1/drivers/md/dm-verity-target.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-verity-target.c
++++ kernel-rockchip-6_1/drivers/md/dm-verity-target.c
+@@ -16,8 +16,10 @@
+ #include "dm-verity.h"
+ #include "dm-verity-fec.h"
+ #include "dm-verity-verify-sig.h"
++#include <linux/delay.h>
+ #include <linux/module.h>
+ #include <linux/reboot.h>
++#include <crypto/hash.h>
+ #include <linux/scatterlist.h>
+ #include <linux/string.h>
+ #include <linux/jump_label.h>
+@@ -37,8 +39,9 @@
+ #define DM_VERITY_OPT_IGN_ZEROES	"ignore_zero_blocks"
+ #define DM_VERITY_OPT_AT_MOST_ONCE	"check_at_most_once"
+ #define DM_VERITY_OPT_TASKLET_VERIFY	"try_verify_in_tasklet"
++#define DM_VERITY_OPT_ERROR_BEHAVIOR	"error_behavior"
+ 
+-#define DM_VERITY_OPTS_MAX		(4 + DM_VERITY_OPTS_FEC + \
++#define DM_VERITY_OPTS_MAX		(5 + DM_VERITY_OPTS_FEC + \
+ 					 DM_VERITY_ROOT_HASH_VERIFICATION_OPTS)
+ 
+ static unsigned int dm_verity_prefetch_cluster = DM_VERITY_DEFAULT_PREFETCH_SIZE;
+@@ -54,6 +57,122 @@ struct dm_verity_prefetch_work {
+ 	unsigned int n_blocks;
+ };
+ 
++/* Provide a lightweight means of specifying the global default for
++ * error behavior: eio, reboot, or none
++ * Legacy support for 0 = eio, 1 = reboot/panic, 2 = none, 3 = notify.
++ * This is matched to the enum in dm-verity.h.
++ */
++static char *error_behavior_istring[] = { "0", "1", "2", "3" };
++static const char *allowed_error_behaviors[] = { "eio", "panic", "none",
++						 "notify", NULL };
++static char *error_behavior = "eio";
++module_param(error_behavior, charp, 0644);
++MODULE_PARM_DESC(error_behavior, "Behavior on error "
++				 "(eio, panic, none, notify)");
++
++/* Controls whether verity_get_device will wait forever for a device. */
++static int dev_wait;
++module_param(dev_wait, int, 0444);
++MODULE_PARM_DESC(dev_wait, "Wait forever for a backing device");
++
++static BLOCKING_NOTIFIER_HEAD(verity_error_notifier);
++
++int dm_verity_register_error_notifier(struct notifier_block *nb)
++{
++	return blocking_notifier_chain_register(&verity_error_notifier, nb);
++}
++EXPORT_SYMBOL_GPL(dm_verity_register_error_notifier);
++
++int dm_verity_unregister_error_notifier(struct notifier_block *nb)
++{
++	return blocking_notifier_chain_unregister(&verity_error_notifier, nb);
++}
++EXPORT_SYMBOL_GPL(dm_verity_unregister_error_notifier);
++
++/* If the request is not successful, this handler takes action.
++ * TODO make this call a registered handler.
++ */
++static void verity_error(struct dm_verity *v, struct dm_verity_io *io,
++			 blk_status_t status)
++{
++	const char *message = v->hash_failed ? "integrity" : "block";
++	int error_behavior = DM_VERITY_ERROR_BEHAVIOR_PANIC;
++	dev_t devt = 0;
++	u64 block = ~0;
++	struct dm_verity_error_state error_state;
++	/* If the hash did not fail, then this is likely transient. */
++	int transient = !v->hash_failed;
++
++	devt = v->data_dev->bdev->bd_dev;
++	error_behavior = v->error_behavior;
++	if (io)
++		block = io->block;
++
++	DMERR_LIMIT("verification failure occurred: %s failure%s", message,
++		    transient ? " (transient)" : "");
++
++	if (error_behavior == DM_VERITY_ERROR_BEHAVIOR_NOTIFY) {
++		error_state.code = status;
++		error_state.transient = transient;
++		error_state.block = block;
++		error_state.message = message;
++		error_state.dev_start = v->data_start;
++		error_state.dev_len = v->data_blocks;
++		error_state.dev = v->data_dev->bdev;
++		error_state.hash_dev_start = v->hash_start;
++		error_state.hash_dev_len = v->hash_blocks;
++		error_state.hash_dev = v->hash_dev->bdev;
++
++		/* Set default fallthrough behavior. */
++		error_state.behavior = DM_VERITY_ERROR_BEHAVIOR_PANIC;
++		error_behavior = DM_VERITY_ERROR_BEHAVIOR_PANIC;
++
++		if (!blocking_notifier_call_chain(
++		    &verity_error_notifier, transient, &error_state)) {
++			error_behavior = error_state.behavior;
++		}
++	}
++
++	switch (error_behavior) {
++	case DM_VERITY_ERROR_BEHAVIOR_EIO:
++		break;
++	case DM_VERITY_ERROR_BEHAVIOR_NONE:
++		break;
++	default:
++		goto do_panic;
++	}
++	return;
++
++do_panic:
++	panic("dm-verity failure: "
++	      "device:%u:%u status:%d block:%llu message:%s",
++	      MAJOR(devt), MINOR(devt), status, (u64)block, message);
++}
++
++/**
++ * verity_parse_error_behavior - parse a behavior charp to the enum
++ * @behavior:	NUL-terminated char array
++ *
++ * Checks if the behavior is valid either as text or as an index digit
++ * and returns the proper enum value in string form or ERR_PTR(-EINVAL)
++ * on error.
++ */
++static char *verity_parse_error_behavior(const char *behavior)
++{
++	const char **allowed = allowed_error_behaviors;
++	int index;
++
++	for (index = 0; *allowed; allowed++, index++)
++		if (!strcmp(*allowed, behavior) || behavior[0] == index + '0')
++			break;
++
++	if (!*allowed)
++		return ERR_PTR(-EINVAL);
++
++	/* Convert to the integer index matching the enum. */
++	return error_behavior_istring[index];
++}
++
+ /*
+  * Auxiliary structure appended to each dm-bufio buffer. If the value
+  * hash_verified is nonzero, hash of the block has been verified.
+@@ -474,6 +593,63 @@ int verity_for_bv_block(struct dm_verity
+ 	return 0;
+ }
+ 
++static int verity_recheck_copy(struct dm_verity *v, struct dm_verity_io *io,
++			       u8 *data, size_t len)
++{
++	memcpy(data, io->recheck_buffer, len);
++	io->recheck_buffer += len;
++
++	return 0;
++}
++
++static noinline int verity_recheck(struct dm_verity *v, struct dm_verity_io *io,
++				   struct bvec_iter start, sector_t cur_block)
++{
++	struct page *page;
++	void *buffer;
++	int r;
++	struct dm_io_request io_req;
++	struct dm_io_region io_loc;
++
++	page = mempool_alloc(&v->recheck_pool, GFP_NOIO);
++	buffer = page_to_virt(page);
++
++	io_req.bi_opf = REQ_OP_READ;
++	io_req.mem.type = DM_IO_KMEM;
++	io_req.mem.ptr.addr = buffer;
++	io_req.notify.fn = NULL;
++	io_req.client = v->io;
++	io_loc.bdev = v->data_dev->bdev;
++	io_loc.sector = cur_block << (v->data_dev_block_bits - SECTOR_SHIFT);
++	io_loc.count = 1 << (v->data_dev_block_bits - SECTOR_SHIFT);
++	r = dm_io(&io_req, 1, &io_loc, NULL, IOPRIO_DEFAULT);
++	if (unlikely(r))
++		goto free_ret;
++
++	r = verity_hash(v, verity_io_hash_req(v, io), buffer,
++			1 << v->data_dev_block_bits,
++			verity_io_real_digest(v, io), true);
++	if (unlikely(r))
++		goto free_ret;
++
++	if (memcmp(verity_io_real_digest(v, io),
++		   verity_io_want_digest(v, io), v->digest_size)) {
++		r = -EIO;
++		goto free_ret;
++	}
++
++	io->recheck_buffer = buffer;
++	r = verity_for_bv_block(v, io, &start, verity_recheck_copy);
++	if (unlikely(r))
++		goto free_ret;
++
++	r = 0;
++free_ret:
++	mempool_free(page, &v->recheck_pool);
++
++	return r;
++}
++
+ static int verity_bv_zero(struct dm_verity *v, struct dm_verity_io *io,
+ 			  u8 *data, size_t len)
+ {
+@@ -500,9 +676,7 @@ static int verity_verify_io(struct dm_ve
+ {
+ 	bool is_zero;
+ 	struct dm_verity *v = io->v;
+-#if defined(CONFIG_DM_VERITY_FEC)
+ 	struct bvec_iter start;
+-#endif
+ 	struct bvec_iter iter_copy;
+ 	struct bvec_iter *iter;
+ 	struct crypto_wait wait;
+@@ -553,10 +727,7 @@ static int verity_verify_io(struct dm_ve
+ 		if (unlikely(r < 0))
+ 			return r;
+ 
+-#if defined(CONFIG_DM_VERITY_FEC)
+-		if (verity_fec_is_enabled(v))
+-			start = *iter;
+-#endif
++		start = *iter;
+ 		r = verity_for_io_block(v, io, iter, &wait);
+ 		if (unlikely(r < 0))
+ 			return r;
+@@ -578,6 +749,10 @@ static int verity_verify_io(struct dm_ve
+ 			 * tasklet since it may sleep, so fallback to work-queue.
+ 			 */
+ 			return -EAGAIN;
++		} else if (verity_recheck(v, io, start, cur_block) == 0) {
++			if (v->validated_blocks)
++				set_bit(cur_block, v->validated_blocks);
++			continue;
+ #if defined(CONFIG_DM_VERITY_FEC)
+ 		} else if (verity_fec_decode(v, io, DM_VERITY_BLOCK_TYPE_DATA,
+ 					     cur_block, NULL, &start) == 0) {
+@@ -616,6 +791,8 @@ static void verity_finish_io(struct dm_v
+ 	struct dm_verity *v = io->v;
+ 	struct bio *bio = dm_bio_from_per_bio_data(io, v->ti->per_io_data_size);
+ 
++	if (status && !verity_fec_is_enabled(io->v))
++		verity_error(v, io, status);
+ 	bio->bi_end_io = io->orig_bi_end_io;
+ 	bio->bi_status = status;
+ 
+@@ -634,23 +811,6 @@ static void verity_work(struct work_stru
+ 	verity_finish_io(io, errno_to_blk_status(verity_verify_io(io)));
+ }
+ 
+-static void verity_tasklet(unsigned long data)
+-{
+-	struct dm_verity_io *io = (struct dm_verity_io *)data;
+-	int err;
+-
+-	io->in_tasklet = true;
+-	err = verity_verify_io(io);
+-	if (err == -EAGAIN || err == -ENOMEM) {
+-		/* fallback to retrying with work-queue */
+-		INIT_WORK(&io->work, verity_work);
+-		queue_work(io->v->verify_wq, &io->work);
+-		return;
+-	}
+-
+-	verity_finish_io(io, errno_to_blk_status(err));
+-}
+-
+ static void verity_end_io(struct bio *bio)
+ {
+ 	struct dm_verity_io *io = bio->bi_private;
+@@ -663,13 +823,8 @@ static void verity_end_io(struct bio *bi
+ 		return;
+ 	}
+ 
+-	if (static_branch_unlikely(&use_tasklet_enabled) && io->v->use_tasklet) {
+-		tasklet_init(&io->tasklet, verity_tasklet, (unsigned long)io);
+-		tasklet_schedule(&io->tasklet);
+-	} else {
+-		INIT_WORK(&io->work, verity_work);
+-		queue_work(io->v->verify_wq, &io->work);
+-	}
++	INIT_WORK(&io->work, verity_work);
++	queue_work(io->v->verify_wq, &io->work);
+ }
+ 
+ /*
+@@ -825,6 +980,9 @@ static void verity_status(struct dm_targ
+ 				DMEMIT("%02x", v->salt[x]);
+ 		if (v->mode != DM_VERITY_MODE_EIO)
+ 			args++;
++		if (v->error_behavior >= DM_VERITY_ERROR_BEHAVIOR_EIO &&
++		    v->error_behavior <= DM_VERITY_ERROR_BEHAVIOR_NOTIFY)
++			args += 2;
+ 		if (verity_fec_is_enabled(v))
+ 			args += DM_VERITY_OPTS_FEC;
+ 		if (v->zero_digest)
+@@ -854,6 +1012,9 @@ static void verity_status(struct dm_targ
+ 				BUG();
+ 			}
+ 		}
++		if (v->error_behavior >= DM_VERITY_ERROR_BEHAVIOR_EIO &&
++		    v->error_behavior <= DM_VERITY_ERROR_BEHAVIOR_NOTIFY)
++			DMEMIT(" " DM_VERITY_OPT_ERROR_BEHAVIOR " %d", v->error_behavior);
+ 		if (v->zero_digest)
+ 			DMEMIT(" " DM_VERITY_OPT_IGN_ZEROES);
+ 		if (v->validated_blocks)
+@@ -950,6 +1111,10 @@ static void verity_dtr(struct dm_target
+ 	if (v->verify_wq)
+ 		destroy_workqueue(v->verify_wq);
+ 
++	mempool_exit(&v->recheck_pool);
++	if (v->io)
++		dm_io_client_destroy(v->io);
++
+ 	if (v->bufio)
+ 		dm_bufio_client_destroy(v->bufio);
+ 
+@@ -1110,6 +1275,22 @@ static int verity_parse_opt_args(struct
+ 			static_branch_inc(&use_tasklet_enabled);
+ 			continue;
+ 
++		} else if (!strcasecmp(arg_name, DM_VERITY_OPT_ERROR_BEHAVIOR)) {
++			int behavior;
++
++			if (!argc) {
++				ti->error = "Missing error behavior parameter";
++				return -EINVAL;
++			}
++			if (kstrtoint(dm_shift_arg(as), 0, &behavior) ||
++			    behavior < 0) {
++				ti->error = "Bad error behavior parameter";
++				return -EINVAL;
++			}
++			v->error_behavior = behavior;
++			argc--;
++			continue;
++
+ 		} else if (verity_is_fec_opt_arg(arg_name)) {
+ 			if (only_modifier_opts)
+ 				continue;
+@@ -1146,6 +1327,135 @@ static int verity_parse_opt_args(struct
+ 	return r;
+ }
+ 
++static int verity_get_device(struct dm_target *ti, const char *devname,
++			     struct dm_dev **dm_dev)
++{
++	do {
++		/* Try the normal path first since if everything is ready, it
++		 * will be the fastest.
++		 */
++		if (!dm_get_device(ti, devname,
++				   dm_table_get_mode(ti->table), dm_dev))
++			return 0;
++
++		if (!dev_wait)
++			break;
++
++		/* This delay directly affects boot time if code reaches here.
++		 * So keep it small.
++		 */
++		msleep(5);
++	} while (dev_wait && (driver_probe_done() != 0 || *dm_dev == NULL));
++	return -1;
++}
++
++static void splitarg(char *arg, char **key, char **val)
++{
++	*key = strsep(&arg, "=");
++	*val = strsep(&arg, "");
++}
++
++/* Convert Chrome OS arguments into standard arguments */
++
++static char *chromeos_args(unsigned *pargc, char ***pargv)
++{
++	char *hashstart = NULL;
++	char **argv = *pargv;
++	int argc = *pargc;
++	char *key, *val;
++	int nargc = 13;
++	char **nargv;
++	char *errstr;
++	int i;
++
++	nargv = kcalloc(14, sizeof(char *), GFP_KERNEL);
++	if (!nargv)
++		return "Failed to allocate memory";
++
++	nargv[0] = "0";		/* version */
++	nargv[3] = "4096";	/* hash block size */
++	nargv[4] = "4096";	/* data block size */
++	nargv[9] = "-";		/* salt (optional) */
++	nargv[10] = "2";
++	nargv[11] = DM_VERITY_OPT_ERROR_BEHAVIOR;
++	nargv[12] = verity_parse_error_behavior(error_behavior);
++
++	for (i = 0; i < argc; ++i) {
++		DMDEBUG("Argument %d: '%s'", i, argv[i]);
++		splitarg(argv[i], &key, &val);
++		if (!key) {
++			DMWARN("Bad argument %d: missing key?", i);
++			errstr = "Bad argument: missing key";
++			goto err;
++		}
++		if (!val) {
++			DMWARN("Bad argument %d='%s': missing value", i, key);
++			errstr = "Bad argument: missing value";
++			goto err;
++		}
++		if (!strcmp(key, "alg")) {
++			nargv[7] = val;
++		} else if (!strcmp(key, "payload")) {
++			nargv[1] = val;
++		} else if (!strcmp(key, "hashtree")) {
++			nargv[2] = val;
++		} else if (!strcmp(key, "root_hexdigest")) {
++			nargv[8] = val;
++		} else if (!strcmp(key, "hashstart")) {
++			unsigned long num;
++
++			if (kstrtoul(val, 10, &num)) {
++				errstr = "Invalid hashstart";
++				goto err;
++			}
++			num >>= (12 - SECTOR_SHIFT);
++			hashstart = kmalloc(24, GFP_KERNEL);
++			if (!hashstart) {
++				errstr = "Failed to allocate memory";
++				goto err;
++			}
++			scnprintf(hashstart, sizeof(hashstart), "%lu", num);
++			nargv[5] = hashstart;
++			nargv[6] = hashstart;
++		} else if (!strcmp(key, "salt")) {
++			nargv[9] = val;
++		} else if (!strcmp(key, DM_VERITY_OPT_ERROR_BEHAVIOR)) {
++			char *behavior = verity_parse_error_behavior(val);
++
++			nargv[12] = behavior;
++		}
++	}
++
++	if (!nargv[1] || !nargv[2] || !nargv[5] || !nargv[7] || !nargv[8]) {
++		errstr = "Missing argument";
++		goto err;
++	}
++
++	if (IS_ERR(nargv[12])) {
++		errstr = "Invalid error behavior";
++		goto err;
++	}
++
++	*pargc = nargc;
++	*pargv = nargv;
++	return NULL;
++
++err:
++	kfree(nargv);
++	kfree(hashstart);
++	return errstr;
++}
++
++/* Release memory allocated for Chrome OS parameter conversion */
++
++static void free_chromeos_argv(char **argv)
++{
++	if (argv) {
++		kfree(argv[5]);
++		kfree(argv);
++	}
++}
++
+ /*
+  * Target parameters:
+  *	<version>	The current format is version 1.
+@@ -1173,10 +1483,19 @@ static int verity_ctr(struct dm_target *
+ 	sector_t hash_position;
+ 	char dummy;
+ 	char *root_hash_digest_to_validate;
++	char **chromeos_argv = NULL;
++
++	if (argc < 10) {
++		ti->error = chromeos_args(&argc, &argv);
++		if (ti->error)
++			return -EINVAL;
++		chromeos_argv = argv;
++	}
+ 
+ 	v = kzalloc(sizeof(struct dm_verity), GFP_KERNEL);
+ 	if (!v) {
+ 		ti->error = "Cannot allocate verity structure";
++		free_chromeos_argv(chromeos_argv);
+ 		return -ENOMEM;
+ 	}
+ 	ti->private = v;
+@@ -1215,13 +1534,13 @@ static int verity_ctr(struct dm_target *
+ 	}
+ 	v->version = num;
+ 
+-	r = dm_get_device(ti, argv[1], FMODE_READ, &v->data_dev);
++	r = verity_get_device(ti, argv[1], &v->data_dev);
+ 	if (r) {
+ 		ti->error = "Data device lookup failed";
+ 		goto bad;
+ 	}
+ 
+-	r = dm_get_device(ti, argv[2], FMODE_READ, &v->hash_dev);
++	r = verity_get_device(ti, argv[2], &v->hash_dev);
+ 	if (r) {
+ 		ti->error = "Hash device lookup failed";
+ 		goto bad;
+@@ -1386,6 +1705,20 @@ static int verity_ctr(struct dm_target *
+ 	}
+ 	v->hash_blocks = hash_position;
+ 
++	r = mempool_init_page_pool(&v->recheck_pool, 1, 0);
++	if (unlikely(r)) {
++		ti->error = "Cannot allocate mempool";
++		goto bad;
++	}
++
++	v->io = dm_io_client_create();
++	if (IS_ERR(v->io)) {
++		r = PTR_ERR(v->io);
++		v->io = NULL;
++		ti->error = "Cannot allocate dm io";
++		goto bad;
++	}
++
+ 	v->bufio = dm_bufio_client_create(v->hash_dev->bdev,
+ 		1 << v->hash_dev_block_bits, 1, sizeof(struct buffer_aux),
+ 		dm_bufio_alloc_callback, NULL,
+@@ -1433,14 +1766,14 @@ static int verity_ctr(struct dm_target *
+ 				       __alignof__(struct dm_verity_io));
+ 
+ 	verity_verify_sig_opts_cleanup(&verify_args);
+-
++	free_chromeos_argv(chromeos_argv);
+ 	return 0;
+ 
+ bad:
+ 
+ 	verity_verify_sig_opts_cleanup(&verify_args);
+ 	verity_dtr(ti);
+-
++	free_chromeos_argv(chromeos_argv);
+ 	return r;
+ }
+ 
+Index: kernel-rockchip-6_1/drivers/md/dm-verity.h
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-verity.h
++++ kernel-rockchip-6_1/drivers/md/dm-verity.h
+@@ -11,10 +11,12 @@
+ #ifndef DM_VERITY_H
+ #define DM_VERITY_H
+ 
++#include <linux/dm-io.h>
+ #include <linux/dm-bufio.h>
+ #include <linux/device-mapper.h>
+ #include <linux/interrupt.h>
+ #include <crypto/hash.h>
++#include <linux/notifier.h>
+ 
+ #define DM_VERITY_MAX_LEVELS		63
+ 
+@@ -58,6 +60,7 @@ struct dm_verity {
+ 	unsigned int ahash_reqsize;/* the size of temporary space for crypto */
+ 	enum verity_mode mode;	/* mode for handling verification errors */
+ 	unsigned int corrupted_errs;/* Number of errors for corrupted blocks */
++	int error_behavior;	/* selects error behavior on io errors */
+ 
+ 	struct workqueue_struct *verify_wq;
+ 
+@@ -68,6 +71,9 @@ struct dm_verity {
+ 	unsigned long *validated_blocks; /* bitset blocks validated */
+ 
+ 	char *signature_key_desc; /* signature keyring reference */
++
++	struct dm_io_client *io;
++	mempool_t recheck_pool;
+ };
+ 
+ struct dm_verity_io {
+@@ -76,14 +82,15 @@ struct dm_verity_io {
+ 	/* original value of bio->bi_end_io */
+ 	bio_end_io_t *orig_bi_end_io;
+ 
++	struct bvec_iter iter;
++
+ 	sector_t block;
+ 	unsigned int n_blocks;
+ 	bool in_tasklet;
+ 
+-	struct bvec_iter iter;
+-
+ 	struct work_struct work;
+-	struct tasklet_struct tasklet;
++
++	char *recheck_buffer;
+ 
+ 	/*
+ 	 * Three variably-size fields follow this struct:
+@@ -97,6 +104,40 @@ struct dm_verity_io {
+ 	 */
+ };
+ 
++struct verity_result {
++	struct completion completion;
++	int err;
++};
++
++struct dm_verity_error_state {
++	int code;
++	int transient;  /* Likely to not happen after a reboot */
++	u64 block;
++	const char *message;
++
++	sector_t dev_start;
++	sector_t dev_len;
++	struct block_device *dev;
++
++	sector_t hash_dev_start;
++	sector_t hash_dev_len;
++	struct block_device *hash_dev;
++
++	/* Final behavior after all notifications are completed. */
++	int behavior;
++};
++
++/* This enum must be matched to allowed_error_behaviors in dm-verity.c */
++enum dm_verity_error_behavior {
++	DM_VERITY_ERROR_BEHAVIOR_EIO = 0,
++	DM_VERITY_ERROR_BEHAVIOR_PANIC,
++	DM_VERITY_ERROR_BEHAVIOR_NONE,
++	DM_VERITY_ERROR_BEHAVIOR_NOTIFY
++};
++
++int dm_verity_register_error_notifier(struct notifier_block *nb);
++int dm_verity_unregister_error_notifier(struct notifier_block *nb);
++
+ static inline struct ahash_request *verity_io_hash_req(struct dm_verity *v,
+ 						     struct dm_verity_io *io)
+ {
+Index: kernel-rockchip-6_1/drivers/md/dm-verity-chromeos.c
+===================================================================
+--- /dev/null
++++ kernel-rockchip-6_1/drivers/md/dm-verity-chromeos.c
+@@ -0,0 +1,292 @@
++/*
++ * Copyright (C) 2010 The Chromium OS Authors <chromium-os-dev@chromium.org>
++ *                    All Rights Reserved.
++ *
++ * This file is released under the GPL.
++ */
++/*
++ * Implements a Chrome OS platform specific error handler.
++ * When verity detects an invalid block, this error handling will
++ * attempt to corrupt the kernel boot image. On reboot, the bios will
++ * detect the kernel corruption and switch to the alternate kernel
++ * and root file system partitions.
++ *
++ * Assumptions:
++ * 1. Partitions are specified on the command line using uuid.
++ * 2. The kernel partition is the partition number is one less
++ *    than the root partition number.
++ */
++#include <linux/bio.h>
++#include <linux/blkdev.h>
++#include <linux/device.h>
++#include <linux/device-mapper.h>
++#include <linux/err.h>
++#include <linux/kernel.h>
++#include <linux/mm.h>
++#include <linux/module.h>
++#include <linux/mount.h>
++#include <linux/notifier.h>
++#include <linux/string.h>
++#include <asm/page.h>
++
++#include "dm-verity.h"
++
++#define DM_MSG_PREFIX "verity-chromeos"
++#define DMVERROR "DMVERROR"
++
++static void chromeos_invalidate_kernel_endio(struct bio *bio)
++{
++	if (bio->bi_status) {
++		DMERR("%s: bio operation failed (status=0x%x)", __func__,
++		      bio->bi_status);
++	}
++	complete(bio->bi_private);
++}
++
++static int chromeos_invalidate_kernel_submit(struct bio *bio,
++					     struct block_device *bdev,
++					     unsigned int op,
++					     unsigned int op_flags,
++					     struct page *page)
++{
++	DECLARE_COMPLETION_ONSTACK(wait);
++	unsigned int block_size = bdev_logical_block_size(bdev);
++
++	if (block_size > page_size(page))
++		panic("dm-verity failed to override signature");
++
++	bio->bi_private = &wait;
++	bio->bi_end_io = chromeos_invalidate_kernel_endio;
++	bio_set_dev(bio, bdev);
++
++	bio->bi_iter.bi_sector = 0;
++	bio->bi_vcnt = 1;
++	bio->bi_iter.bi_idx = 0;
++	bio->bi_iter.bi_size = block_size;
++	bio->bi_iter.bi_bvec_done = 0;
++	bio_set_op_attrs(bio, op, op_flags);
++	bio->bi_io_vec[0].bv_page = page;
++	bio->bi_io_vec[0].bv_len = block_size;
++	bio->bi_io_vec[0].bv_offset = 0;
++
++	submit_bio(bio);
++	/* Wait up to 2 seconds for completion or fail. */
++	if (!wait_for_completion_timeout(&wait, msecs_to_jiffies(2000)))
++		return -1;
++	return 0;
++}
++
++static dev_t get_boot_dev_from_root_dev(struct block_device *root_bdev)
++{
++	/* Very basic sanity checking. This should be better. */
++	if (!root_bdev || MAJOR(root_bdev->bd_dev) == 254 ||
++	    root_bdev->bd_partno <= 1) {
++		return 0;
++	}
++	return MKDEV(MAJOR(root_bdev->bd_dev), MINOR(root_bdev->bd_dev) - 1);
++}
++
++static char kern_guid[48];
++
++/* get_boot_dev is bassed on dm_get_device_by_uuid in dm_bootcache. */
++static dev_t get_boot_dev(void)
++{
++	const char partuuid[] = "PARTUUID=";
++	char uuid[sizeof(partuuid) + 36];
++	char *uuid_str;
++	dev_t devt = 0;
++
++	if (!strlen(kern_guid)) {
++		DMERR("Couldn't get uuid, try root dev");
++		return 0;
++	}
++
++	if (strncmp(kern_guid, partuuid, strlen(partuuid))) {
++		/* Not prefixed with "PARTUUID=", so add it */
++		strcpy(uuid, partuuid);
++		strlcat(uuid, kern_guid, sizeof(uuid));
++		uuid_str = uuid;
++	} else {
++		uuid_str = kern_guid;
++	}
++	devt = name_to_dev_t(uuid_str);
++	if (!devt)
++		goto found_nothing;
++	return devt;
++
++found_nothing:
++	DMDEBUG("No matching partition for GUID: %s", uuid_str);
++	return 0;
++}
++
++/*
++ * Invalidate the kernel which corresponds to the root block device.
++ *
++ * This function stamps DMVERROR on the beginning of the kernel partition.
++ *
++ * The kernel_guid commandline parameter is used to find the kernel partition
++ *  number.
++ * If that fails, the kernel partition is found by subtracting 1 from
++ *  the root partition.
++ * The DMVERROR string is stamped over only the CHROMEOS string at the
++ *  beginning of the kernel blob, leaving the rest of it intact.
++ */
++static int chromeos_invalidate_kernel_bio(struct block_device *root_bdev)
++{
++	int ret = 0;
++	struct block_device *bdev;
++	struct bio *bio;
++	struct page *page;
++	dev_t devt;
++	fmode_t dev_mode;
++
++	devt = get_boot_dev();
++	if (!devt) {
++		devt = get_boot_dev_from_root_dev(root_bdev);
++		if (!devt)
++			return -EINVAL;
++	}
++
++	/* First we open the device for reading. */
++	dev_mode = FMODE_READ | FMODE_EXCL;
++	bdev = blkdev_get_by_dev(devt, dev_mode,
++				 chromeos_invalidate_kernel_bio);
++	if (IS_ERR(bdev)) {
++		DMERR("invalidate_kernel: could not open device for reading");
++		dev_mode = 0;
++		ret = -1;
++		goto failed_to_read;
++	}
++
++	bio = bio_alloc(NULL, 1, 0, GFP_NOIO);
++	if (!bio) {
++		ret = -1;
++		goto failed_bio_alloc;
++	}
++
++	page = alloc_page(GFP_NOIO);
++	if (!page) {
++		ret = -ENOMEM;
++		goto failed_to_alloc_page;
++	}
++
++	/*
++	 * Request read operation with REQ_PREFLUSH flag to ensure that the
++	 * cache of non-volatile storage device has been flushed before read is
++	 * started.
++	 */
++	if (chromeos_invalidate_kernel_submit(bio, bdev,
++					      REQ_OP_READ,
++					      REQ_SYNC | REQ_PREFLUSH,
++					      page)) {
++		ret = -1;
++		goto failed_to_submit_read;
++	}
++
++	/* We have a page. Let's make sure it looks right. */
++	if (memcmp("CHROMEOS", page_address(page), 8)) {
++		DMERR("invalidate_kernel called on non-kernel partition");
++		ret = -EINVAL;
++		goto invalid_header;
++	} else {
++		DMERR("invalidate_kernel: found CHROMEOS kernel partition");
++	}
++
++	/* Stamp it and rewrite */
++	memcpy(page_address(page), DMVERROR, strlen(DMVERROR));
++
++	/* The block dev was being changed on read. Let's reopen here. */
++	blkdev_put(bdev, dev_mode);
++	dev_mode = FMODE_WRITE | FMODE_EXCL;
++	bdev = blkdev_get_by_dev(devt, dev_mode,
++				 chromeos_invalidate_kernel_bio);
++	if (IS_ERR(bdev)) {
++		DMERR("invalidate_kernel: could not open device for writing");
++		dev_mode = 0;
++		ret = -1;
++		goto failed_to_write;
++	}
++
++	/* We re-use the same bio to do the write after the read. Need to reset
++	 * it to initialize bio->bi_remaining.
++	 */
++	bio_reset(bio, NULL, 0);
++
++	/*
++	 * Request write operation with REQ_FUA flag to ensure that I/O
++	 * completion for the write is signaled only after the data has been
++	 * committed to non-volatile storage.
++	 */
++	if (chromeos_invalidate_kernel_submit(bio, bdev, REQ_OP_WRITE,
++					      REQ_SYNC | REQ_FUA, page)) {
++		ret = -1;
++		goto failed_to_submit_write;
++	}
++
++	DMERR("invalidate_kernel: completed.");
++	ret = 0;
++failed_to_submit_write:
++failed_to_write:
++invalid_header:
++	__free_page(page);
++failed_to_submit_read:
++	/* Technically, we'll leak a page with the pending bio, but
++	 *  we're about to panic so it's safer to do the panic() we expect.
++	 */
++failed_to_alloc_page:
++	bio_put(bio);
++failed_bio_alloc:
++	if (dev_mode)
++		blkdev_put(bdev, dev_mode);
++failed_to_read:
++	return ret;
++}
++
++static int error_handler(struct notifier_block *nb, unsigned long transient,
++			 void *opaque_err)
++{
++	struct dm_verity_error_state *err =
++		(struct dm_verity_error_state *) opaque_err;
++	err->behavior = DM_VERITY_ERROR_BEHAVIOR_PANIC;
++	if (transient)
++		return 0;
++
++	/* Mark the kernel partition as invalid. */
++	chromeos_invalidate_kernel_bio(err->dev);
++	return 0;
++}
++
++static struct notifier_block chromeos_nb = {
++	.notifier_call = &error_handler,
++	.next = NULL,
++	.priority = 1,
++};
++
++static int __init dm_verity_chromeos_init(void)
++{
++	int r;
++
++	r = dm_verity_register_error_notifier(&chromeos_nb);
++	if (r < 0)
++		DMERR("failed to register handler: %d", r);
++	else
++		DMINFO("dm-verity-chromeos registered");
++	return r;
++}
++
++static void __exit dm_verity_chromeos_exit(void)
++{
++	dm_verity_unregister_error_notifier(&chromeos_nb);
++}
++
++module_init(dm_verity_chromeos_init);
++module_exit(dm_verity_chromeos_exit);
++
++MODULE_AUTHOR("Will Drewry <wad@chromium.org>");
++MODULE_DESCRIPTION("chromeos-specific error handler for dm-verity");
++MODULE_LICENSE("GPL");
++
++/* Declare parameter with no module prefix */
++#undef MODULE_PARAM_PREFIX
++#define MODULE_PARAM_PREFIX	""
++module_param_string(kern_guid, kern_guid, sizeof(kern_guid), 0);
+Index: kernel-rockchip-6_1/drivers/md/Makefile
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/Makefile
++++ kernel-rockchip-6_1/drivers/md/Makefile
+@@ -84,6 +84,7 @@ obj-$(CONFIG_DM_INTEGRITY)	+= dm-integri
+ obj-$(CONFIG_DM_ZONED)		+= dm-zoned.o
+ obj-$(CONFIG_DM_WRITECACHE)	+= dm-writecache.o
+ obj-$(CONFIG_SECURITY_LOADPIN_VERITY)	+= dm-verity-loadpin.o
++obj-$(CONFIG_DM_VERITY_CHROMEOS)	+= dm-verity-chromeos.o
+ 
+ ifeq ($(CONFIG_DM_INIT),y)
+ dm-mod-objs			+= dm-init.o
+Index: kernel-rockchip-6_1/drivers/md/Kconfig
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/Kconfig
++++ kernel-rockchip-6_1/drivers/md/Kconfig
+@@ -294,6 +294,16 @@ config DM_CRYPT
+ 
+ 	  If unsure, say N.
+ 
++config DM_VERITY_CHROMEOS
++	tristate "Support Chrome OS specific verity error behavior"
++	depends on DM_VERITY
++	help
++	  Enables Chrome OS platform-specific error behavior.  In particular,
++	  it will modify the partition preceding the verified block device
++	  when non-transient error occurs (followed by a panic).
++
++	  If unsure, say N.
++
+ config DM_SNAPSHOT
+        tristate "Snapshot target"
+        depends on BLK_DEV_DM
+Index: kernel-rockchip-6_1/drivers/md/dm-bufio.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-bufio.c
++++ kernel-rockchip-6_1/drivers/md/dm-bufio.c
+@@ -614,7 +614,7 @@ static void use_dmio(struct dm_buffer *b
+ 		io_req.mem.ptr.vma = (char *)b->data + offset;
+ 	}
+ 
+-	r = dm_io(&io_req, 1, &region, NULL);
++	r = dm_io(&io_req, 1, &region, NULL, IOPRIO_DEFAULT);
+ 	if (unlikely(r))
+ 		b->end_io(b, errno_to_blk_status(r));
+ }
+@@ -1375,7 +1375,7 @@ int dm_bufio_issue_flush(struct dm_bufio
+ 
+ 	BUG_ON(dm_bufio_in_request());
+ 
+-	return dm_io(&io_req, 1, &io_reg, NULL);
++	return dm_io(&io_req, 1, &io_reg, NULL, IOPRIO_DEFAULT);
+ }
+ EXPORT_SYMBOL_GPL(dm_bufio_issue_flush);
+ 
+@@ -1398,7 +1398,7 @@ int dm_bufio_issue_discard(struct dm_buf
+ 
+ 	BUG_ON(dm_bufio_in_request());
+ 
+-	return dm_io(&io_req, 1, &io_reg, NULL);
++	return dm_io(&io_req, 1, &io_reg, NULL, IOPRIO_DEFAULT);
+ }
+ EXPORT_SYMBOL_GPL(dm_bufio_issue_discard);
+ 
+Index: kernel-rockchip-6_1/drivers/md/dm-cache-policy.h
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-cache-policy.h
++++ kernel-rockchip-6_1/drivers/md/dm-cache-policy.h
+@@ -75,7 +75,7 @@ struct dm_cache_policy {
+ 	 * background work.
+ 	 */
+ 	int (*get_background_work)(struct dm_cache_policy *p, bool idle,
+-			           struct policy_work **result);
++				   struct policy_work **result);
+ 
+ 	/*
+ 	 * You must pass in the same work pointer that you were given, not
+Index: kernel-rockchip-6_1/drivers/md/dm-core.h
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-core.h
++++ kernel-rockchip-6_1/drivers/md/dm-core.h
+@@ -21,6 +21,8 @@
+ #include "dm-ima.h"
+ 
+ #define DM_RESERVED_MAX_IOS		1024
++#define DM_MAX_TARGETS			1048576
++#define DM_MAX_TARGET_PARAMS		1024
+ 
+ struct dm_io;
+ 
+Index: kernel-rockchip-6_1/drivers/md/dm-crypt.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-crypt.c
++++ kernel-rockchip-6_1/drivers/md/dm-crypt.c
+@@ -52,15 +52,17 @@
+ struct convert_context {
+ 	struct completion restart;
+ 	struct bio *bio_in;
+-	struct bio *bio_out;
+ 	struct bvec_iter iter_in;
++	struct bio *bio_out;
+ 	struct bvec_iter iter_out;
+-	u64 cc_sector;
+ 	atomic_t cc_pending;
++	u64 cc_sector;
+ 	union {
+ 		struct skcipher_request *req;
+ 		struct aead_request *req_aead;
+ 	} r;
++	bool aead_recheck;
++	bool aead_failed;
+ 
+ };
+ 
+@@ -72,10 +74,8 @@ struct dm_crypt_io {
+ 	struct bio *base_bio;
+ 	u8 *integrity_metadata;
+ 	bool integrity_metadata_from_pool:1;
+-	bool in_tasklet:1;
+ 
+ 	struct work_struct work;
+-	struct tasklet_struct tasklet;
+ 
+ 	struct convert_context ctx;
+ 
+@@ -83,6 +83,8 @@ struct dm_crypt_io {
+ 	blk_status_t error;
+ 	sector_t sector;
+ 
++	struct bvec_iter saved_bi_iter;
++
+ 	struct rb_node rb_node;
+ } CRYPTO_MINALIGN_ATTR;
+ 
+@@ -1367,10 +1369,13 @@ static int crypt_convert_block_aead(stru
+ 	if (r == -EBADMSG) {
+ 		sector_t s = le64_to_cpu(*sector);
+ 
+-		DMERR_LIMIT("%pg: INTEGRITY AEAD ERROR, sector %llu",
+-			    ctx->bio_in->bi_bdev, s);
+-		dm_audit_log_bio(DM_MSG_PREFIX, "integrity-aead",
+-				 ctx->bio_in, s, 0);
++		ctx->aead_failed = true;
++		if (ctx->aead_recheck) {
++			DMERR_LIMIT("%pg: INTEGRITY AEAD ERROR, sector %llu",
++				    ctx->bio_in->bi_bdev, s);
++			dm_audit_log_bio(DM_MSG_PREFIX, "integrity-aead",
++					 ctx->bio_in, s, 0);
++		}
+ 	}
+ 
+ 	if (!r && cc->iv_gen_ops && cc->iv_gen_ops->post)
+@@ -1726,10 +1731,11 @@ static void crypt_io_init(struct dm_cryp
+ 	io->base_bio = bio;
+ 	io->sector = sector;
+ 	io->error = 0;
++	io->ctx.aead_recheck = false;
++	io->ctx.aead_failed = false;
+ 	io->ctx.r.req = NULL;
+ 	io->integrity_metadata = NULL;
+ 	io->integrity_metadata_from_pool = false;
+-	io->in_tasklet = false;
+ 	atomic_set(&io->io_pending, 0);
+ }
+ 
+@@ -1738,11 +1744,7 @@ static void crypt_inc_pending(struct dm_
+ 	atomic_inc(&io->io_pending);
+ }
+ 
+-static void kcryptd_io_bio_endio(struct work_struct *work)
+-{
+-	struct dm_crypt_io *io = container_of(work, struct dm_crypt_io, work);
+-	bio_endio(io->base_bio);
+-}
++static void kcryptd_queue_read(struct dm_crypt_io *io);
+ 
+ /*
+  * One of the bios was finished. Check for completion of
+@@ -1757,6 +1759,15 @@ static void crypt_dec_pending(struct dm_
+ 	if (!atomic_dec_and_test(&io->io_pending))
+ 		return;
+ 
++	if (likely(!io->ctx.aead_recheck) && unlikely(io->ctx.aead_failed) &&
++	    cc->on_disk_tag_size && bio_data_dir(base_bio) == READ) {
++		io->ctx.aead_recheck = true;
++		io->ctx.aead_failed = false;
++		io->error = 0;
++		kcryptd_queue_read(io);
++		return;
++	}
++
+ 	if (io->ctx.r.req)
+ 		crypt_free_req(cc, io->ctx.r.req, base_bio);
+ 
+@@ -1767,20 +1778,6 @@ static void crypt_dec_pending(struct dm_
+ 
+ 	base_bio->bi_status = error;
+ 
+-	/*
+-	 * If we are running this function from our tasklet,
+-	 * we can't call bio_endio() here, because it will call
+-	 * clone_endio() from dm.c, which in turn will
+-	 * free the current struct dm_crypt_io structure with
+-	 * our tasklet. In this case we need to delay bio_endio()
+-	 * execution to after the tasklet is done and dequeued.
+-	 */
+-	if (io->in_tasklet) {
+-		INIT_WORK(&io->work, kcryptd_io_bio_endio);
+-		queue_work(cc->io_queue, &io->work);
+-		return;
+-	}
+-
+ 	bio_endio(base_bio);
+ }
+ 
+@@ -1806,15 +1803,19 @@ static void crypt_endio(struct bio *clon
+ 	struct dm_crypt_io *io = clone->bi_private;
+ 	struct crypt_config *cc = io->cc;
+ 	unsigned int rw = bio_data_dir(clone);
+-	blk_status_t error;
++	blk_status_t error = clone->bi_status;
++
++	if (io->ctx.aead_recheck && !error) {
++		kcryptd_queue_crypt(io);
++		return;
++	}
+ 
+ 	/*
+ 	 * free the processed pages
+ 	 */
+-	if (rw == WRITE)
++	if (rw == WRITE || io->ctx.aead_recheck)
+ 		crypt_free_buffer_pages(cc, clone);
+ 
+-	error = clone->bi_status;
+ 	bio_put(clone);
+ 
+ 	if (rw == READ && !error) {
+@@ -1835,6 +1836,22 @@ static int kcryptd_io_read(struct dm_cry
+ 	struct crypt_config *cc = io->cc;
+ 	struct bio *clone;
+ 
++	if (io->ctx.aead_recheck) {
++		if (!(gfp & __GFP_DIRECT_RECLAIM))
++			return 1;
++		crypt_inc_pending(io);
++		clone = crypt_alloc_buffer(io, io->base_bio->bi_iter.bi_size);
++		if (unlikely(!clone)) {
++			crypt_dec_pending(io);
++			return 1;
++		}
++		clone->bi_iter.bi_sector = cc->start + io->sector;
++		crypt_convert_init(cc, &io->ctx, clone, clone, io->sector);
++		io->saved_bi_iter = clone->bi_iter;
++		dm_submit_bio_remap(io->base_bio, clone);
++		return 0;
++	}
++
+ 	/*
+ 	 * We need the original biovec array in order to decrypt the whole bio
+ 	 * data *afterwards* -- thanks to immutable biovecs we don't need to
+@@ -2061,6 +2078,12 @@ static void kcryptd_crypt_write_convert(
+ 	io->ctx.bio_out = clone;
+ 	io->ctx.iter_out = clone->bi_iter;
+ 
++	if (crypt_integrity_aead(cc)) {
++		bio_copy_data(clone, io->base_bio);
++		io->ctx.bio_in = clone;
++		io->ctx.iter_in = clone->bi_iter;
++	}
++
+ 	sector += bio_sectors(clone);
+ 
+ 	crypt_inc_pending(io);
+@@ -2097,6 +2120,14 @@ dec:
+ 
+ static void kcryptd_crypt_read_done(struct dm_crypt_io *io)
+ {
++	if (io->ctx.aead_recheck) {
++		if (!io->error) {
++			io->ctx.bio_in->bi_iter = io->saved_bi_iter;
++			bio_copy_data(io->base_bio, io->ctx.bio_in);
++		}
++		crypt_free_buffer_pages(io->cc, io->ctx.bio_in);
++		bio_put(io->ctx.bio_in);
++	}
+ 	crypt_dec_pending(io);
+ }
+ 
+@@ -2126,11 +2157,17 @@ static void kcryptd_crypt_read_convert(s
+ 
+ 	crypt_inc_pending(io);
+ 
+-	crypt_convert_init(cc, &io->ctx, io->base_bio, io->base_bio,
+-			   io->sector);
++	if (io->ctx.aead_recheck) {
++		io->ctx.cc_sector = io->sector + cc->iv_offset;
++		r = crypt_convert(cc, &io->ctx,
++				  test_bit(DM_CRYPT_NO_READ_WORKQUEUE, &cc->flags), true);
++	} else {
++		crypt_convert_init(cc, &io->ctx, io->base_bio, io->base_bio,
++				   io->sector);
+ 
+-	r = crypt_convert(cc, &io->ctx,
+-			  test_bit(DM_CRYPT_NO_READ_WORKQUEUE, &cc->flags), true);
++		r = crypt_convert(cc, &io->ctx,
++				  test_bit(DM_CRYPT_NO_READ_WORKQUEUE, &cc->flags), true);
++	}
+ 	/*
+ 	 * Crypto API backlogged the request, because its queue was full
+ 	 * and we're in softirq context, so continue from a workqueue
+@@ -2173,10 +2210,13 @@ static void kcryptd_async_done(struct cr
+ 	if (error == -EBADMSG) {
+ 		sector_t s = le64_to_cpu(*org_sector_of_dmreq(cc, dmreq));
+ 
+-		DMERR_LIMIT("%pg: INTEGRITY AEAD ERROR, sector %llu",
+-			    ctx->bio_in->bi_bdev, s);
+-		dm_audit_log_bio(DM_MSG_PREFIX, "integrity-aead",
+-				 ctx->bio_in, s, 0);
++		ctx->aead_failed = true;
++		if (ctx->aead_recheck) {
++			DMERR_LIMIT("%pg: INTEGRITY AEAD ERROR, sector %llu",
++				    ctx->bio_in->bi_bdev, s);
++			dm_audit_log_bio(DM_MSG_PREFIX, "integrity-aead",
++					 ctx->bio_in, s, 0);
++		}
+ 		io->error = BLK_STS_PROTECTION;
+ 	} else if (error < 0)
+ 		io->error = BLK_STS_IOERR;
+@@ -2213,11 +2253,6 @@ static void kcryptd_crypt(struct work_st
+ 		kcryptd_crypt_write_convert(io);
+ }
+ 
+-static void kcryptd_crypt_tasklet(unsigned long work)
+-{
+-	kcryptd_crypt((struct work_struct *)work);
+-}
+-
+ static void kcryptd_queue_crypt(struct dm_crypt_io *io)
+ {
+ 	struct crypt_config *cc = io->cc;
+@@ -2229,15 +2264,10 @@ static void kcryptd_queue_crypt(struct d
+ 		 * irqs_disabled(): the kernel may run some IO completion from the idle thread, but
+ 		 * it is being executed with irqs disabled.
+ 		 */
+-		if (in_hardirq() || irqs_disabled()) {
+-			io->in_tasklet = true;
+-			tasklet_init(&io->tasklet, kcryptd_crypt_tasklet, (unsigned long)&io->work);
+-			tasklet_schedule(&io->tasklet);
++		if (!(in_hardirq() || irqs_disabled())) {
++			kcryptd_crypt(&io->work);
+ 			return;
+ 		}
+-
+-		kcryptd_crypt(&io->work);
+-		return;
+ 	}
+ 
+ 	INIT_WORK(&io->work, kcryptd_crypt);
+@@ -2505,7 +2535,7 @@ static int crypt_set_keyring_key(struct
+ 		type = &key_type_encrypted;
+ 		set_key = set_key_encrypted;
+ 	} else if (IS_ENABLED(CONFIG_TRUSTED_KEYS) &&
+-	           !strncmp(key_string, "trusted:", key_desc - key_string + 1)) {
++		   !strncmp(key_string, "trusted:", key_desc - key_string + 1)) {
+ 		type = &key_type_trusted;
+ 		set_key = set_key_trusted;
+ 	} else {
+@@ -3112,7 +3142,7 @@ static int crypt_ctr_optional(struct dm_
+ 			sval = strchr(opt_string + strlen("integrity:"), ':') + 1;
+ 			if (!strcasecmp(sval, "aead")) {
+ 				set_bit(CRYPT_MODE_INTEGRITY_AEAD, &cc->cipher_flags);
+-			} else  if (strcasecmp(sval, "none")) {
++			} else if (strcasecmp(sval, "none")) {
+ 				ti->error = "Unknown integrity profile";
+ 				return -EINVAL;
+ 			}
+Index: kernel-rockchip-6_1/drivers/md/dm-init.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-init.c
++++ kernel-rockchip-6_1/drivers/md/dm-init.c
+@@ -319,5 +319,256 @@ late_initcall(dm_init_init);
+ module_param(create, charp, 0);
+ MODULE_PARM_DESC(create, "Create a mapped device in early boot");
+ 
++/* ---------------------------------------------------------------
++ * ChromeOS shim - convert dm= format to dm-mod.create= format
++ * ---------------------------------------------------------------
++ */
++
++struct dm_chrome_target {
++	char *field[4];
++};
++
++struct dm_chrome_dev {
++	char *name, *uuid, *mode;
++	unsigned int num_targets;
++	struct dm_chrome_target targets[DM_MAX_TARGETS];
++};
++
++static char __init *dm_chrome_parse_target(char *str, struct dm_chrome_target *tgt)
++{
++	unsigned int i;
++
++	tgt->field[0] = str;
++	/* Delimit first 3 fields that are separated by space */
++	for (i = 0; i < ARRAY_SIZE(tgt->field) - 1; i++) {
++		tgt->field[i + 1] = str_field_delimit(&tgt->field[i], ' ');
++		if (!tgt->field[i + 1])
++			return NULL;
++	}
++	/* Delimit last field that can be terminated by comma */
++	return str_field_delimit(&tgt->field[i], ',');
++}
++
++static char __init *dm_chrome_parse_dev(char *str, struct dm_chrome_dev *dev)
++{
++	char *target, *num;
++	unsigned int i;
++
++	if (!str)
++		return ERR_PTR(-EINVAL);
++
++	target = str_field_delimit(&str, ',');
++	if (!target)
++		return ERR_PTR(-EINVAL);
++
++	/* Delimit first 3 fields that are separated by space */
++	dev->name = str;
++	dev->uuid = str_field_delimit(&dev->name, ' ');
++	if (!dev->uuid)
++		return ERR_PTR(-EINVAL);
++
++	dev->mode = str_field_delimit(&dev->uuid, ' ');
++	if (!dev->mode)
++		return ERR_PTR(-EINVAL);
++
++	/* num is optional */
++	num = str_field_delimit(&dev->mode, ' ');
++	if (!num)
++		dev->num_targets = 1;
++	else {
++		/* Delimit num and check if it the last field */
++		if(str_field_delimit(&num, ' '))
++			return ERR_PTR(-EINVAL);
++		if (kstrtouint(num, 0, &dev->num_targets))
++			return ERR_PTR(-EINVAL);
++	}
++
++	if (dev->num_targets > DM_MAX_TARGETS) {
++		DMERR("too many targets %u > %d",
++		      dev->num_targets, DM_MAX_TARGETS);
++		return ERR_PTR(-EINVAL);
++	}
++
++	for (i = 0; i < dev->num_targets - 1; i++) {
++		target = dm_chrome_parse_target(target, &dev->targets[i]);
++		if (!target)
++			return ERR_PTR(-EINVAL);
++	}
++	/* The last one can return NULL if it reaches the end of str */
++	return dm_chrome_parse_target(target, &dev->targets[i]);
++}
++
++static char __init *dm_chrome_convert(struct dm_chrome_dev *devs, unsigned int num_devs)
++{
++	char *str = kmalloc(DM_MAX_STR_SIZE, GFP_KERNEL);
++	char *p = str;
++	unsigned int i, j;
++	int ret;
++
++	if (!str)
++		return ERR_PTR(-ENOMEM);
++
++	for (i = 0; i < num_devs; i++) {
++		if (!strcmp(devs[i].uuid, "none"))
++			devs[i].uuid = "";
++		ret = snprintf(p, DM_MAX_STR_SIZE - (p - str),
++			       "%s,%s,,%s",
++			       devs[i].name,
++			       devs[i].uuid,
++			       devs[i].mode);
++		if (ret < 0)
++			goto out;
++		p += ret;
++
++		for (j = 0; j < devs[i].num_targets; j++) {
++			ret = snprintf(p, DM_MAX_STR_SIZE - (p - str),
++				       ",%s %s %s %s",
++				       devs[i].targets[j].field[0],
++				       devs[i].targets[j].field[1],
++				       devs[i].targets[j].field[2],
++				       devs[i].targets[j].field[3]);
++			if (ret < 0)
++				goto out;
++			p += ret;
++		}
++		if (i < num_devs - 1) {
++			ret = snprintf(p, DM_MAX_STR_SIZE - (p - str), ";");
++			if (ret < 0)
++				goto out;
++			p += ret;
++		}
++	}
++
++	return str;
++
++out:
++	kfree(str);
++	return ERR_PTR(ret);
++}
++
++/**
++ * dm_chrome_shim - convert old dm= format used in chromeos to the new
++ * upstream format.
++ *
++ * ChromeOS old format
++ * -------------------
++ * <device>        ::= [<num>] <device-mapper>+
++ * <device-mapper> ::= <head> "," <target>+
++ * <head>          ::= <name> <uuid> <mode> [<num>]
++ * <target>        ::= <start> <length> <type> <options> ","
++ * <mode>          ::= "ro" | "rw"
++ * <uuid>          ::= xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx | "none"
++ * <type>          ::= "verity" | "bootcache" | ...
++ *
++ * Example:
++ * 2 vboot none ro 1,
++ *     0 1768000 bootcache
++ *       device=aa55b119-2a47-8c45-946a-5ac57765011f+1
++ *       signature=76e9be054b15884a9fa85973e9cb274c93afadb6
++ *       cache_start=1768000 max_blocks=100000 size_limit=23 max_trace=20000,
++ *   vroot none ro 1,
++ *     0 1740800 verity payload=254:0 hashtree=254:0 hashstart=1740800 alg=sha1
++ *       root_hexdigest=76e9be054b15884a9fa85973e9cb274c93afadb6
++ *       salt=5b3549d54d6c7a3837b9b81ed72e49463a64c03680c47835bef94d768e5646fe
++ *
++ * Notes:
++ *  1. uuid is a label for the device and we set it to "none".
++ *  2. The <num> field will be optional initially and assumed to be 1.
++ *     Once all the scripts that set these fields have been set, it will
++ *     be made mandatory.
++ */
++
++static char *chrome_create;
++
++static int __init dm_chrome_shim(char *arg) {
++	if (!arg || create)
++		return -EINVAL;
++	chrome_create = arg;
++	return 0;
++}
++
++static int __init dm_chrome_parse_devices(void)
++{
++	struct dm_chrome_dev *devs;
++	unsigned int num_devs, i;
++	char *next, *base_str;
++	int ret = 0;
++
++	/* Verify if dm-mod.create was not used */
++	if (!chrome_create || create)
++		return -EINVAL;
++
++	if (strlen(chrome_create) >= DM_MAX_STR_SIZE) {
++		DMERR("Argument is too big. Limit is %d\n", DM_MAX_STR_SIZE);
++		return -EINVAL;
++	}
++
++	base_str = kstrdup(chrome_create, GFP_KERNEL);
++	if (!base_str)
++		return -ENOMEM;
++
++	next = str_field_delimit(&base_str, ' ');
++	if (!next) {
++		ret = -EINVAL;
++		goto out_str;
++	}
++
++	/* if first field is not the optional <num> field */
++	if (kstrtouint(base_str, 0, &num_devs)) {
++		num_devs = 1;
++		/* rewind next pointer */
++		next = base_str;
++	}
++
++	if (num_devs > DM_MAX_DEVICES) {
++		DMERR("too many devices %u > %d", num_devs, DM_MAX_DEVICES);
++		ret = -EINVAL;
++		goto out_str;
++	}
++
++	devs = kcalloc(num_devs, sizeof(*devs), GFP_KERNEL);
++	if (!devs)
++		return -ENOMEM;
++
++	/* restore string */
++	strcpy(base_str, chrome_create);
++
++	/* parse devices */
++	for (i = 0; i < num_devs; i++) {
++		next = dm_chrome_parse_dev(next, &devs[i]);
++		if (IS_ERR(next)) {
++			DMERR("couldn't parse device");
++			ret = PTR_ERR(next);
++			goto out_devs;
++		}
++	}
++
++	create = dm_chrome_convert(devs, num_devs);
++	if (IS_ERR(create)) {
++		ret = PTR_ERR(create);
++		goto out_devs;
++	}
++
++	DMDEBUG("Converting:\n\tdm=\"%s\"\n\tdm-mod.create=\"%s\"\n",
++		chrome_create, create);
++
++	/* Call upstream code */
++	dm_init_init();
++
++	kfree(create);
++
++out_devs:
++	create = NULL;
++	kfree(devs);
++out_str:
++	kfree(base_str);
++
++	return ret;
++}
++
++late_initcall(dm_chrome_parse_devices);
++
++__setup("dm=", dm_chrome_shim);
++
+ module_param_array(waitfor, charp, NULL, 0);
+ MODULE_PARM_DESC(waitfor, "Devices to wait for before setting up tables");
+Index: kernel-rockchip-6_1/drivers/md/dm-integrity.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-integrity.c
++++ kernel-rockchip-6_1/drivers/md/dm-integrity.c
+@@ -279,6 +279,8 @@ struct dm_integrity_c {
+ 
+ 	atomic64_t number_of_mismatches;
+ 
++	mempool_t recheck_pool;
++
+ 	struct notifier_block reboot_notifier;
+ };
+ 
+@@ -577,7 +579,7 @@ static int sync_rw_sb(struct dm_integrit
+ 		}
+ 	}
+ 
+-	r = dm_io(&io_req, 1, &io_loc, NULL);
++	r = dm_io(&io_req, 1, &io_loc, NULL, IOPRIO_DEFAULT);
+ 	if (unlikely(r))
+ 		return r;
+ 
+@@ -1087,7 +1089,7 @@ static void rw_journal_sectors(struct dm
+ 	io_loc.sector = ic->start + SB_SECTORS + sector;
+ 	io_loc.count = n_sectors;
+ 
+-	r = dm_io(&io_req, 1, &io_loc, NULL);
++	r = dm_io(&io_req, 1, &io_loc, NULL, IOPRIO_DEFAULT);
+ 	if (unlikely(r)) {
+ 		dm_integrity_io_error(ic, (opf & REQ_OP_MASK) == REQ_OP_READ ?
+ 				      "reading journal" : "writing journal", r);
+@@ -1203,7 +1205,7 @@ static void copy_from_journal(struct dm_
+ 	io_loc.sector = target;
+ 	io_loc.count = n_sectors;
+ 
+-	r = dm_io(&io_req, 1, &io_loc, NULL);
++	r = dm_io(&io_req, 1, &io_loc, NULL, IOPRIO_DEFAULT);
+ 	if (unlikely(r)) {
+ 		WARN_ONCE(1, "asynchronous dm_io failed: %d", r);
+ 		fn(-1UL, data);
+@@ -1530,7 +1532,7 @@ static void dm_integrity_flush_buffers(s
+ 		fr.io_reg.count = 0,
+ 		fr.ic = ic;
+ 		init_completion(&fr.comp);
+-		r = dm_io(&fr.io_req, 1, &fr.io_reg, NULL);
++		r = dm_io(&fr.io_req, 1, &fr.io_reg, NULL, IOPRIO_DEFAULT);
+ 		BUG_ON(r);
+ 	}
+ 
+@@ -1699,6 +1701,85 @@ failed:
+ 	get_random_bytes(result, ic->tag_size);
+ }
+ 
++static noinline void integrity_recheck(struct dm_integrity_io *dio, char *checksum)
++{
++	struct bio *bio = dm_bio_from_per_bio_data(dio, sizeof(struct dm_integrity_io));
++	struct dm_integrity_c *ic = dio->ic;
++	struct bvec_iter iter;
++	struct bio_vec bv;
++	sector_t sector, logical_sector, area, offset;
++	struct page *page;
++
++	get_area_and_offset(ic, dio->range.logical_sector, &area, &offset);
++	dio->metadata_block = get_metadata_sector_and_offset(ic, area, offset,
++							     &dio->metadata_offset);
++	sector = get_data_sector(ic, area, offset);
++	logical_sector = dio->range.logical_sector;
++
++	page = mempool_alloc(&ic->recheck_pool, GFP_NOIO);
++
++	__bio_for_each_segment(bv, bio, iter, dio->bio_details.bi_iter) {
++		unsigned pos = 0;
++
++		do {
++			sector_t alignment;
++			char *mem;
++			char *buffer = page_to_virt(page);
++			int r;
++			struct dm_io_request io_req;
++			struct dm_io_region io_loc;
++			io_req.bi_opf = REQ_OP_READ;
++			io_req.mem.type = DM_IO_KMEM;
++			io_req.mem.ptr.addr = buffer;
++			io_req.notify.fn = NULL;
++			io_req.client = ic->io;
++			io_loc.bdev = ic->dev->bdev;
++			io_loc.sector = sector;
++			io_loc.count = ic->sectors_per_block;
++
++			/* Align the bio to logical block size */
++			alignment = dio->range.logical_sector | bio_sectors(bio) | (PAGE_SIZE >> SECTOR_SHIFT);
++			alignment &= -alignment;
++			io_loc.sector = round_down(io_loc.sector, alignment);
++			io_loc.count += sector - io_loc.sector;
++			buffer += (sector - io_loc.sector) << SECTOR_SHIFT;
++			io_loc.count = round_up(io_loc.count, alignment);
++
++			r = dm_io(&io_req, 1, &io_loc, NULL, IOPRIO_DEFAULT);
++			if (unlikely(r)) {
++				dio->bi_status = errno_to_blk_status(r);
++				goto free_ret;
++			}
++
++			integrity_sector_checksum(ic, logical_sector, buffer, checksum);
++			r = dm_integrity_rw_tag(ic, checksum, &dio->metadata_block,
++						&dio->metadata_offset, ic->tag_size, TAG_CMP);
++			if (r) {
++				if (r > 0) {
++					DMERR_LIMIT("%pg: Checksum failed at sector 0x%llx",
++						    bio->bi_bdev, logical_sector);
++					atomic64_inc(&ic->number_of_mismatches);
++					dm_audit_log_bio(DM_MSG_PREFIX, "integrity-checksum",
++							 bio, logical_sector, 0);
++					r = -EILSEQ;
++				}
++				dio->bi_status = errno_to_blk_status(r);
++				goto free_ret;
++			}
++
++			mem = bvec_kmap_local(&bv);
++			memcpy(mem + pos, buffer, ic->sectors_per_block << SECTOR_SHIFT);
++			kunmap_local(mem);
++
++			pos += ic->sectors_per_block << SECTOR_SHIFT;
++			sector += ic->sectors_per_block;
++			logical_sector += ic->sectors_per_block;
++		} while (pos < bv.bv_len);
++	}
++free_ret:
++	mempool_free(page, &ic->recheck_pool);
++}
++
+ static void integrity_metadata(struct work_struct *w)
+ {
+ 	struct dm_integrity_io *dio = container_of(w, struct dm_integrity_io, work);
+@@ -1783,19 +1864,12 @@ again:
+ 			r = dm_integrity_rw_tag(ic, checksums, &dio->metadata_block, &dio->metadata_offset,
+ 						checksums_ptr - checksums, dio->op == REQ_OP_READ ? TAG_CMP : TAG_WRITE);
+ 			if (unlikely(r)) {
+-				if (r > 0) {
+-					sector_t s;
+-
+-					s = sector - ((r + ic->tag_size - 1) / ic->tag_size);
+-					DMERR_LIMIT("%pg: Checksum failed at sector 0x%llx",
+-						    bio->bi_bdev, s);
+-					r = -EILSEQ;
+-					atomic64_inc(&ic->number_of_mismatches);
+-					dm_audit_log_bio(DM_MSG_PREFIX, "integrity-checksum",
+-							 bio, s, 0);
+-				}
+ 				if (likely(checksums != checksums_onstack))
+ 					kfree(checksums);
++				if (r > 0) {
++					integrity_recheck(dio, checksums_onstack);
++					goto skip_io;
++				}
+ 				goto error;
+ 			}
+ 
+@@ -2301,7 +2375,6 @@ offload_to_thread:
+ 		else
+ skip_check:
+ 			dec_in_flight(dio);
+-
+ 	} else {
+ 		INIT_WORK(&dio->work, integrity_metadata);
+ 		queue_work(ic->metadata_wq, &dio->work);
+@@ -2709,7 +2782,7 @@ next_chunk:
+ 	io_loc.sector = get_data_sector(ic, area, offset);
+ 	io_loc.count = n_sectors;
+ 
+-	r = dm_io(&io_req, 1, &io_loc, NULL);
++	r = dm_io(&io_req, 1, &io_loc, NULL, IOPRIO_DEFAULT);
+ 	if (unlikely(r)) {
+ 		dm_integrity_io_error(ic, "reading data", r);
+ 		goto err;
+@@ -4085,7 +4158,7 @@ static int dm_integrity_ctr(struct dm_ta
+ 		} else if (sscanf(opt_string, "block_size:%u%c", &val, &dummy) == 1) {
+ 			if (val < 1 << SECTOR_SHIFT ||
+ 			    val > MAX_SECTORS_PER_BLOCK << SECTOR_SHIFT ||
+-			    (val & (val -1))) {
++			    (val & (val - 1))) {
+ 				r = -EINVAL;
+ 				ti->error = "Invalid block_size argument";
+ 				goto bad;
+@@ -4094,7 +4167,7 @@ static int dm_integrity_ctr(struct dm_ta
+ 		} else if (sscanf(opt_string, "sectors_per_bit:%llu%c", &llval, &dummy) == 1) {
+ 			log2_sectors_per_bitmap_bit = !llval ? 0 : __ilog2_u64(llval);
+ 		} else if (sscanf(opt_string, "bitmap_flush_interval:%u%c", &val, &dummy) == 1) {
+-			if (val >= (uint64_t)UINT_MAX * 1000 / HZ) {
++			if ((uint64_t)val >= (uint64_t)UINT_MAX * 1000 / HZ) {
+ 				r = -EINVAL;
+ 				ti->error = "Invalid bitmap_flush_interval argument";
+ 				goto bad;
+@@ -4208,6 +4281,12 @@ static int dm_integrity_ctr(struct dm_ta
+ 		goto bad;
+ 	}
+ 
++	r = mempool_init_page_pool(&ic->recheck_pool, 1, 0);
++	if (r) {
++		ti->error = "Cannot allocate mempool";
++		goto bad;
++	}
++
+ 	ic->metadata_wq = alloc_workqueue("dm-integrity-metadata",
+ 					  WQ_MEM_RECLAIM, METADATA_WORKQUEUE_MAX_ACTIVE);
+ 	if (!ic->metadata_wq) {
+@@ -4405,7 +4484,7 @@ try_smaller_buffer:
+ 	if (ic->internal_hash) {
+ 		size_t recalc_tags_size;
+ 		ic->recalc_wq = alloc_workqueue("dm-integrity-recalc", WQ_MEM_RECLAIM, 1);
+-		if (!ic->recalc_wq ) {
++		if (!ic->recalc_wq) {
+ 			ti->error = "Cannot allocate workqueue";
+ 			r = -ENOMEM;
+ 			goto bad;
+@@ -4572,6 +4651,7 @@ static void dm_integrity_dtr(struct dm_t
+ 	kvfree(ic->bbs);
+ 	if (ic->bufio)
+ 		dm_bufio_client_destroy(ic->bufio);
++	mempool_exit(&ic->recheck_pool);
+ 	mempool_exit(&ic->journal_io_mempool);
+ 	if (ic->io)
+ 		dm_io_client_destroy(ic->io);
+Index: kernel-rockchip-6_1/drivers/md/dm-io.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-io.c
++++ kernel-rockchip-6_1/drivers/md/dm-io.c
+@@ -295,7 +295,7 @@ static void km_dp_init(struct dpages *dp
+  *---------------------------------------------------------------*/
+ static void do_region(const blk_opf_t opf, unsigned int region,
+ 		      struct dm_io_region *where, struct dpages *dp,
+-		      struct io *io)
++		      struct io *io, unsigned short ioprio)
+ {
+ 	struct bio *bio;
+ 	struct page *page;
+@@ -344,6 +344,7 @@ static void do_region(const blk_opf_t op
+ 				       &io->client->bios);
+ 		bio->bi_iter.bi_sector = where->sector + (where->count - remaining);
+ 		bio->bi_end_io = endio;
++		bio->bi_ioprio = ioprio;
+ 		store_io_and_region_in_bio(bio, io, region);
+ 
+ 		if (op == REQ_OP_DISCARD || op == REQ_OP_WRITE_ZEROES) {
+@@ -371,7 +372,7 @@ static void do_region(const blk_opf_t op
+ 
+ static void dispatch_io(blk_opf_t opf, unsigned int num_regions,
+ 			struct dm_io_region *where, struct dpages *dp,
+-			struct io *io, int sync)
++			struct io *io, int sync, unsigned short ioprio)
+ {
+ 	int i;
+ 	struct dpages old_pages = *dp;
+@@ -388,7 +389,7 @@ static void dispatch_io(blk_opf_t opf, u
+ 	for (i = 0; i < num_regions; i++) {
+ 		*dp = old_pages;
+ 		if (where[i].count || (opf & REQ_PREFLUSH))
+-			do_region(opf, i, where + i, dp, io);
++			do_region(opf, i, where + i, dp, io, ioprio);
+ 	}
+ 
+ 	/*
+@@ -413,7 +414,7 @@ static void sync_io_complete(unsigned lo
+ 
+ static int sync_io(struct dm_io_client *client, unsigned int num_regions,
+ 		   struct dm_io_region *where, blk_opf_t opf, struct dpages *dp,
+-		   unsigned long *error_bits)
++		   unsigned long *error_bits, unsigned short ioprio)
+ {
+ 	struct io *io;
+ 	struct sync_io sio;
+@@ -435,7 +436,7 @@ static int sync_io(struct dm_io_client *
+ 	io->vma_invalidate_address = dp->vma_invalidate_address;
+ 	io->vma_invalidate_size = dp->vma_invalidate_size;
+ 
+-	dispatch_io(opf, num_regions, where, dp, io, 1);
++	dispatch_io(opf, num_regions, where, dp, io, 1, ioprio);
+ 
+ 	wait_for_completion_io(&sio.wait);
+ 
+@@ -447,7 +448,8 @@ static int sync_io(struct dm_io_client *
+ 
+ static int async_io(struct dm_io_client *client, unsigned int num_regions,
+ 		    struct dm_io_region *where, blk_opf_t opf,
+-		    struct dpages *dp, io_notify_fn fn, void *context)
++		    struct dpages *dp, io_notify_fn fn, void *context,
++		    unsigned short ioprio)
+ {
+ 	struct io *io;
+ 
+@@ -467,7 +469,7 @@ static int async_io(struct dm_io_client
+ 	io->vma_invalidate_address = dp->vma_invalidate_address;
+ 	io->vma_invalidate_size = dp->vma_invalidate_size;
+ 
+-	dispatch_io(opf, num_regions, where, dp, io, 0);
++	dispatch_io(opf, num_regions, where, dp, io, 0, ioprio);
+ 	return 0;
+ }
+ 
+@@ -509,7 +511,8 @@ static int dp_init(struct dm_io_request
+ }
+ 
+ int dm_io(struct dm_io_request *io_req, unsigned int num_regions,
+-	  struct dm_io_region *where, unsigned long *sync_error_bits)
++	  struct dm_io_region *where, unsigned long *sync_error_bits,
++	  unsigned short ioprio)
+ {
+ 	int r;
+ 	struct dpages dp;
+@@ -520,11 +523,11 @@ int dm_io(struct dm_io_request *io_req,
+ 
+ 	if (!io_req->notify.fn)
+ 		return sync_io(io_req->client, num_regions, where,
+-			       io_req->bi_opf, &dp, sync_error_bits);
++			       io_req->bi_opf, &dp, sync_error_bits, ioprio);
+ 
+ 	return async_io(io_req->client, num_regions, where,
+ 			io_req->bi_opf, &dp, io_req->notify.fn,
+-			io_req->notify.context);
++			io_req->notify.context, ioprio);
+ }
+ EXPORT_SYMBOL(dm_io);
+ 
+Index: kernel-rockchip-6_1/drivers/md/dm-ioctl.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-ioctl.c
++++ kernel-rockchip-6_1/drivers/md/dm-ioctl.c
+@@ -1877,7 +1877,8 @@ static int copy_params(struct dm_ioctl _
+ 			   minimum_data_size - sizeof(param_kernel->version)))
+ 		return -EFAULT;
+ 
+-	if (param_kernel->data_size < minimum_data_size) {
++	if (unlikely(param_kernel->data_size < minimum_data_size) ||
++	    unlikely(param_kernel->data_size > DM_MAX_TARGETS * DM_MAX_TARGET_PARAMS)) {
+ 		DMERR("Invalid data size in the ioctl structure: %u",
+ 		      param_kernel->data_size);
+ 		return -EINVAL;
+Index: kernel-rockchip-6_1/drivers/md/dm-kcopyd.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-kcopyd.c
++++ kernel-rockchip-6_1/drivers/md/dm-kcopyd.c
+@@ -572,9 +572,9 @@ static int run_io_job(struct kcopyd_job
+ 	io_job_start(job->kc->throttle);
+ 
+ 	if (job->op == REQ_OP_READ)
+-		r = dm_io(&io_req, 1, &job->source, NULL);
++		r = dm_io(&io_req, 1, &job->source, NULL, IOPRIO_DEFAULT);
+ 	else
+-		r = dm_io(&io_req, job->num_dests, job->dests, NULL);
++		r = dm_io(&io_req, job->num_dests, job->dests, NULL, IOPRIO_DEFAULT);
+ 
+ 	return r;
+ }
+Index: kernel-rockchip-6_1/drivers/md/dm-log.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-log.c
++++ kernel-rockchip-6_1/drivers/md/dm-log.c
+@@ -295,7 +295,7 @@ static int rw_header(struct log_c *lc, e
+ {
+ 	lc->io_req.bi_opf = op;
+ 
+-	return dm_io(&lc->io_req, 1, &lc->header_location, NULL);
++	return dm_io(&lc->io_req, 1, &lc->header_location, NULL, IOPRIO_DEFAULT);
+ }
+ 
+ static int flush_header(struct log_c *lc)
+@@ -308,7 +308,7 @@ static int flush_header(struct log_c *lc
+ 
+ 	lc->io_req.bi_opf = REQ_OP_WRITE | REQ_PREFLUSH;
+ 
+-	return dm_io(&lc->io_req, 1, &null_location, NULL);
++	return dm_io(&lc->io_req, 1, &null_location, NULL, IOPRIO_DEFAULT);
+ }
+ 
+ static int read_header(struct log_c *log)
+@@ -756,8 +756,8 @@ static void core_set_region_sync(struct
+ 	log_clear_bit(lc, lc->recovering_bits, region);
+ 	if (in_sync) {
+ 		log_set_bit(lc, lc->sync_bits, region);
+-                lc->sync_count++;
+-        } else if (log_test_bit(lc->sync_bits, region)) {
++		lc->sync_count++;
++	} else if (log_test_bit(lc->sync_bits, region)) {
+ 		lc->sync_count--;
+ 		log_clear_bit(lc, lc->sync_bits, region);
+ 	}
+@@ -765,9 +765,9 @@ static void core_set_region_sync(struct
+ 
+ static region_t core_get_sync_count(struct dm_dirty_log *log)
+ {
+-        struct log_c *lc = (struct log_c *) log->context;
++	struct log_c *lc = (struct log_c *) log->context;
+ 
+-        return lc->sync_count;
++	return lc->sync_count;
+ }
+ 
+ #define	DMEMIT_SYNC \
+Index: kernel-rockchip-6_1/drivers/md/dm-raid.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-raid.c
++++ kernel-rockchip-6_1/drivers/md/dm-raid.c
+@@ -362,8 +362,8 @@ static struct {
+ 	const int mode;
+ 	const char *param;
+ } _raid456_journal_mode[] = {
+-	{ R5C_JOURNAL_MODE_WRITE_THROUGH , "writethrough" },
+-	{ R5C_JOURNAL_MODE_WRITE_BACK    , "writeback" }
++	{ R5C_JOURNAL_MODE_WRITE_THROUGH, "writethrough" },
++	{ R5C_JOURNAL_MODE_WRITE_BACK,    "writeback" }
+ };
+ 
+ /* Return MD raid4/5/6 journal mode for dm @journal_mode one */
+@@ -1114,7 +1114,7 @@ too_many:
+  *    [stripe_cache <sectors>]		Stripe cache size for higher RAIDs
+  *    [region_size <sectors>]		Defines granularity of bitmap
+  *    [journal_dev <dev>]		raid4/5/6 journaling deviice
+- *    					(i.e. write hole closing log)
++ *					(i.e. write hole closing log)
+  *
+  * RAID10-only options:
+  *    [raid10_copies <# copies>]	Number of copies.  (Default: 2)
+@@ -3325,14 +3325,14 @@ static int raid_map(struct dm_target *ti
+ 	struct mddev *mddev = &rs->md;
+ 
+ 	/*
+-	 * If we're reshaping to add disk(s)), ti->len and
++	 * If we're reshaping to add disk(s), ti->len and
+ 	 * mddev->array_sectors will differ during the process
+ 	 * (ti->len > mddev->array_sectors), so we have to requeue
+ 	 * bios with addresses > mddev->array_sectors here or
+ 	 * there will occur accesses past EOD of the component
+ 	 * data images thus erroring the raid set.
+ 	 */
+-	if (unlikely(bio_end_sector(bio) > mddev->array_sectors))
++	if (unlikely(bio_has_data(bio) && bio_end_sector(bio) > mddev->array_sectors))
+ 		return DM_MAPIO_REQUEUE;
+ 
+ 	md_handle_request(mddev, bio);
+@@ -3999,7 +3999,7 @@ static int raid_preresume(struct dm_targ
+ 	}
+ 
+ 	/* Resize bitmap to adjust to changed region size (aka MD bitmap chunksize) or grown device size */
+-        if (test_bit(RT_FLAG_RS_BITMAP_LOADED, &rs->runtime_flags) && mddev->bitmap &&
++	if (test_bit(RT_FLAG_RS_BITMAP_LOADED, &rs->runtime_flags) && mddev->bitmap &&
+ 	    (test_bit(RT_FLAG_RS_GROW, &rs->runtime_flags) ||
+ 	     (rs->requested_bitmap_chunk_sectors &&
+ 	       mddev->bitmap_info.chunksize != to_bytes(rs->requested_bitmap_chunk_sectors)))) {
+@@ -4046,7 +4046,9 @@ static void raid_resume(struct dm_target
+ 		 * Take this opportunity to check whether any failed
+ 		 * devices are reachable again.
+ 		 */
++		mddev_lock_nointr(mddev);
+ 		attempt_restore_of_faulty_devices(rs);
++		mddev_unlock(mddev);
+ 	}
+ 
+ 	if (test_and_clear_bit(RT_FLAG_RS_SUSPENDED, &rs->runtime_flags)) {
+Index: kernel-rockchip-6_1/drivers/md/dm-raid1.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-raid1.c
++++ kernel-rockchip-6_1/drivers/md/dm-raid1.c
+@@ -273,7 +273,7 @@ static int mirror_flush(struct dm_target
+ 	}
+ 
+ 	error_bits = -1;
+-	dm_io(&io_req, ms->nr_mirrors, io, &error_bits);
++	dm_io(&io_req, ms->nr_mirrors, io, &error_bits, IOPRIO_DEFAULT);
+ 	if (unlikely(error_bits != 0)) {
+ 		for (i = 0; i < ms->nr_mirrors; i++)
+ 			if (test_bit(i, &error_bits))
+@@ -543,7 +543,7 @@ static void read_async_bio(struct mirror
+ 
+ 	map_region(&io, m, bio);
+ 	bio_set_m(bio, m);
+-	BUG_ON(dm_io(&io_req, 1, &io, NULL));
++	BUG_ON(dm_io(&io_req, 1, &io, NULL, IOPRIO_DEFAULT));
+ }
+ 
+ static inline int region_in_sync(struct mirror_set *ms, region_t region,
+@@ -670,7 +670,7 @@ static void do_write(struct mirror_set *
+ 	 */
+ 	bio_set_m(bio, get_default_mirror(ms));
+ 
+-	BUG_ON(dm_io(&io_req, ms->nr_mirrors, io, NULL));
++	BUG_ON(dm_io(&io_req, ms->nr_mirrors, io, NULL, IOPRIO_DEFAULT));
+ }
+ 
+ static void do_writes(struct mirror_set *ms, struct bio_list *writes)
+@@ -902,7 +902,7 @@ static struct mirror_set *alloc_context(
+ 	if (IS_ERR(ms->io_client)) {
+ 		ti->error = "Error creating dm_io client";
+ 		kfree(ms);
+- 		return NULL;
++		return NULL;
+ 	}
+ 
+ 	ms->rh = dm_region_hash_create(ms, dispatch_bios, wakeup_mirrord,
+Index: kernel-rockchip-6_1/drivers/md/dm-snap-persistent.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-snap-persistent.c
++++ kernel-rockchip-6_1/drivers/md/dm-snap-persistent.c
+@@ -220,7 +220,7 @@ static void do_metadata(struct work_stru
+ {
+ 	struct mdata_req *req = container_of(work, struct mdata_req, work);
+ 
+-	req->result = dm_io(req->io_req, 1, req->where, NULL);
++	req->result = dm_io(req->io_req, 1, req->where, NULL, IOPRIO_DEFAULT);
+ }
+ 
+ /*
+@@ -244,7 +244,7 @@ static int chunk_io(struct pstore *ps, v
+ 	struct mdata_req req;
+ 
+ 	if (!metadata)
+-		return dm_io(&io_req, 1, &where, NULL);
++		return dm_io(&io_req, 1, &where, NULL, IOPRIO_DEFAULT);
+ 
+ 	req.where = &where;
+ 	req.io_req = &io_req;
+Index: kernel-rockchip-6_1/drivers/md/dm-snap.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-snap.c
++++ kernel-rockchip-6_1/drivers/md/dm-snap.c
+@@ -679,8 +679,10 @@ static void dm_exception_table_exit(stru
+ 	for (i = 0; i < size; i++) {
+ 		slot = et->table + i;
+ 
+-		hlist_bl_for_each_entry_safe(ex, pos, n, slot, hash_list)
++		hlist_bl_for_each_entry_safe(ex, pos, n, slot, hash_list) {
+ 			kmem_cache_free(mem, ex);
++			cond_resched();
++		}
+ 	}
+ 
+ 	kvfree(et->table);
+Index: kernel-rockchip-6_1/drivers/md/dm-table.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-table.c
++++ kernel-rockchip-6_1/drivers/md/dm-table.c
+@@ -72,7 +72,7 @@ static sector_t high(struct dm_table *t,
+ 		n = get_child(n, CHILDREN_PER_NODE - 1);
+ 
+ 	if (n >= t->counts[l])
+-		return (sector_t) - 1;
++		return (sector_t) -1;
+ 
+ 	return get_node(t, l, n)[KEYS_PER_NODE - 1];
+ }
+@@ -128,7 +128,12 @@ static int alloc_targets(struct dm_table
+ int dm_table_create(struct dm_table **result, fmode_t mode,
+ 		    unsigned int num_targets, struct mapped_device *md)
+ {
+-	struct dm_table *t = kzalloc(sizeof(*t), GFP_KERNEL);
++	struct dm_table *t;
++
++	if (num_targets > DM_MAX_TARGETS)
++		return -EOVERFLOW;
++
++	t = kzalloc(sizeof(*t), GFP_KERNEL);
+ 
+ 	if (!t)
+ 		return -ENOMEM;
+@@ -143,7 +148,7 @@ int dm_table_create(struct dm_table **re
+ 
+ 	if (!num_targets) {
+ 		kfree(t);
+-		return -ENOMEM;
++		return -EOVERFLOW;
+ 	}
+ 
+ 	if (alloc_targets(t, num_targets)) {
+@@ -1528,7 +1533,7 @@ static bool dm_table_any_dev_attr(struct
+ 		if (ti->type->iterate_devices &&
+ 		    ti->type->iterate_devices(ti, func, data))
+ 			return true;
+-        }
++	}
+ 
+ 	return false;
+ }
+Index: kernel-rockchip-6_1/drivers/md/dm-thin.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-thin.c
++++ kernel-rockchip-6_1/drivers/md/dm-thin.c
+@@ -1179,9 +1179,9 @@ static void process_prepared_discard_pas
+ 	discard_parent = bio_alloc(NULL, 1, 0, GFP_NOIO);
+ 	discard_parent->bi_end_io = passdown_endio;
+ 	discard_parent->bi_private = m;
+- 	if (m->maybe_shared)
+- 		passdown_double_checking_shared_status(m, discard_parent);
+- 	else {
++	if (m->maybe_shared)
++		passdown_double_checking_shared_status(m, discard_parent);
++	else {
+ 		struct discard_op op;
+ 
+ 		begin_discard(&op, tc, discard_parent);
+Index: kernel-rockchip-6_1/drivers/md/dm-writecache.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm-writecache.c
++++ kernel-rockchip-6_1/drivers/md/dm-writecache.c
+@@ -531,7 +531,7 @@ static void ssd_commit_flushed(struct dm
+ 		req.notify.context = &endio;
+ 
+ 		/* writing via async dm-io (implied by notify.fn above) won't return an error */
+-	        (void) dm_io(&req, 1, &region, NULL);
++		(void) dm_io(&req, 1, &region, NULL, IOPRIO_DEFAULT);
+ 		i = j;
+ 	}
+ 
+@@ -568,7 +568,7 @@ static void ssd_commit_superblock(struct
+ 	req.notify.fn = NULL;
+ 	req.notify.context = NULL;
+ 
+-	r = dm_io(&req, 1, &region, NULL);
++	r = dm_io(&req, 1, &region, NULL, IOPRIO_DEFAULT);
+ 	if (unlikely(r))
+ 		writecache_error(wc, r, "error writing superblock");
+ }
+@@ -596,7 +596,7 @@ static void writecache_disk_flush(struct
+ 	req.client = wc->dm_io;
+ 	req.notify.fn = NULL;
+ 
+-	r = dm_io(&req, 1, &region, NULL);
++	r = dm_io(&req, 1, &region, NULL, IOPRIO_DEFAULT);
+ 	if (unlikely(r))
+ 		writecache_error(wc, r, "error flushing metadata: %d", r);
+ }
+@@ -984,7 +984,7 @@ static int writecache_read_metadata(stru
+ 	req.client = wc->dm_io;
+ 	req.notify.fn = NULL;
+ 
+-	return dm_io(&req, 1, &region, NULL);
++	return dm_io(&req, 1, &region, NULL, IOPRIO_DEFAULT);
+ }
+ 
+ static void writecache_resume(struct dm_target *ti)
+Index: kernel-rockchip-6_1/drivers/md/dm.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/dm.c
++++ kernel-rockchip-6_1/drivers/md/dm.c
+@@ -2897,6 +2897,9 @@ static void __dm_internal_suspend(struct
+ 
+ static void __dm_internal_resume(struct mapped_device *md)
+ {
++	int r;
++	struct dm_table *map;
++
+ 	BUG_ON(!md->internal_suspend_count);
+ 
+ 	if (--md->internal_suspend_count)
+@@ -2905,12 +2908,23 @@ static void __dm_internal_resume(struct
+ 	if (dm_suspended_md(md))
+ 		goto done; /* resume from nested suspend */
+ 
+-	/*
+-	 * NOTE: existing callers don't need to call dm_table_resume_targets
+-	 * (which may fail -- so best to avoid it for now by passing NULL map)
+-	 */
+-	(void) __dm_resume(md, NULL);
+-
++	map = rcu_dereference_protected(md->map, lockdep_is_held(&md->suspend_lock));
++	r = __dm_resume(md, map);
++	if (r) {
++		/*
++		 * If a preresume method of some target failed, we are in a
++		 * tricky situation. We can't return an error to the caller. We
++		 * can't fake success because then the "resume" and
++		 * "postsuspend" methods would not be paired correctly, and it
++		 * would break various targets, for example it would cause list
++		 * corruption in the "origin" target.
++		 *
++		 * So, we fake normal suspend here, to make sure that the
++		 * "resume" and "postsuspend" methods will be paired correctly.
++		 */
++		DMERR("Preresume method failed: %d", r);
++		set_bit(DMF_SUSPENDED, &md->flags);
++	}
+ done:
+ 	clear_bit(DMF_SUSPENDED_INTERNALLY, &md->flags);
+ 	smp_mb__after_atomic();
+Index: kernel-rockchip-6_1/drivers/md/md.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/md.c
++++ kernel-rockchip-6_1/drivers/md/md.c
+@@ -564,8 +564,12 @@ static void submit_flushes(struct work_s
+ 			rcu_read_lock();
+ 		}
+ 	rcu_read_unlock();
+-	if (atomic_dec_and_test(&mddev->flush_pending))
++	if (atomic_dec_and_test(&mddev->flush_pending)) {
++		/* The pair is percpu_ref_get() from md_flush_request() */
++		percpu_ref_put(&mddev->active_io);
++
+ 		queue_work(md_wq, &mddev->flush_work);
++	}
+ }
+ 
+ static void md_submit_flush_data(struct work_struct *ws)
+@@ -963,9 +967,10 @@ void md_super_write(struct mddev *mddev,
+ 		return;
+ 
+ 	bio = bio_alloc_bioset(rdev->meta_bdev ? rdev->meta_bdev : rdev->bdev,
+-			       1,
+-			       REQ_OP_WRITE | REQ_SYNC | REQ_PREFLUSH | REQ_FUA,
+-			       GFP_NOIO, &mddev->sync_set);
++			      1,
++			      REQ_OP_WRITE | REQ_SYNC | REQ_IDLE | REQ_META
++				  | REQ_PREFLUSH | REQ_FUA,
++			      GFP_NOIO, &mddev->sync_set);
+ 
+ 	atomic_inc(&rdev->nr_pending);
+ 
+@@ -1145,6 +1150,7 @@ struct super_type  {
+ 					  struct md_rdev *refdev,
+ 					  int minor_version);
+ 	int		    (*validate_super)(struct mddev *mddev,
++					      struct md_rdev *freshest,
+ 					      struct md_rdev *rdev);
+ 	void		    (*sync_super)(struct mddev *mddev,
+ 					  struct md_rdev *rdev);
+@@ -1282,8 +1288,9 @@ static int super_90_load(struct md_rdev
+ 
+ /*
+  * validate_super for 0.90.0
++ * note: we are not using "freshest" for 0.9 superblock
+  */
+-static int super_90_validate(struct mddev *mddev, struct md_rdev *rdev)
++static int super_90_validate(struct mddev *mddev, struct md_rdev *freshest, struct md_rdev *rdev)
+ {
+ 	mdp_disk_t *desc;
+ 	mdp_super_t *sb = page_address(rdev->sb_page);
+@@ -1795,7 +1802,7 @@ static int super_1_load(struct md_rdev *
+ 	return ret;
+ }
+ 
+-static int super_1_validate(struct mddev *mddev, struct md_rdev *rdev)
++static int super_1_validate(struct mddev *mddev, struct md_rdev *freshest, struct md_rdev *rdev)
+ {
+ 	struct mdp_superblock_1 *sb = page_address(rdev->sb_page);
+ 	__u64 ev1 = le64_to_cpu(sb->events);
+@@ -1891,13 +1898,15 @@ static int super_1_validate(struct mddev
+ 		}
+ 	} else if (mddev->pers == NULL) {
+ 		/* Insist of good event counter while assembling, except for
+-		 * spares (which don't need an event count) */
+-		++ev1;
++		 * spares (which don't need an event count).
++		 * Similar to mdadm, we allow event counter difference of 1
++		 * from the freshest device.
++		 */
+ 		if (rdev->desc_nr >= 0 &&
+ 		    rdev->desc_nr < le32_to_cpu(sb->max_dev) &&
+ 		    (le16_to_cpu(sb->dev_roles[rdev->desc_nr]) < MD_DISK_ROLE_MAX ||
+ 		     le16_to_cpu(sb->dev_roles[rdev->desc_nr]) == MD_DISK_ROLE_JOURNAL))
+-			if (ev1 < mddev->events)
++			if (ev1 + 1 < mddev->events)
+ 				return -EINVAL;
+ 	} else if (mddev->bitmap) {
+ 		/* If adding to array with a bitmap, then we can accept an
+@@ -1918,8 +1927,38 @@ static int super_1_validate(struct mddev
+ 		    rdev->desc_nr >= le32_to_cpu(sb->max_dev)) {
+ 			role = MD_DISK_ROLE_SPARE;
+ 			rdev->desc_nr = -1;
+-		} else
++		} else if (mddev->pers == NULL && freshest && ev1 < mddev->events) {
++			/*
++			 * If we are assembling, and our event counter is smaller than the
++			 * highest event counter, we cannot trust our superblock about the role.
++			 * It could happen that our rdev was marked as Faulty, and all other
++			 * superblocks were updated with +1 event counter.
++			 * Then, before the next superblock update, which typically happens when
++			 * remove_and_add_spares() removes the device from the array, there was
++			 * a crash or reboot.
++			 * If we allow current rdev without consulting the freshest superblock,
++			 * we could cause data corruption.
++			 * Note that in this case our event counter is smaller by 1 than the
++			 * highest, otherwise, this rdev would not be allowed into array;
++			 * both kernel and mdadm allow event counter difference of 1.
++			 */
++			struct mdp_superblock_1 *freshest_sb = page_address(freshest->sb_page);
++			u32 freshest_max_dev = le32_to_cpu(freshest_sb->max_dev);
++
++			if (rdev->desc_nr >= freshest_max_dev) {
++				/* this is unexpected, better not proceed */
++				pr_warn("md: %s: rdev[%pg]: desc_nr(%d) >= freshest(%pg)->sb->max_dev(%u)\n",
++						mdname(mddev), rdev->bdev, rdev->desc_nr,
++						freshest->bdev, freshest_max_dev);
++				return -EUCLEAN;
++			}
++
++			role = le16_to_cpu(freshest_sb->dev_roles[rdev->desc_nr]);
++			pr_debug("md: %s: rdev[%pg]: role=%d(0x%x) according to freshest %pg\n",
++				     mdname(mddev), rdev->bdev, role, role, freshest->bdev);
++		} else {
+ 			role = le16_to_cpu(sb->dev_roles[rdev->desc_nr]);
++		}
+ 		switch(role) {
+ 		case MD_DISK_ROLE_SPARE: /* spare */
+ 			break;
+@@ -2861,7 +2900,7 @@ static int add_bound_rdev(struct md_rdev
+ 		 * and should be added immediately.
+ 		 */
+ 		super_types[mddev->major_version].
+-			validate_super(mddev, rdev);
++			validate_super(mddev, NULL/*freshest*/, rdev);
+ 		if (add_journal)
+ 			mddev_suspend(mddev);
+ 		err = mddev->pers->hot_add_disk(mddev, rdev);
+@@ -3775,7 +3814,7 @@ static int analyze_sbs(struct mddev *mdd
+ 	}
+ 
+ 	super_types[mddev->major_version].
+-		validate_super(mddev, freshest);
++		validate_super(mddev, NULL/*freshest*/, freshest);
+ 
+ 	i = 0;
+ 	rdev_for_each_safe(rdev, tmp, mddev) {
+@@ -3790,7 +3829,7 @@ static int analyze_sbs(struct mddev *mdd
+ 		}
+ 		if (rdev != freshest) {
+ 			if (super_types[mddev->major_version].
+-			    validate_super(mddev, rdev)) {
++			    validate_super(mddev, freshest, rdev)) {
+ 				pr_warn("md: kicking non-fresh %pg from array!\n",
+ 					rdev->bdev);
+ 				md_kick_rdev_from_array(rdev);
+@@ -4864,11 +4903,21 @@ action_store(struct mddev *mddev, const
+ 			return -EINVAL;
+ 		err = mddev_lock(mddev);
+ 		if (!err) {
+-			if (test_bit(MD_RECOVERY_RUNNING, &mddev->recovery))
++			if (test_bit(MD_RECOVERY_RUNNING, &mddev->recovery)) {
+ 				err =  -EBUSY;
+-			else {
++			} else if (mddev->reshape_position == MaxSector ||
++				   mddev->pers->check_reshape == NULL ||
++				   mddev->pers->check_reshape(mddev)) {
+ 				clear_bit(MD_RECOVERY_FROZEN, &mddev->recovery);
+ 				err = mddev->pers->start_reshape(mddev);
++			} else {
++				/*
++				 * If reshape is still in progress, and
++				 * md_check_recovery() can continue to reshape,
++				 * don't restart reshape because data can be
++				 * corrupted for raid456.
++				 */
++				clear_bit(MD_RECOVERY_FROZEN, &mddev->recovery);
+ 			}
+ 			mddev_unlock(mddev);
+ 		}
+@@ -6194,7 +6243,15 @@ static void md_clean(struct mddev *mddev
+ 	mddev->persistent = 0;
+ 	mddev->level = LEVEL_NONE;
+ 	mddev->clevel[0] = 0;
+-	mddev->flags = 0;
++	/*
++	 * Don't clear MD_CLOSING, or mddev can be opened again.
++	 * 'hold_active != 0' means mddev is still in the creation
++	 * process and will be used later.
++	 */
++	if (mddev->hold_active)
++		mddev->flags = 0;
++	else
++		mddev->flags &= BIT_ULL_MASK(MD_CLOSING);
+ 	mddev->sb_flags = 0;
+ 	mddev->ro = MD_RDWR;
+ 	mddev->metadata_type[0] = 0;
+@@ -6804,7 +6861,7 @@ int md_add_new_disk(struct mddev *mddev,
+ 			rdev->saved_raid_disk = rdev->raid_disk;
+ 		} else
+ 			super_types[mddev->major_version].
+-				validate_super(mddev, rdev);
++				validate_super(mddev, NULL/*freshest*/, rdev);
+ 		if ((info->state & (1<<MD_DISK_SYNC)) &&
+ 		     rdev->raid_disk != info->raid_disk) {
+ 			/* This was a hot-add request, but events doesn't
+@@ -7522,7 +7579,6 @@ static int md_ioctl(struct block_device
+ 	int err = 0;
+ 	void __user *argp = (void __user *)arg;
+ 	struct mddev *mddev = NULL;
+-	bool did_set_md_closing = false;
+ 
+ 	if (!md_ioctl_valid(cmd))
+ 		return -ENOTTY;
+@@ -7609,7 +7665,6 @@ static int md_ioctl(struct block_device
+ 			err = -EBUSY;
+ 			goto out;
+ 		}
+-		did_set_md_closing = true;
+ 		mutex_unlock(&mddev->open_mutex);
+ 		sync_blockdev(bdev);
+ 	}
+@@ -7772,7 +7827,7 @@ unlock:
+ 		mddev->hold_active = 0;
+ 	mddev_unlock(mddev);
+ out:
+-	if(did_set_md_closing)
++	if (cmd == STOP_ARRAY_RO || (err && cmd == STOP_ARRAY))
+ 		clear_bit(MD_CLOSING, &mddev->flags);
+ 	return err;
+ }
+Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-btree.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/persistent-data/dm-btree.c
++++ kernel-rockchip-6_1/drivers/md/persistent-data/dm-btree.c
+@@ -726,7 +726,7 @@ static int shadow_child(struct dm_btree_
+  * nodes, so saves metadata space.
+  */
+ static int split_two_into_three(struct shadow_spine *s, unsigned int parent_index,
+-                                struct dm_btree_value_type *vt, uint64_t key)
++				struct dm_btree_value_type *vt, uint64_t key)
+ {
+ 	int r;
+ 	unsigned int middle_index;
+@@ -781,7 +781,7 @@ static int split_two_into_three(struct s
+ 		if (shadow_current(s) != right)
+ 			unlock_block(s->info, right);
+ 
+-	        return r;
++		return r;
+ 	}
+ 
+ 
+@@ -1216,7 +1216,7 @@ int btree_get_overwrite_leaf(struct dm_b
+ static bool need_insert(struct btree_node *node, uint64_t *keys,
+ 			unsigned int level, unsigned int index)
+ {
+-        return ((index >= le32_to_cpu(node->header.nr_entries)) ||
++	return ((index >= le32_to_cpu(node->header.nr_entries)) ||
+ 		(le64_to_cpu(node->keys[index]) != keys[level]));
+ }
+ 
+Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/persistent-data/dm-space-map-common.c
++++ kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.c
+@@ -390,7 +390,7 @@ int sm_ll_find_free_block(struct ll_disk
+ }
+ 
+ int sm_ll_find_common_free_block(struct ll_disk *old_ll, struct ll_disk *new_ll,
+-	                         dm_block_t begin, dm_block_t end, dm_block_t *b)
++				 dm_block_t begin, dm_block_t end, dm_block_t *b)
+ {
+ 	int r;
+ 	uint32_t count;
+Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.h
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/persistent-data/dm-space-map-common.h
++++ kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.h
+@@ -120,7 +120,7 @@ int sm_ll_lookup(struct ll_disk *ll, dm_
+ int sm_ll_find_free_block(struct ll_disk *ll, dm_block_t begin,
+ 			  dm_block_t end, dm_block_t *result);
+ int sm_ll_find_common_free_block(struct ll_disk *old_ll, struct ll_disk *new_ll,
+-	                         dm_block_t begin, dm_block_t end, dm_block_t *result);
++				 dm_block_t begin, dm_block_t end, dm_block_t *result);
+ 
+ /*
+  * The next three functions return (via nr_allocations) the net number of
+Index: kernel-rockchip-6_1/drivers/md/raid10.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/raid10.c
++++ kernel-rockchip-6_1/drivers/md/raid10.c
+@@ -920,6 +920,7 @@ static void flush_pending_writes(struct
+ 
+ 			raid1_submit_write(bio);
+ 			bio = next;
++			cond_resched();
+ 		}
+ 		blk_finish_plug(&plug);
+ 	} else
+@@ -1130,6 +1131,7 @@ static void raid10_unplug(struct blk_plu
+ 
+ 		raid1_submit_write(bio);
+ 		bio = next;
++		cond_resched();
+ 	}
+ 	kfree(plug);
+ }
+Index: kernel-rockchip-6_1/drivers/md/raid5.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/md/raid5.c
++++ kernel-rockchip-6_1/drivers/md/raid5.c
+@@ -2420,7 +2420,7 @@ static int grow_one_stripe(struct r5conf
+ 	atomic_inc(&conf->active_stripes);
+ 
+ 	raid5_release_stripe(sh);
+-	conf->max_nr_stripes++;
++	WRITE_ONCE(conf->max_nr_stripes, conf->max_nr_stripes + 1);
+ 	return 1;
+ }
+ 
+@@ -2717,7 +2717,7 @@ static int drop_one_stripe(struct r5conf
+ 	shrink_buffers(sh);
+ 	free_stripe(conf->slab_cache, sh);
+ 	atomic_dec(&conf->active_stripes);
+-	conf->max_nr_stripes--;
++	WRITE_ONCE(conf->max_nr_stripes, conf->max_nr_stripes - 1);
+ 	return 1;
+ }
+ 
+@@ -6891,7 +6891,7 @@ raid5_set_cache_size(struct mddev *mddev
+ 	if (size <= 16 || size > 32768)
+ 		return -EINVAL;
+ 
+-	conf->min_nr_stripes = size;
++	WRITE_ONCE(conf->min_nr_stripes, size);
+ 	mutex_lock(&conf->cache_size_mutex);
+ 	while (size < conf->max_nr_stripes &&
+ 	       drop_one_stripe(conf))
+@@ -6903,7 +6903,7 @@ raid5_set_cache_size(struct mddev *mddev
+ 	mutex_lock(&conf->cache_size_mutex);
+ 	while (size > conf->max_nr_stripes)
+ 		if (!grow_one_stripe(conf, GFP_KERNEL)) {
+-			conf->min_nr_stripes = conf->max_nr_stripes;
++			WRITE_ONCE(conf->min_nr_stripes, conf->max_nr_stripes);
+ 			result = -ENOMEM;
+ 			break;
+ 		}
+@@ -7468,11 +7468,13 @@ static unsigned long raid5_cache_count(s
+ 				       struct shrink_control *sc)
+ {
+ 	struct r5conf *conf = container_of(shrink, struct r5conf, shrinker);
++	int max_stripes = READ_ONCE(conf->max_nr_stripes);
++	int min_stripes = READ_ONCE(conf->min_nr_stripes);
+ 
+-	if (conf->max_nr_stripes < conf->min_nr_stripes)
++	if (max_stripes < min_stripes)
+ 		/* unlikely, but not impossible */
+ 		return 0;
+-	return conf->max_nr_stripes - conf->min_nr_stripes;
++	return max_stripes - min_stripes;
+ }
+ 
+ static struct r5conf *setup_conf(struct mddev *mddev)
+Index: kernel-rockchip-6_1/include/linux/dm-io.h
+===================================================================
+--- kernel-rockchip-6_1.orig/include/linux/dm-io.h
++++ kernel-rockchip-6_1/include/linux/dm-io.h
+@@ -79,7 +79,8 @@ void dm_io_client_destroy(struct dm_io_c
+  * error occurred doing io to the corresponding region.
+  */
+ int dm_io(struct dm_io_request *io_req, unsigned int num_regions,
+-	  struct dm_io_region *region, unsigned int long *sync_error_bits);
++	  struct dm_io_region *region, unsigned int long *sync_error_bits,
++	  unsigned short ioprio);
+ 
+ #endif	/* __KERNEL__ */
+ #endif	/* _LINUX_DM_IO_H */

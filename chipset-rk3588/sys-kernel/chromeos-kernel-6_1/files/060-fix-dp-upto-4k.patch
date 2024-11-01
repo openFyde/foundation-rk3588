@@ -1,0 +1,231 @@
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -270,6 +270,17 @@
+ 	status = "okay";
+ };
+ 
++&vp1 {
++	assigned-clocks = <&cru DCLK_VOP1_SRC>;
++  assigned-clock-parents = <&cru PLL_V0PLL>;
++};
++
++&vp2 {
++  assigned-clocks = <&cru DCLK_VOP2_SRC>;
++  assigned-clock-parents = <&cru PLL_AUPLL>;
++  assigned-clock-rates = <275000000>;
++};
++
+ &dsi0_in_vp2 {
+ 	status = "okay";
+ };
+@@ -283,19 +294,21 @@
+ 	rockchip,lane-rate = <676000>;
+ 	dsi0_panel: panel@0 {
+ 		status = "okay";
+-		compatible = "simple-panel-dsi";
++		compatible = "simple-panel-dsi-fyde";
+ 		reg = <0>;
+ 		backlight = <&backlight>;
+-		power-supply = <&vcc_avee>;
++		power-supply = <&vcc_lcd_en>;
+ 		reset-gpios = <&gpio3 RK_PC6 GPIO_ACTIVE_HIGH>;
++    avdd-gpios = <&gpio3 RK_PA7 GPIO_ACTIVE_HIGH>;
++    avee-gpios = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
+     reset-enable-combined;
+ 		pinctrl-names = "default";
+-		pinctrl-0 = <&lcd_rst_gpio>;
++		pinctrl-0 = <&lcd_rst_gpio &avdd_lcd_gpio &avee_lcd_gpio>;
+ 		reset-delay-ms = <120>;
+ 		enable-delay-ms = <120>;
+ 		prepare-delay-ms = <120>;
+ 		init-delay-ms = <120>;
+-		unprepare-delay-ms = <120>;
++		unprepare-delay-ms = <500>;
+ 		disable-delay-ms = <120>;
+ 		compressed-data;
+ 		//dsi,flags = <(MIPI_DSI_MODE_LPM | MIPI_DSI_MODE_EOT_PACKET)>;
+@@ -375,7 +388,8 @@
+ 		];
+ 
+ 		panel-exit-sequence = [
+-
++      39 10 01 28
++      39 28 01 10
+ 		];
+ 
+     width-mm = <166>;
+@@ -644,6 +658,7 @@
+ 
+ &i2s0_8ch {
+ 	status = "okay";
++  assigned-clock-parents = <&cru PLL_GPLL>, <&cru PLL_GPLL>;
+ 	pinctrl-0 = <&i2s0_lrck
+ 		     &i2s0_sclk
+ 		     &i2s0_sdi0
+@@ -982,6 +997,7 @@
+ 
+ &vop {
+ 	status = "okay";
++  assigned-clock-rates = <800000000>;
+ };
+ 
+ &vop_mmu {
+@@ -1001,3 +1017,18 @@
+ &vp2_out_dsi0 {
+ 	status = "okay";
+ };
++
++&cru {
++	assigned-clock-rates =
++      <1100000000>, <1100000000>,
++      <850000000>, <1188000000>,
++      <702000000>,
++      <400000000>, <500000000>,
++      <750000000>, <100000000>,
++      <400000000>, <100000000>,
++      <200000000>,
++      <375000000>, <150000000>,
++      <200000000>, <12000000>,
++      <12000000>, <99000000>,
++      <20000000>;
++};
+Index: kernel-rockchip-6_1/drivers/misc/redriver/pi3dpx1207c.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/misc/redriver/pi3dpx1207c.c
++++ kernel-rockchip-6_1/drivers/misc/redriver/pi3dpx1207c.c
+@@ -13,6 +13,7 @@
+ #include <linux/clk-provider.h>
+ #include <linux/i2c.h>
+ #include <linux/usb/typec_dp.h>
++#include <linux/mutex.h>
+ #define PI3DPX_BYTES_NUM	9
+ 
+ extern int redriver_reg_notifier(struct notifier_block *nb);
+@@ -29,6 +30,7 @@ struct pi3dpx_priv {
+ 		struct notifier_block nb;
+     unsigned long typec_state;
+     unsigned int flip;
++    struct mutex i2c_rw_lock;
+ };
+ 
+ struct pi3dpx_config redriver_config[2] = {
+@@ -39,7 +41,7 @@ struct pi3dpx_config redriver_config[2]
+ 	},
+ 
+ 	{
+-		{0x13 ,0x11 ,0x20 ,0x32 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
++		{0x13 ,0x11 ,0x20 ,0x23 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
+ 		{0x13 ,0x11 ,0x20 ,0x52 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
+ 		{0x13 ,0x11 ,0x20 ,0x82 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
+ 	}
+@@ -70,15 +72,21 @@ static int pi3dpx_notifier_call(struct n
+ 	unsigned int *flip = (unsigned int*)v;
+   struct pi3dpx_priv *priv =
+                 container_of(nb, struct pi3dpx_priv, nb);
+-  if ((val == priv->typec_state) && (*flip == priv->flip))
++  unsigned long typec = val;
++  if (typec != TYPEC_DP_STATE_E &&
++      typec != TYPEC_DP_STATE_C &&
++      typec != TYPEC_DP_STATE_D)
++    typec = TYPEC_STATE_SAFE;
++  if ((typec == priv->typec_state) && (*flip == priv->flip))
+     return NOTIFY_OK;
+-  priv->typec_state = val;
++  pr_info("typec state:%lu, flip:%d", val, *flip);
++  mutex_lock(&priv->i2c_rw_lock);
++  priv->typec_state = typec;
+   priv->flip = *flip;
+-  pr_info("typec state:%ul, flip:%d", priv->typec_state, priv->flip);
+ 	switch (priv->typec_state) {
+ 		case TYPEC_DP_STATE_E:
+     case TYPEC_DP_STATE_C:
+-			pi3dpx_i2c_write(priv, 9, &redriver_config[0].full_dp_config);
++			pi3dpx_i2c_write(priv, 9, &redriver_config[priv->flip].full_dp_config);
+ 			break;
+ 	  case TYPEC_DP_STATE_D:
+ 			pi3dpx_i2c_write(priv, 9, &redriver_config[priv->flip].usb_dp_config);
+@@ -86,6 +94,7 @@ static int pi3dpx_notifier_call(struct n
+     default:
+       pi3dpx_i2c_write(priv, 9, &redriver_config[priv->flip].no_dp_config);
+ 	}
++  mutex_unlock(&priv->i2c_rw_lock);
+   return NOTIFY_OK;
+ }
+ 
+@@ -99,12 +108,14 @@ static int pi3dpx1207c_probe(struct i2c_
+                             sizeof(struct pi3dpx_priv), GFP_KERNEL);
+     if (priv == NULL)
+        return -ENOMEM;
+-
++    mutex_init(&priv->i2c_rw_lock);
+     i2c_set_clientdata(i2c, priv);
++    priv->typec_state = TYPEC_STATE_SAFE;
+     priv->client = i2c;
+     priv->nb.notifier_call = pi3dpx_notifier_call;
+     ret = redriver_reg_notifier(&priv->nb);
+-
++    if (ret < 0)
++      pr_warn("Failed to register Type C notifier, port-switcher will not work.");
+ 	return 0;
+ }
+ 
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c-linux.dts
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c-linux.dts
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c-linux.dts
+@@ -10,6 +10,6 @@
+ #include "rk3588-linux.dtsi"
+ 
+ / {
+-	model = "Rockchip RK3588S TABLET 12C Board";
+-	compatible = "rockchip,rk3588s-tablet-12c-linux", "rockchip,rk3588";
++	model = "Fydetab Duo powered by FydeOS";
++	compatible = "rockchip,rk3588s-tablet-fydetab-linux", "rockchip,rk3588";
+ };
+Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+===================================================================
+--- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+@@ -185,28 +185,6 @@
+     pinctrl-0 = <&vcc_lcd_en_pin>;
+   };
+ 
+-  vcc_avdd: vcc-avdd {
+-    compatible = "regulator-fixed";
+-    regulator-name = "vcc_avdd";
+-    enable-active-high;
+-    gpio = <&gpio3 RK_PA7 GPIO_ACTIVE_HIGH>;
+-    pinctrl-names = "default";
+-    startup-delay-us = <3>;
+-    pinctrl-0 = <&avdd_lcd_gpio>;
+-    vin-supply = <&vcc_lcd_en>;
+-  };
+-
+-  vcc_avee: vcc-avee {
+-    compatible = "regulator-fixed";
+-    regulator-name = "vcc_avee";
+-    enable-active-high;
+-    gpio = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
+-    pinctrl-names = "default";
+-    startup-delay-us = <3>;
+-    pinctrl-0 = <&avee_lcd_gpio>;
+-    vin-supply = <&vcc_avdd>;
+-  };
+-
+ 	finger_power_test: finger-power-test {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "finger_power";
+Index: kernel-rockchip-6_1/drivers/clk/rockchip/clk-rk3588.c
+===================================================================
+--- kernel-rockchip-6_1.orig/drivers/clk/rockchip/clk-rk3588.c
++++ kernel-rockchip-6_1/drivers/clk/rockchip/clk-rk3588.c
+@@ -86,6 +86,7 @@ static struct rockchip_pll_rate_table rk
+ 	RK3588_PLL_RATE(955520000, 3, 478, 2, 49807),
+ 	RK3588_PLL_RATE(903168000, 6, 903, 2, 11009),
+ 	RK3588_PLL_RATE(900000000, 2, 300, 2, 0),
++  RK3588_PLL_RATE(825000000, 1, 275, 4, 0),
+ 	RK3588_PLL_RATE(816000000, 2, 272, 2, 0),
+ 	RK3588_PLL_RATE(786432000, 2, 262, 2, 9437),
+ 	RK3588_PLL_RATE(786000000, 1, 131, 2, 0),
