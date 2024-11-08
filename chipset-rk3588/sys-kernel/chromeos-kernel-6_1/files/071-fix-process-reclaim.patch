@@ -1,0 +1,319 @@
+Index: kernel-rockchip-6_1/fs/proc/task_mmu.c
+===================================================================
+--- kernel-rockchip-6_1.orig/fs/proc/task_mmu.c
++++ kernel-rockchip-6_1/fs/proc/task_mmu.c
+@@ -26,6 +26,7 @@
+ #include <asm/tlb.h>
+ #include <asm/tlbflush.h>
+ #include "internal.h"
++#include "../../mm/internal.h"
+ 
+ #define SEQ_PUT_DEC(str, val) \
+ 		seq_put_decimal_ull_width(m, str, (val) << (PAGE_SHIFT-10), 8)
+@@ -1134,32 +1135,39 @@ static int smaps_rollup_release(struct i
+ static int totmaps_open(struct inode *inode, struct file *file)
+ {
+ 	struct proc_maps_private *priv;
+-	int ret = -ENOMEM;
++	int ret;
++
+ 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+-	if (priv) {
+-		priv->mss = kzalloc(sizeof(*priv->mss), GFP_KERNEL);
+-		if (!priv->mss)
+-			return -ENOMEM;
+-
+-		/* we need to grab references to the task_struct */
+-		/* at open time, because there's a potential information */
+-		/* leak where the totmaps file is opened and held open */
+-		/* while the underlying pid to task mapping changes */
+-		/* underneath it */
+-		priv->task = get_pid_task(proc_pid(inode), PIDTYPE_PID);
+-		if (!priv->task) {
+-			kfree(priv->mss);
+-			kfree(priv);
+-			return -ESRCH;
+-		}
+-
+-		ret = single_open(file, totmaps_proc_show, priv);
+-		if (ret) {
+-			put_task_struct(priv->task);
+-			kfree(priv->mss);
+-			kfree(priv);
+-		}
++	if (!priv)
++		return -ENOMEM;
++
++	priv->mss = kzalloc(sizeof(*priv->mss), GFP_KERNEL);
++	if (!priv->mss) {
++		ret = -ENOMEM;
++		goto exit;
+ 	}
++
++	/* we need to grab references to the task_struct */
++	/* at open time, because there's a potential information */
++	/* leak where the totmaps file is opened and held open */
++	/* while the underlying pid to task mapping changes */
++	/* underneath it */
++	priv->task = get_pid_task(proc_pid(inode), PIDTYPE_PID);
++	if (!priv->task) {
++		ret = -ESRCH;
++		goto exit;
++	}
++
++	ret = single_open(file, totmaps_proc_show, priv);
++	if (ret)
++		goto exit;
++
++	return 0;
++exit:
++	if (priv->task)
++		put_task_struct(priv->task);
++	kfree(priv->mss);
++	kfree(priv);
+ 	return ret;
+ }
+ 
+@@ -2021,6 +2029,7 @@ static int reclaim_pte_range(pmd_t *pmd,
+ 	enum reclaim_type type = 0;
+ 	struct mm_struct *mm = vma->vm_mm;
+ 	unsigned long next = pmd_addr_end(addr, end);
++	unsigned int batch_count = 0;
+ 
+ 	if (data)
+ 		type = data->type;
+@@ -2079,8 +2088,10 @@ huge_unlock:
+ regular_page:
+ 	if (pmd_trans_unstable(pmd))
+ 		return 0;
+-
++restart:
+ 	orig_pte = pte_offset_map_lock(vma->vm_mm, pmd, addr, &ptl);
++	if (!orig_pte)
++		return 0;
+ 	for (pte = orig_pte; addr < end; pte++, addr += PAGE_SIZE) {
+ 		if (!data->nr_to_try)
+ 			break;
+@@ -2092,6 +2103,16 @@ regular_page:
+ 		if (!page)
+ 			continue;
+ 
++		if (++batch_count == SWAP_CLUSTER_MAX) {
++			batch_count = 0;
++			if (need_resched()) {
++				arch_leave_lazy_mmu_mode();
++				pte_unmap_unlock(orig_pte, ptl);
++				cond_resched();
++				goto restart;
++			}
++		}
++
+ 		if (PageTransCompound(page)) {
+ 			if (type != RECLAIM_SHMEM && page_mapcount(page) != 1)
+ 				break;
+@@ -2150,13 +2171,106 @@ regular_page:
+ 	return 0;
+ }
+ 
++static void reclaim_mm(struct mm_struct *mm, enum reclaim_type type, unsigned long nr_to_try)
++{
++	struct vm_area_struct *start, *vma;
++	struct mm_walk_ops reclaim_walk = {};
++	struct walk_data reclaim_data = {
++		.type = type,
++		.nr_to_try = nr_to_try,
++	};
++
++	mmap_read_lock(mm);
++
++	start = find_vma(mm, 0);
++	if (nr_to_try != ULONG_MAX) {
++		unsigned int start_idx;
++
++		/*
++		 * Try to start at a random VMA to avoid always
++		 * reclaiming the same pages.
++		 */
++		start_idx = get_random_u32() % mm->map_count;
++		for (; start_idx && start; start_idx--)
++			start = find_vma(mm, start->vm_end);
++	}
++	BUG_ON(!start);
++
++	vma = start;
++	while (reclaim_data.nr_to_try) {
++		if (is_vm_hugetlb_page(vma))
++			goto next;
++
++		if (vma->vm_flags & VM_LOCKED)
++			goto next;
++
++		if (type == RECLAIM_ANON && !vma_is_anonymous(vma))
++			goto next;
++		if ((type == RECLAIM_FILE || type == RECLAIM_SHMEM)
++				&& vma_is_anonymous(vma)) {
++			goto next;
++		}
++
++		if (vma_is_anonymous(vma) || shmem_file(vma->vm_file)) {
++			if (get_nr_swap_pages() <= 0 ||
++				get_mm_counter(mm, MM_ANONPAGES) == 0) {
++				if (type == RECLAIM_ALL)
++					goto next;
++				else
++					break;
++			}
++
++			if (shmem_file(vma->vm_file) && type != RECLAIM_SHMEM)
++				goto next;
++
++			reclaim_walk.pmd_entry = reclaim_pte_range;
++		} else {
++			reclaim_walk.pmd_entry = deactivate_pte_range;
++		}
++
++		/*
++		 * Use a random start address if we are limited in order
++		 * to avoid always hitting the same pages when we only
++		 * have a few eligible mappings.
++		 */
++		if (nr_to_try != ULONG_MAX) {
++			unsigned long idx, start;
++
++			idx = (vma->vm_end - vma->vm_start) / PAGE_SIZE;
++			idx = idx ? (get_random_u32() % idx) : 0;
++			start = vma->vm_start + PAGE_SIZE * idx;
++
++			walk_page_range(mm, start, vma->vm_end,
++			    &reclaim_walk, (void *)&reclaim_data);
++			if (start != vma->vm_start)
++				walk_page_range(mm, vma->vm_start,
++				    start, &reclaim_walk,
++				    (void *)&reclaim_data);
++		} else {
++			walk_page_range(mm, vma->vm_start, vma->vm_end,
++			    &reclaim_walk, (void *)&reclaim_data);
++		}
++
++next:
++		vma = find_vma(mm, vma->vm_end);
++		if (!vma)
++			vma = find_vma(mm, 0);
++
++		/* Already walked through all of them. */
++		if (vma == start)
++			break;
++	}
++
++	flush_tlb_mm(mm);
++	mmap_read_unlock(mm);
++}
++
+ static ssize_t reclaim_write(struct file *file, const char __user *buf,
+ 				size_t count, loff_t *ppos)
+ {
+ 	struct task_struct *task;
+ 	char buffer[PROC_NUMBUF];
+ 	struct mm_struct *mm;
+-	struct vm_area_struct *start, *next, *vma;
+ 	enum reclaim_type type;
+ 	unsigned long num;
+ 	char *tok, *type_buf;
+@@ -2193,95 +2307,10 @@ static ssize_t reclaim_write(struct file
+ 
+ 	mm = get_task_mm(task);
+ 	if (mm) {
+-		struct mm_walk_ops reclaim_walk = {
+-			.pmd_entry = reclaim_pte_range,
+-		};
+-
+-		struct walk_data reclaim_data = {
+-			.type = type,
+-			.nr_to_try = num,
+-		};
+-
+-		mmap_read_lock(mm);
+-		start = find_vma(mm, 0);
+-		if (num != ULONG_MAX) {
+-			unsigned int start_idx;
+-
+-			/*
+-			 * Try to start at a random VMA to avoid always
+-			 * reclaiming the same pages.
+-			 */
+-			start_idx = get_random_u32() % mm->map_count;
+-			for (; start_idx && start; start_idx--)
+-				start = find_vma(mm, start->vm_end);
+-			BUG_ON(!start);
+-		}
+-
+-		for (vma = start, next = find_vma(mm, vma->vm_end); vma && next != start;
+-		    (vma = next ? next :
+-		    /* Only loop around if we didn't start at mm->mmap. */
+-		    (start != find_vma(mm, 0) ? find_vma(mm, 0) : NULL))) {
+-			if (!reclaim_data.nr_to_try)
+-				break;
+-			if (is_vm_hugetlb_page(vma))
+-				continue;
+-
+-			if (vma->vm_flags & VM_LOCKED)
+-				continue;
+-
+-			if (type == RECLAIM_ANON && !vma_is_anonymous(vma))
+-				continue;
+-			if ((type == RECLAIM_FILE || type == RECLAIM_SHMEM)
+-					&& vma_is_anonymous(vma)) {
+-				continue;
+-			}
+-
+-			if (vma_is_anonymous(vma) || shmem_file(vma->vm_file)) {
+-				if (get_nr_swap_pages() <= 0 ||
+-					get_mm_counter(mm, MM_ANONPAGES) == 0) {
+-					if (type == RECLAIM_ALL)
+-						continue;
+-					else
+-						break;
+-				}
+-
+-				if (shmem_file(vma->vm_file) && type != RECLAIM_SHMEM) {
+-					continue;
+-				}
+-
+-				reclaim_walk.pmd_entry = reclaim_pte_range;
+-			} else {
+-				reclaim_walk.pmd_entry = deactivate_pte_range;
+-			}
+-
+-			/*
+-			 * Use a random start address if we are limited in order
+-			 * to avoid always hitting the same pages when we only
+-			 * have a few eligible mappings.
+-			 */
+-			if (num != ULONG_MAX) {
+-				unsigned long idx, start;
+-
+-				idx = (vma->vm_end - vma->vm_start) / PAGE_SIZE;
+-				idx = idx ? (get_random_u32() % idx) : 0;
+-				start = vma->vm_start + PAGE_SIZE * idx;
+-
+-				walk_page_range(mm, start, vma->vm_end,
+-				    &reclaim_walk, (void*)&reclaim_data);
+-				if (start != vma->vm_start)
+-					walk_page_range(mm, vma->vm_start,
+-					    start, &reclaim_walk,
+-					    (void*)&reclaim_data);
+-			} else
+-				walk_page_range(mm, vma->vm_start, vma->vm_end,
+-				    &reclaim_walk, (void*)&reclaim_data);
+-
+-			vma = find_vma(mm, vma->vm_end);
+-		}
+-		flush_tlb_mm(mm);
+-		mmap_read_unlock(mm);
++		reclaim_mm(mm, type, num);
+ 		mmput(mm);
+ 	}
++
+ 	put_task_struct(task);
+ 
+ 	return count;
