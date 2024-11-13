@@ -1,29 +1,3 @@
-Index: kernel-rockchip-6_1/net/rfkill/rfkill-wlan.c
-===================================================================
---- kernel-rockchip-6_1.orig/net/rfkill/rfkill-wlan.c
-+++ kernel-rockchip-6_1/net/rfkill/rfkill-wlan.c
-@@ -178,6 +178,10 @@ int rfkill_set_wifi_bt_power(int on)
- 	struct rksdmmc_gpio *vbat;
- 
- 	LOG("%s: %d\n", __func__, on);
-+  if (on == wifi_bt_vbat_state) {
-+    LOG("%s: bt power is already set to %d\n", __func__, on);
-+    return 0;
-+  }
- 
- 	if (!mrfkill) {
- 		LOG("%s: rfkill-wlan driver has not Successful initialized\n",
-@@ -234,6 +238,10 @@ int rockchip_wifi_power(int on)
- 	bool toggle = false;
- 
- 	LOG("%s: %d\n", __func__, on);
-+  if (wifi_power_state == on) {
-+    LOG("%s: wifi power is already set to %d\n", __func__, on);
-+    return 0;
-+  }
- 
- 	if (!mrfkill) {
- 		LOG("%s: rfkill-wlan driver has not Successful initialized\n",
 Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
 ===================================================================
 --- kernel-rockchip-6_1.orig/drivers/input/touchscreen/hxchipset/himax_platform.c
