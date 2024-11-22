@@ -27,7 +27,8 @@ RDEPEND="
 S=$WORKDIR
 
 src_unpack() {
-  unpack ${FILESDIR}/mali-rk3588-10.8.7-r13p0-r2.tar.gz
+ # unpack ${FILESDIR}/mali-rk3588-10.8.7-r13p0-r2.tar.gz
+ unpack ${FILESDIR}/mali-rk3588-10.8.6-r13p0.tar.gz
 }
 
 src_install() {
