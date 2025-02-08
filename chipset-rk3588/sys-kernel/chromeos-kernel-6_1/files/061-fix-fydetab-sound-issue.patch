@@ -2,7 +2,15 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
 --- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-@@ -138,7 +138,7 @@
+@@ -130,15 +130,13 @@
+                 "Speaker", "LOUT2",
+                 "Speaker", "ROUT2",
+                 "Headphone", "Headphone Power",
+-                "Headphone", "Headphone Power",
+-                "Speaker", "Speaker Power",
+                 "Speaker", "Speaker Power",
+                 "LINPUT1", "Main Mic",
+                 "LINPUT2", "Main Mic",
                  "RINPUT1", "Headset Mic",
                  "RINPUT2", "Headset Mic";
          pinctrl-names = "default";
@@ -11,6 +19,18 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
          play-pause-key {
                  label = "playpause";
                  linux,code = <KEY_PLAYPAUSE>;
+@@ -642,8 +640,10 @@
+ 		#sound-dai-cells = <0>;
+ 		compatible = "everest,es8388", "everest,es8323";
+ 		reg = <0x11>;
+-		clocks = <&cru I2S0_8CH_MCLKOUT>;
++    clocks = <&mclkout_i2s0>;
+ 		clock-names = "mclk";
++    assigned-clocks = <&mclkout_i2s0>;
++    assigned-clock-rates = <12288000>;
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&i2s0_mclk>;
+ 	};
 @@ -723,6 +723,12 @@
          hp_det: hp-det {
              rockchip,pins = <1 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;

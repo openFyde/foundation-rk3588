@@ -162,7 +162,20 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		status = "okay";
  
  		ports {
-@@ -762,9 +760,6 @@
+@@ -659,12 +657,7 @@
+ };
+ 
+ &i2s0_8ch {
+-	status = "okay";
+   assigned-clock-parents = <&cru PLL_GPLL>, <&cru PLL_GPLL>;
+-	pinctrl-0 = <&i2s0_lrck
+-		     &i2s0_sclk
+-		     &i2s0_sdi0
+-		     &i2s0_sdo0>;
+ };
+ 
+ &iep {
+@@ -762,9 +755,6 @@
  		batt_in_en: batt-in-en {
  			rockchip,pins = <3 RK_PC4 RK_FUNC_GPIO &pcfg_pull_up>;
  		};
