@@ -4,12 +4,12 @@
 EAPI=7
 
 EGIT_REPO_URI="git://anongit.freedesktop.org/mesa/mesa"
-CROS_WORKON_COMMIT="63e17ccc0a2ed5e762aedfa71d9133672e77aa24"
+CROS_WORKON_COMMIT="64552db2f8358f5e7b3f0326d8ac261823dfa5d0"
 CROS_WORKON_TREE="b0d9c48cf8158a238fc4cf3f39e58c4bd5717c49"
 CROS_WORKON_PROJECT="chromiumos/third_party/mesa"
 CROS_WORKON_LOCALNAME="mesa"
 CROS_WORKON_MANUAL_UPREV="1"
-CROS_WORKON_EGIT_BRANCH="release-R126-15886.B"
+CROS_WORKON_EGIT_BRANCH="upstream/25.0"
 
 KEYWORDS="*"
 
@@ -49,7 +49,6 @@ src_configure() {
 	emesonargs+=(
 		-Dglvnd=$(usex libglvnd true false)
 		-Dllvm=disabled
-		-Ddri3=disabled
 		-Dshader-cache=disabled
 		-Dglx=disabled
 		-Degl=enabled
@@ -58,7 +57,7 @@ src_configure() {
 		-Dgles2=enabled
 		-Dshared-glapi=enabled
 		-Ddri-drivers-path=
-		-Dgallium-drivers=panfrost,kmsro
+		-Dgallium-drivers=panfrost
 		-Dgallium-vdpau=disabled
 		-Dgallium-xa=disabled
 		$(meson_feature zstd)

@@ -1,0 +1,36 @@
+Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
+===================================================================
+--- kernel-rockchip.orig/sound/soc/rockchip/rockchip_multicodecs.c
++++ kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
+@@ -929,13 +929,18 @@ static int rk_multicodecs_probe(struct p
+ 	return ret;
+ }
+ 
++void set_mute(struct multicodecs_data *mc_data) {
++	cancel_delayed_work_sync(&mc_data->handler);
++	cancel_delayed_work_sync(&mc_data->hp_blast_handler);
++  gpiod_set_value_cansleep(mc_data->spk_ctl_gpio, VOLUME_OFF);
++  gpiod_set_value_cansleep(mc_data->hp_ctl_gpio, VOLUME_OFF);
++}
++
+ static int rk_multicodec_remove(struct platform_device *pdev)
+ {
+ 	struct multicodecs_data *mc_data = platform_get_drvdata(pdev);
+ 
+-	cancel_delayed_work_sync(&mc_data->handler);
+-  cancel_delayed_work_sync(&mc_data->hp_blast_handler);
+-
++	set_mute(mc_data);
+ 	return 0;
+ }
+ 
+@@ -943,8 +948,7 @@ static void rk_multicodec_shutdown(struc
+ {
+ 	struct multicodecs_data *mc_data = platform_get_drvdata(pdev);
+ 
+-	cancel_delayed_work_sync(&mc_data->handler);
+-  cancel_delayed_work_sync(&mc_data->hp_blast_handler);
++	set_mute(mc_data);
+ }
+ 
+ static const struct of_device_id rockchip_multicodecs_of_match[] = {

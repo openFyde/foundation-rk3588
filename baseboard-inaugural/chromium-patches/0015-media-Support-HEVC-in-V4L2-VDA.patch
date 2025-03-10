@@ -2,7 +2,7 @@ Index: src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
 +++ src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
-@@ -90,6 +90,7 @@ static const std::vector<uint32_t> kSupp
+@@ -88,6 +88,7 @@ static const std::vector<uint32_t> kSupp
      V4L2_PIX_FMT_H264,
      V4L2_PIX_FMT_VP8,
      V4L2_PIX_FMT_VP9,

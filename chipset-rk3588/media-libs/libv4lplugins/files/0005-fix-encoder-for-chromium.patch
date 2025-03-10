@@ -29,19 +29,21 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
  			.step_height = RKMPP_MB_DIM,
  		},
  	},
-@@ -92,13 +99,28 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
- 		.format = MPP_FMT_BUTT,
- 		.frmsize = {
- 			.min_width = 96,
--			.max_width = 1920,
-+			.max_width = 3840,
+@@ -95,7 +102,7 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
+ 			.max_width = 1920,
  			.step_width = RKMPP_MB_DIM,
  			.min_height = 96,
 -			.max_height = 1088,
-+			.max_height = 2160,
++			.max_height = 1080,
  			.step_height = RKMPP_MB_DIM,
  		},
  	},
+@@ -113,7 +120,22 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
+ 			.max_height = 1088,
+ 			.step_height = RKMPP_MB_DIM,
+ 		}
+-	}
++	},
 +  {
 +    .name = "H.265",
 +    .fourcc = V4L2_PIX_FMT_HEVC,
@@ -60,7 +62,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
  };
  
  static int rkmpp_enc_apply_rc_cfg(struct rkmpp_enc_context *enc);
-@@ -833,6 +855,48 @@ static int rkmpp_enc_s_parm(struct rkmpp
+@@ -891,6 +913,48 @@ static int rkmpp_enc_s_parm(struct rkmpp
  	return 0;
  }
  
@@ -109,7 +111,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
  static int rkmpp_enc_queryctrl(struct rkmpp_enc_context *enc,
  			       struct v4l2_queryctrl *query_ctrl)
  {
-@@ -855,6 +919,10 @@ static int rkmpp_enc_queryctrl(struct rk
+@@ -913,6 +977,10 @@ static int rkmpp_enc_queryctrl(struct rk
  		query_ctrl->minimum = V4L2_MPEG_VIDEO_VP8_PROFILE_0;
  		query_ctrl->maximum = query_ctrl->minimum;
  		break;

@@ -8,10 +8,11 @@ DESCRIPTION="Virtual for OpenGLES implementations"
 LICENSE="metapackage"
 SLOT="0"
 KEYWORDS="-* arm arm64"
-IUSE=""
-
+IUSE="mali panfrost"
+REQUIRED_USE=" ^^ ( mali panfrost ) "
 DEPEND="
-	media-libs/mali-drivers-valhall-bin
+	mali? ( media-libs/mali-drivers-valhall-bin )
+  panfrost? ( media-libs/mesa-panfrost )
 	x11-drivers/opengles-headers
 "
 RDEPEND="${DEPEND}"

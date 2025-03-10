@@ -24,7 +24,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
  };
  
  /* Feed all available packets to mpp */
-@@ -242,6 +257,21 @@ static void rkmpp_put_frames(struct rkmp
+@@ -243,6 +258,21 @@ static void rkmpp_put_frames(struct rkmp
  	LEAVE();
  }
  
@@ -46,7 +46,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
  static void rkmpp_apply_info_change(struct rkmpp_dec_context *dec,
  				    MppFrame frame)
  {
-@@ -462,7 +492,6 @@ static int rkmpp_dec_g_fmt(struct rkmpp_
+@@ -464,7 +494,6 @@ static int rkmpp_dec_g_fmt(struct rkmpp_
  		LOGV(1, "cannot provide resolution yet\n");
  		RETURN_ERR(EINVAL, -1);
  	}
@@ -67,7 +67,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  {
  	char *env = getenv("LIBV4L_RKMPP_LOG_LEVEL");
  	if (env != NULL)
-@@ -552,7 +552,7 @@ int rkmpp_querybuf(struct rkmpp_context
+@@ -561,7 +561,7 @@ int rkmpp_querybuf(struct rkmpp_context
  
  	rkmpp_buffer = &queue->buffers[buffer->index];
  
@@ -76,7 +76,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (ret < 0) {
  		LOGE("failed to convert buffer\n");
  		RETURN_ERR(EINVAL, -1);
-@@ -621,7 +621,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
+@@ -630,7 +630,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
  
  	rkmpp_buffer = &queue->buffers[buffer->index];
  
@@ -85,7 +85,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (ret < 0) {
  		LOGE("failed to convert buffer\n");
  		RETURN_ERR(EINVAL, -1);
-@@ -671,7 +671,7 @@ int rkmpp_dqbuf(struct rkmpp_context *ct
+@@ -674,7 +674,7 @@ static int rkmpp_try_dqbuf(struct rkmpp_
  	rkmpp_buffer = TAILQ_FIRST(&queue->avail_buffers);
  	pthread_mutex_unlock(&queue->queue_mutex);
  
@@ -94,7 +94,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (ret < 0) {
  		LOGE("failed to convert buffer, ret:%d\n", ret);
  		RETURN_ERR(EINVAL, -1);
-@@ -819,7 +819,10 @@ int rkmpp_update_poll_event(struct rkmpp
+@@ -853,7 +853,10 @@ int rkmpp_update_poll_event(struct rkmpp
  	else
  		ret = eventfd_read(ctx->eventfd, &event);
  
@@ -105,7 +105,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	return ret;
  }
  
-@@ -946,7 +949,11 @@ static void *plugin_init(int fd)
+@@ -980,7 +983,11 @@ static void *plugin_init(int fd)
  		if (ctx->codecs)
  			free(ctx->codecs);
  		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1");
@@ -118,7 +118,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  
  	/* Create eventfd to fake poll events */
  	ctx->eventfd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
-@@ -962,7 +969,7 @@ static void *plugin_init(int fd)
+@@ -996,7 +1003,7 @@ static void *plugin_init(int fd)
  	}
  
  	/* Filter out eventfd's POLLOUT, since it would be always generated */
@@ -127,7 +127,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	ev.data.fd = ctx->eventfd;
  	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, ctx->eventfd, &ev) < 0) {
  		LOGE("failed to add eventfd\n");
-@@ -1125,7 +1132,6 @@ static void *plugin_mmap(void *dev_ops_p
+@@ -1161,7 +1168,6 @@ static void *plugin_mmap(void *dev_ops_p
  	unsigned int index;
  
  	ENTER();
@@ -135,7 +135,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	if (start) {
  		LOGE("only support start=NULL\n");
  		RETURN_ERR(EINVAL, NULL);
-@@ -1154,7 +1160,8 @@ static void *plugin_mmap(void *dev_ops_p
+@@ -1190,7 +1196,8 @@ static void *plugin_mmap(void *dev_ops_p
  	rkmpp_buffer = &queue->buffers[index];
  	ptr = mmap(start, length, prot, flags, rkmpp_buffer->fd, 0);
  
@@ -164,7 +164,7 @@ Index: libv4l-rkmpp/include/libv4l-rkmpp.h
  	} while (0)
  
  #define LOGV(level, fmt, ...) \
-@@ -478,9 +478,9 @@ void rkmpp_finish_flushing(struct rkmpp_
+@@ -480,9 +480,9 @@ void rkmpp_finish_flushing(struct rkmpp_
  
  int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
  			 struct rkmpp_buffer *rkmpp_buffer,

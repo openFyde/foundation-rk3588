@@ -31,6 +31,16 @@
         # 2. We intentionally keep the filesystem size low to catch bloat.
         "fs_size":"2484 MiB",
         "size":"2724 MiB"
+      },
+      {
+        # User data, fills all remaining space on drive.
+        "num": 1,
+        "label": "STATE",
+        "type": "data",
+        "fs_format": "ext4",
+        "size": "5 GiB",
+        "features": ["expand"],
+        "uuid": "random"
       }
     ],
     "usb":[
