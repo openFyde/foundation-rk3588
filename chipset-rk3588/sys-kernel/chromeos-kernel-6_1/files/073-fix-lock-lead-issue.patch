@@ -1,0 +1,27 @@
+Index: kernel-rockchip/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+===================================================================
+--- kernel-rockchip.orig/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
++++ kernel-rockchip/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+@@ -1504,6 +1504,7 @@ static void rockchip_chg_detect_work(str
+ 		rphy->dcd_retries = 0;
+ 		rphy->primary_retries = 0;
+ 		delay = CHG_DCD_POLL_TIME;
++    mutex_unlock(&rport->mutex);
+ 		break;
+ 	case USB_CHG_STATE_WAIT_FOR_DCD:
+ 		/* get data contact detection status */
+@@ -1586,13 +1587,12 @@ static void rockchip_chg_detect_work(str
+ 			dev_err(&rport->phy->dev,
+ 				"Fail to set phy_sus reg offset 0x%x, ret %d\n",
+ 				phy_sus_reg->offset, ret);
+-		mutex_unlock(&rport->mutex);
+ 		rockchip_usb2phy_otg_sm_work(&rport->otg_sm_work.work);
+ 		dev_dbg(&rport->phy->dev, "charger = %s\n",
+ 			 chg_to_string(rphy->chg_type));
+ 		return;
+ 	default:
+-		mutex_unlock(&rport->mutex);
++    dev_dbg(&rport->phy->dev,"unknown status:%d\n", (int) rphy->chg_state);
+ 		return;
+ 	}
+ 
