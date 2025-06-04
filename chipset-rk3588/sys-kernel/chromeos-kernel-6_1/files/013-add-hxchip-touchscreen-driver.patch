@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/Kconfig
+Index: kernel-rockchip/drivers/input/touchscreen/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/Kconfig
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/Kconfig
+--- kernel-rockchip.orig/drivers/input/touchscreen/Kconfig
++++ kernel-rockchip/drivers/input/touchscreen/Kconfig
 @@ -1444,4 +1444,16 @@ config TOUCHSCREEN_ZINITIX
  	  To compile this driver as a module, choose M here: the
  	  module will be called zinitix.
@@ -19,10 +19,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/Kconfig
 +source "drivers/input/touchscreen/hxchipset/Kconfig"
 +
  endif
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/Kconfig
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/Kconfig
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/Kconfig
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/Kconfig
 @@ -0,0 +1,136 @@
 +config TOUCHSCREEN_HIMAX_COMMON
 +       tristate "HIMAX chipset i2c touchscreen"
@@ -160,10 +160,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/Kconfig
 +		depends on TOUCHSCREEN_HIMAX_COMMON
 +		help
 +		This enables support for support kernel 4.19.
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/Makefile
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/Makefile
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/Makefile
 @@ -0,0 +1,15 @@
 +obj-$(CONFIG_TOUCHSCREEN_HIMAX_COMMON) += himax_tp.o
 +
@@ -180,10 +180,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/Makefile
 +#obj-y	+= himax_debug.o
 +#obj-y	+= himax_ic_incell_core.o
 +#obj-y	+= himax_common.o
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_common.c
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_common.c
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.c
 @@ -0,0 +1,3504 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
@@ -3689,10 +3689,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_common.c
 +	I("%s: END\n", __func__);
 +	return 0;
 +}
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_common.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_common.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_common.h
 @@ -0,0 +1,616 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for common functions
@@ -4310,10 +4310,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_common.h
 +int himax_input_register_device(struct input_dev *input_dev);
 +
 +#endif
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug.c
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug.c
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.c
 @@ -0,0 +1,3425 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for debug nodes
@@ -7740,10 +7740,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug.c
 +}
 +EXPORT_SYMBOL(himax_debug_remove);
 +
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug.h
 @@ -0,0 +1,218 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for debug nodes
@@ -7963,10 +7963,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug.h
 +}
 +
 +#endif
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug_info.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug_info.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug_info.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_debug_info.h
 @@ -0,0 +1,83 @@
 +#define HX_TAB "\t"
 +#define DBG_REG_NAME  "register"
@@ -8051,10 +8051,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_debug_info.
 +HELP_GUEST_INFO \
 +HELP_UPDATE
 +
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.c
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.c
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.c
 @@ -0,0 +1,535 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for HX83121 chipset
@@ -8591,10 +8591,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.
 +    }
 +	return ret;
 +}
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.h
 @@ -0,0 +1,34 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for HX83121 chipset
@@ -8630,10 +8630,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_HX83121.
 +
 +#define HX83121A_FLASH_SIZE 261120
 +
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_core.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_core.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_core.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_core.h
 @@ -0,0 +1,988 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for ic core functions
@@ -9623,10 +9623,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_core.h
 +};
 +
 +#endif
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_incell_core.c
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_incell_core.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_incell_core.c
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_ic_incell_core.c
 @@ -0,0 +1,4485 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for incell ic core functions
@@ -14113,10 +14113,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_ic_incell_c
 +
 +/* init end*/
 +/* CORE_INIT */
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_inspection.c
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_inspection.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_inspection.c
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_inspection.c
 @@ -0,0 +1,2870 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for inspection functions
@@ -16988,10 +16988,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_inspection.
 +	I("%s: enter, %d\n", __func__, __LINE__);
 +	g_core_fp.fp_chip_self_test = himax_chip_self_test;
 +}
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_inspection.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_inspection.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_inspection.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_inspection.h
 @@ -0,0 +1,311 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for inspection functions
@@ -17304,10 +17304,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_inspection.
 +};
 +
 +extern void himax_inspect_data_clear(void);
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_modular.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_modular.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_modular.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_modular.h
 @@ -0,0 +1,103 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for modularize functions
@@ -17412,10 +17412,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_modular.h
 +extern void himax_int_enable(int enable);
 +
 +#endif
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 @@ -0,0 +1,1303 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for QCT platform
@@ -18720,10 +18720,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
 +
 +MODULE_DESCRIPTION("Himax_common driver");
 +MODULE_LICENSE("GPL");
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.h
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.h
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.h
 @@ -0,0 +1,149 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*  Himax Android Driver Sample Code for QCT platform
@@ -18874,10 +18874,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.h
 +
 +#endif
 +
-Index: kernel-rockchip-6_1/drivers/gpu/drm/drm_panel.c
+Index: kernel-rockchip/drivers/gpu/drm/drm_panel.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpu/drm/drm_panel.c
-+++ kernel-rockchip-6_1/drivers/gpu/drm/drm_panel.c
+--- kernel-rockchip.orig/drivers/gpu/drm/drm_panel.c
++++ kernel-rockchip/drivers/gpu/drm/drm_panel.c
 @@ -61,6 +61,7 @@ void drm_panel_init(struct drm_panel *pa
  	panel->dev = dev;
  	panel->funcs = funcs;
@@ -18961,10 +18961,10 @@ Index: kernel-rockchip-6_1/drivers/gpu/drm/drm_panel.c
  MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
  MODULE_DESCRIPTION("DRM panel infrastructure");
  MODULE_LICENSE("GPL and additional rights");
-Index: kernel-rockchip-6_1/include/drm/drm_connector.h
+Index: kernel-rockchip/include/drm/drm_connector.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/drm/drm_connector.h
-+++ kernel-rockchip-6_1/include/drm/drm_connector.h
+--- kernel-rockchip.orig/include/drm/drm_connector.h
++++ kernel-rockchip/include/drm/drm_connector.h
 @@ -1691,6 +1691,12 @@ struct drm_connector {
  
  	/** @hdr_sink_metadata: HDR Metadata Information read from sink */
@@ -18978,10 +18978,10 @@ Index: kernel-rockchip-6_1/include/drm/drm_connector.h
  };
  
  #define obj_to_connector(x) container_of(x, struct drm_connector, base)
-Index: kernel-rockchip-6_1/include/drm/drm_panel.h
+Index: kernel-rockchip/include/drm/drm_panel.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/drm/drm_panel.h
-+++ kernel-rockchip-6_1/include/drm/drm_panel.h
+--- kernel-rockchip.orig/include/drm/drm_panel.h
++++ kernel-rockchip/include/drm/drm_panel.h
 @@ -28,6 +28,24 @@
  #include <linux/errno.h>
  #include <linux/list.h>
@@ -19035,10 +19035,10 @@ Index: kernel-rockchip-6_1/include/drm/drm_panel.h
  #if defined(CONFIG_OF) && defined(CONFIG_DRM_PANEL)
  struct drm_panel *of_drm_find_panel(const struct device_node *np);
  int of_drm_get_panel_orientation(const struct device_node *np,
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/Makefile
+Index: kernel-rockchip/drivers/input/touchscreen/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/Makefile
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/Makefile
+--- kernel-rockchip.orig/drivers/input/touchscreen/Makefile
++++ kernel-rockchip/drivers/input/touchscreen/Makefile
 @@ -131,3 +131,4 @@ obj-$(CONFIG_TOUCHSCREEN_ROHM_BU21023)	+
  obj-$(CONFIG_TOUCHSCREEN_RASPBERRYPI_FW)	+= raspberrypi-ts.o
  obj-$(CONFIG_TOUCHSCREEN_IQS5XX)	+= iqs5xx.o

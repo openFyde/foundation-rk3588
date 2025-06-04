@@ -35,7 +35,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  #else
  int rkmpp_log_level = 0;
  static bool rkmpp_log_fps = false;
-@@ -676,7 +676,7 @@ static int rkmpp_try_dqbuf(struct rkmpp_
+@@ -703,7 +703,7 @@ static int rkmpp_try_dqbuf(struct rkmpp_
  
  	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
  	if (ret < 0) {
@@ -44,7 +44,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  		RETURN_ERR(EINVAL, -1);
  	}
  
-@@ -859,8 +859,11 @@ int rkmpp_update_poll_event(struct rkmpp
+@@ -886,8 +886,11 @@ int rkmpp_update_poll_event(struct rkmpp
  
  static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
  {
@@ -57,7 +57,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  #define MAX_OPT_LEN 1024
  #define OPT_DEC "dec"
  #define OPT_ENC "enc"
-@@ -926,10 +929,21 @@ static int rkmpp_parse_options(struct rk
+@@ -953,10 +956,21 @@ static int rkmpp_parse_options(struct rk
  			RETURN_ERR(ENODEV, -1);
  		}
  	}
@@ -80,7 +80,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	LEAVE();
  	return 0;
  }
-@@ -946,7 +960,8 @@ static void *plugin_init(int fd)
+@@ -973,7 +987,8 @@ static void *plugin_init(int fd)
  	ENTER();
  
  	/* Filter out invalid fd and real devices */
@@ -90,7 +90,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  		RETURN_ERR(errno, NULL);
  
  	pthread_once(&g_rkmpp_global_init_once, rkmpp_global_init);
-@@ -1157,7 +1172,7 @@ static void *plugin_mmap(void *dev_ops_p
+@@ -1184,7 +1199,7 @@ static void *plugin_mmap(void *dev_ops_p
  		RETURN_ERR(EINVAL, NULL);
  	}
  
@@ -161,7 +161,7 @@ Index: libv4l-rkmpp/src/utils.c
  		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
  
  		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0)
-@@ -233,3 +243,14 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+@@ -234,3 +244,14 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
  	LEAVE();
  	return 0;
  }

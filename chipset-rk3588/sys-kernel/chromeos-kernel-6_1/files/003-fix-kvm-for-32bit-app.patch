@@ -1,7 +1,7 @@
-Index: kernel-raspberry/virt/kvm/Kconfig
+Index: kernel-rockchip/virt/kvm/Kconfig
 ===================================================================
---- kernel-raspberry.orig/virt/kvm/Kconfig
-+++ kernel-raspberry/virt/kvm/Kconfig
+--- kernel-rockchip.orig/virt/kvm/Kconfig
++++ kernel-rockchip/virt/kvm/Kconfig
 @@ -67,7 +67,7 @@ config KVM_GENERIC_DIRTYLOG_READ_PROTECT
  
  config KVM_COMPAT

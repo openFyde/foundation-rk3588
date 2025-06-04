@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
-+++ kernel-rockchip-6_1/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+--- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
++++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
 @@ -2000,7 +2000,12 @@ struct dma_buf *rockchip_drm_gem_prime_e
  
  DEFINE_DRM_GEM_FOPS(rockchip_drm_driver_fops);
@@ -15,10 +15,10 @@ Index: kernel-rockchip-6_1/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
  	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC | DRIVER_RENDER,
  	.postclose		= rockchip_drm_postclose,
  	.lastclose		= rockchip_drm_lastclose,
-Index: kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-+++ kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 @@ -29,18 +29,18 @@ CONFIG_AP6XXX ?= m
  
  CONFIG_BCMDHD_OOB := y
@@ -50,10 +50,10 @@ Index: kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Make
  ifeq ($(CONFIG_AP6XXX),m)
  EXTRA_LDFLAGS += --strip-debug
  endif
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.h
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/sensors/fingerprint/madev.h
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
+--- kernel-rockchip.orig/drivers/input/sensors/fingerprint/madev.h
++++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.h
 @@ -184,12 +184,17 @@ extern int mas_do_some_for_probe(struct
  //#define MALOGD(x) MALOGF(x)																									//debug log
  //#define MALOGW(x) printk(KERN_WARNING "%s%s: warning log! the function %s's ret = %d\n", MALOG_TAG, __func__,x, ret);			//warning log
@@ -74,10 +74,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
  
  /**
   *	the old ioctl command, compatible for the old version
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.c
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/sensors/fingerprint/madev.c
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.c
+--- kernel-rockchip.orig/drivers/input/sensors/fingerprint/madev.c
++++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
 @@ -772,7 +772,7 @@ int mas_probe(struct spi_device *spi) {
  
      int ret = 0;

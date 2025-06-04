@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+Index: kernel-rockchip/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/pci/controller/dwc/pcie-dw-rockchip.c
-+++ kernel-rockchip-6_1/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+--- kernel-rockchip.orig/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ kernel-rockchip/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 @@ -752,8 +752,9 @@ static irqreturn_t rk_pcie_sys_irq_handl
  	}
  

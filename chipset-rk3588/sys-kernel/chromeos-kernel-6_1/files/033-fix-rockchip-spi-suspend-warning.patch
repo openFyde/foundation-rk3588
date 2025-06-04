@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/spi/spi-rockchip.c
+Index: kernel-rockchip/drivers/spi/spi-rockchip.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/spi/spi-rockchip.c
-+++ kernel-rockchip-6_1/drivers/spi/spi-rockchip.c
+--- kernel-rockchip.orig/drivers/spi/spi-rockchip.c
++++ kernel-rockchip/drivers/spi/spi-rockchip.c
 @@ -6,6 +6,7 @@
  
  #include <linux/acpi.h>

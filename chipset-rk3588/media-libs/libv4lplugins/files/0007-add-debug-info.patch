@@ -1,0 +1,83 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -40,6 +40,14 @@ int rkmpp_log_level = 0;
+ static bool rkmpp_log_fps = false;
+ #endif
+ 
++const char dec[] = "dec";
++const char enc[] = "enc";
++
++static const char* ctx_type(struct rkmpp_context *ctx)
++{
++  return ctx->is_decoder ? dec : enc;
++}
++
+ static pthread_once_t g_rkmpp_global_init_once = PTHREAD_ONCE_INIT;
+ 
+ static void rkmpp_global_init(void)
+@@ -80,7 +88,7 @@ void rkmpp_new_frame(struct rkmpp_contex
+ 	ctx->last_fps_time = curr_time;
+ 
+ 	LOG("%s FPS: %6.1f || Frames: %" PRIu64 "\n",
+-	    ctx->is_decoder ? "DEC" : "ENC", fps, ctx->frames);
++	    ctx_type(ctx), fps, ctx->frames);
+ }
+ 
+ static void rkmpp_destroy_buffers(struct rkmpp_buf_queue *queue)
+@@ -243,7 +251,7 @@ int rkmpp_enum_fmt(struct rkmpp_context
+ 	}
+ 
+ 	LOGV(1, "%s format(%d) not found\n",
+-	     compressed ? "compressed" : "raw", f->index);
++	     ctx_type(ctx), f->index);
+ 	RETURN_ERR(EINVAL, -1);
+ }
+ 
+@@ -328,8 +336,8 @@ int rkmpp_try_fmt(struct rkmpp_context *
+ 
+ 	fmt = rkmpp_find_fmt(ctx, pix_fmt_mp->pixelformat);
+ 	if (!fmt) {
+-		LOGE("failed to find %s format\n",
+-		     compressed ? "compressed" : "raw");
++		LOGE("failed to find %s format:%s\n",
++		     ctx_type(ctx), (char *) &pix_fmt_mp->pixelformat);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -1087,7 +1095,7 @@ static void *plugin_init(int fd)
+ 	ctx->eos_buffer.index = -1;
+ 	rkmpp_buffer_set_last(&ctx->eos_buffer);
+ 
+-	LOGV(1, "ctx(%p): plugin inited\n", (void *)ctx);
++	LOGV(1, "ctx(%p): plugin %s inited\n", (void *)ctx, ctx_type(ctx));
+ 
+ 	LEAVE();
+ 	return ctx;
+@@ -1112,7 +1120,7 @@ static void plugin_close(void *dev_ops_p
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "ctx(%p): closing plugin\n", (void *)ctx);
++	LOGV(1, "ctx(%p): closing %s plugin\n", (void *)ctx, ctx_type(ctx));
+ 
+ 	if (ctx->worker_thread) {
+ 		pthread_cancel(ctx->worker_thread);
+@@ -1167,14 +1175,14 @@ static int plugin_ioctl(void *dev_ops_pr
+ 
+ 	pthread_mutex_lock(&ctx->ioctl_mutex);
+ 
+-	LOGV(4, "ctx(%p): %s\n", (void *)ctx, rkmpp_cmd2str(cmd));
++	LOGV(4, "ctx(%p)%s: %s\n", (void *)ctx, ctx_type(ctx), rkmpp_cmd2str(cmd));
+ 
+ 	if (ctx->is_decoder)
+ 		ret = rkmpp_dec_ioctl(ctx->data, cmd, arg);
+ 	else
+ 		ret = rkmpp_enc_ioctl(ctx->data, cmd, arg);
+ 
+-	LOGV(4, "ctx(%p): %s  ret: %d\n", (void *)ctx, rkmpp_cmd2str(cmd), ret);
++	LOGV(4, "ctx(%p)%s: %s  ret: %d\n", (void *)ctx, ctx_type(ctx), rkmpp_cmd2str(cmd), ret);
+ 
+ 	pthread_mutex_unlock(&ctx->ioctl_mutex);
+ 

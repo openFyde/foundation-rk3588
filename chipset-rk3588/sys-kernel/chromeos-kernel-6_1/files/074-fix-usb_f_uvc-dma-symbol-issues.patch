@@ -1,0 +1,12 @@
+Index: kernel-rockchip/drivers/usb/gadget/function/uvc_queue.c
+===================================================================
+--- kernel-rockchip.orig/drivers/usb/gadget/function/uvc_queue.c
++++ kernel-rockchip/drivers/usb/gadget/function/uvc_queue.c
+@@ -22,6 +22,7 @@
+ 
+ #include "uvc.h"
+ #include "u_uvc.h"
++MODULE_IMPORT_NS(DMA_BUF);
+ 
+ /* ------------------------------------------------------------------------
+  * Video buffers queue management.

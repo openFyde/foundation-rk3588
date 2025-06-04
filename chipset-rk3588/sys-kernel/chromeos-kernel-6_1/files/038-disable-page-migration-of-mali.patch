@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
+Index: kernel-rockchip/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
-+++ kernel-rockchip-6_1/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
+--- kernel-rockchip.orig/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
++++ kernel-rockchip/drivers/gpu/arm/bifrost/mali_kbase_core_linux.c
 @@ -334,8 +334,15 @@ static bool kbase_file_inc_fops_count_if
  	 * of /dev/malixx file i.e. 'kfile' or disallow file operations if parent
  	 * process has closed the file instance.

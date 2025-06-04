@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-diff.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-diff.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-diff.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-diff.dtsi
 @@ -0,0 +1,356 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -359,10 +359,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-diff.dtsi
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
 @@ -0,0 +1,313 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -677,10 +677,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-core.dtsi
 +	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
 +	rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER3>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
 @@ -0,0 +1,78 @@
 +
 +/ {
@@ -760,10 +760,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
 +        };
 +    };
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dts
 @@ -0,0 +1,18 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -783,10 +783,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j
 +	compatible = "rockchip,rk3588-firefly-itx-3588j", "rockchip,rk3588";
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
 @@ -0,0 +1,444 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1232,10 +1232,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-2ms2m.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-2ms2m.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-2ms2m.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-2ms2m.dtsi
 @@ -0,0 +1,340 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1577,10 +1577,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-2
 +                };
 +        };
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-8ms1m.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-8ms1m.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-8ms1m.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-8ms1m.dtsi
 @@ -0,0 +1,182 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1764,10 +1764,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-cam-8
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-port.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-port.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-port.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-port.dtsi
 @@ -0,0 +1,320 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -2089,10 +2089,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-port.dtsi
 +	dr_mode = "otg";
 +	status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-rk806-single.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-rk806-single.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-rk806-single.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-rk806-single.dtsi
 @@ -0,0 +1,480 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -2574,10 +2574,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-rk806-sin
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/include/dt-bindings/pinctrl/rockchip.h
+Index: kernel-rockchip/include/dt-bindings/pinctrl/rockchip.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/dt-bindings/pinctrl/rockchip.h
-+++ kernel-rockchip-6_1/include/dt-bindings/pinctrl/rockchip.h
+--- kernel-rockchip.orig/include/dt-bindings/pinctrl/rockchip.h
++++ kernel-rockchip/include/dt-bindings/pinctrl/rockchip.h
 @@ -44,4 +44,21 @@
  
  #define RK_FUNC_GPIO	0
@@ -2600,10 +2600,10 @@ Index: kernel-rockchip-6_1/include/dt-bindings/pinctrl/rockchip.h
 +#define PCA_IO1_7          15
 +
  #endif
-Index: kernel-rockchip-6_1/drivers/media/i2c/Kconfig
+Index: kernel-rockchip/drivers/media/i2c/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/media/i2c/Kconfig
-+++ kernel-rockchip-6_1/drivers/media/i2c/Kconfig
+--- kernel-rockchip.orig/drivers/media/i2c/Kconfig
++++ kernel-rockchip/drivers/media/i2c/Kconfig
 @@ -978,6 +978,13 @@ config VIDEO_OG02B10
  	  This is a Video4Linux2 sensor driver for the OmniVision
  	  OG02B10 camera.
@@ -2618,10 +2618,10 @@ Index: kernel-rockchip-6_1/drivers/media/i2c/Kconfig
  config VIDEO_OS02G10
  	tristate "OmniVision OS02G10 sensor support"
  	depends on I2C && VIDEO_DEV
-Index: kernel-rockchip-6_1/drivers/media/i2c/Makefile
+Index: kernel-rockchip/drivers/media/i2c/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/media/i2c/Makefile
-+++ kernel-rockchip-6_1/drivers/media/i2c/Makefile
+--- kernel-rockchip.orig/drivers/media/i2c/Makefile
++++ kernel-rockchip/drivers/media/i2c/Makefile
 @@ -154,6 +154,7 @@ obj-$(CONFIG_VIDEO_OS04A10) += os04a10.o
  obj-$(CONFIG_VIDEO_OS04D10) += os04d10.o
  obj-$(CONFIG_VIDEO_OS05A20) += os05a20.o
@@ -2630,10 +2630,10 @@ Index: kernel-rockchip-6_1/drivers/media/i2c/Makefile
  obj-$(CONFIG_VIDEO_OTP_EEPROM) += otp_eeprom.o
  obj-$(CONFIG_VIDEO_OV02A10) += ov02a10.o
  obj-$(CONFIG_VIDEO_OV02B10) += ov02b10.o
-Index: kernel-rockchip-6_1/drivers/media/i2c/xc7160.c
+Index: kernel-rockchip/drivers/media/i2c/xc7160.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/media/i2c/xc7160.c
++++ kernel-rockchip/drivers/media/i2c/xc7160.c
 @@ -0,0 +1,1646 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
@@ -4281,10 +4281,10 @@ Index: kernel-rockchip-6_1/drivers/media/i2c/xc7160.c
 +
 +MODULE_DESCRIPTION("OmniVision xc7160 sensor driver");
 +MODULE_LICENSE("GPL v2");
-Index: kernel-rockchip-6_1/drivers/media/i2c/xc7160_regs.h
+Index: kernel-rockchip/drivers/media/i2c/xc7160_regs.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/media/i2c/xc7160_regs.h
++++ kernel-rockchip/drivers/media/i2c/xc7160_regs.h
 @@ -0,0 +1,7013 @@
 +#ifndef  XC7160_REGS_H
 +#define XC7160_REGS_H
@@ -11299,10 +11299,10 @@ Index: kernel-rockchip-6_1/drivers/media/i2c/xc7160_regs.h
 +
 +/*************************************************Camera Sensor Setting End***********************************************************/
 +#endif // XC7160_REGS_H
-Index: kernel-rockchip-6_1/drivers/gpio/gpio-pca953x.c
+Index: kernel-rockchip/drivers/gpio/gpio-pca953x.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpio/gpio-pca953x.c
-+++ kernel-rockchip-6_1/drivers/gpio/gpio-pca953x.c
+--- kernel-rockchip.orig/drivers/gpio/gpio-pca953x.c
++++ kernel-rockchip/drivers/gpio/gpio-pca953x.c
 @@ -1062,6 +1062,11 @@ static int pca953x_probe(struct i2c_clie
  	u32 invert = 0;
  	struct regulator *reg;
@@ -11429,10 +11429,10 @@ Index: kernel-rockchip-6_1/drivers/gpio/gpio-pca953x.c
  
  	return 0;
  }
-Index: kernel-rockchip-6_1/drivers/gpio/Kconfig
+Index: kernel-rockchip/drivers/gpio/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpio/Kconfig
-+++ kernel-rockchip-6_1/drivers/gpio/Kconfig
+--- kernel-rockchip.orig/drivers/gpio/Kconfig
++++ kernel-rockchip/drivers/gpio/Kconfig
 @@ -1084,6 +1084,12 @@ config GPIO_PCA953X
  
  	  40 bits:      pca9505, pca9698
@@ -11446,10 +11446,10 @@ Index: kernel-rockchip-6_1/drivers/gpio/Kconfig
  config GPIO_PCA953X_IRQ
  	bool "Interrupt controller support for PCA953x"
  	depends on GPIO_PCA953X
-Index: kernel-rockchip-6_1/sound/soc/rockchip/Kconfig
+Index: kernel-rockchip/sound/soc/rockchip/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/sound/soc/rockchip/Kconfig
-+++ kernel-rockchip-6_1/sound/soc/rockchip/Kconfig
+--- kernel-rockchip.orig/sound/soc/rockchip/Kconfig
++++ kernel-rockchip/sound/soc/rockchip/Kconfig
 @@ -144,6 +144,13 @@ config SND_SOC_ROCKCHIP_MULTICODECS
  	  Say Y or M here if you want to add support for SoC audio on Rockchip
  	  boards using multicodecs, such as RK3308 boards.
@@ -11464,10 +11464,10 @@ Index: kernel-rockchip-6_1/sound/soc/rockchip/Kconfig
  config SND_SOC_ROCKCHIP_RT5645
  	tristate "ASoC support for Rockchip boards using a RT5645/RT5650 codec"
  	depends on SND_SOC_ROCKCHIP && I2C && GPIOLIB && HAVE_CLK
-Index: kernel-rockchip-6_1/sound/soc/rockchip/Makefile
+Index: kernel-rockchip/sound/soc/rockchip/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/sound/soc/rockchip/Makefile
-+++ kernel-rockchip-6_1/sound/soc/rockchip/Makefile
+--- kernel-rockchip.orig/sound/soc/rockchip/Makefile
++++ kernel-rockchip/sound/soc/rockchip/Makefile
 @@ -39,6 +39,7 @@ obj-$(CONFIG_SND_SOC_ROCKCHIP_VAD) += sn
  snd-soc-rockchip-hdmi-objs := rockchip_hdmi.o
  snd-soc-rockchip-max98090-objs := rockchip_max98090.o
@@ -11484,10 +11484,10 @@ Index: kernel-rockchip-6_1/sound/soc/rockchip/Makefile
  obj-$(CONFIG_SND_SOC_ROCKCHIP_RT5645) += snd-soc-rockchip-rt5645.o
  obj-$(CONFIG_SND_SOC_RK3288_HDMI_ANALOG) += snd-soc-rk3288-hdmi-analog.o
  obj-$(CONFIG_SND_SOC_RK3399_GRU_SOUND) += snd-soc-rk3399-gru-sound.o
-Index: kernel-rockchip-6_1/sound/soc/rockchip/firefly_multicodecs.c
+Index: kernel-rockchip/sound/soc/rockchip/firefly_multicodecs.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/sound/soc/rockchip/firefly_multicodecs.c
++++ kernel-rockchip/sound/soc/rockchip/firefly_multicodecs.c
 @@ -0,0 +1,896 @@
 +/*
 + * Rockchip machine ASoC driver for Rockchip Multi-codecs audio
@@ -12385,10 +12385,10 @@ Index: kernel-rockchip-6_1/sound/soc/rockchip/firefly_multicodecs.c
 +MODULE_DESCRIPTION("Firefly General Multicodecs ASoC driver");
 +MODULE_LICENSE("GPL v2");
 +MODULE_ALIAS("platform:" DRV_NAME);
-Index: kernel-rockchip-6_1/drivers/net/ethernet/stmicro/stmmac/Kconfig
+Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/net/ethernet/stmicro/stmmac/Kconfig
-+++ kernel-rockchip-6_1/drivers/net/ethernet/stmicro/stmmac/Kconfig
+--- kernel-rockchip.orig/drivers/net/ethernet/stmicro/stmmac/Kconfig
++++ kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/Kconfig
 @@ -45,6 +45,12 @@ config STMMAC_FULL
  	  This selects the full function, default is Y, full-featured version
  	  includes 4.10 and other versions, if it is N, only 4.10 core working.
@@ -12402,10 +12402,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/stmicro/stmmac/Kconfig
  config STMMAC_PLATFORM
  	tristate "STMMAC Platform bus support"
  	depends on STMMAC_ETH
-Index: kernel-rockchip-6_1/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+Index: kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
-+++ kernel-rockchip-6_1/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+--- kernel-rockchip.orig/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
++++ kernel-rockchip/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
 @@ -57,6 +57,11 @@
  #define STMMAC_HWTS_ACTIVE	(PTP_TCR_TSENA | PTP_TCR_TSCFUPDT | \
  				 PTP_TCR_TSCTRLSSR)
@@ -12461,19 +12461,19 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
  
  #ifdef CONFIG_DEBUG_FS
  	stmmac_init_fs(ndev);
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/Makefile
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 @@ -339,3 +339,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-t
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v10.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-12c-linux.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-firefly-itx-3588j.dtb
-Index: kernel-rockchip-6_1/sound/soc/codecs/es8323.c
+Index: kernel-rockchip/sound/soc/codecs/es8323.c
 ===================================================================
---- kernel-rockchip-6_1.orig/sound/soc/codecs/es8323.c
-+++ kernel-rockchip-6_1/sound/soc/codecs/es8323.c
+--- kernel-rockchip.orig/sound/soc/codecs/es8323.c
++++ kernel-rockchip/sound/soc/codecs/es8323.c
 @@ -25,6 +25,9 @@
  #include <sound/soc-dapm.h>
  #include <sound/initval.h>

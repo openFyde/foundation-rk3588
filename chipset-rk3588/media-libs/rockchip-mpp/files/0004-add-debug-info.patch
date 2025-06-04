@@ -1,0 +1,51 @@
+Index: mpp/osal/mpp_runtime.cpp
+===================================================================
+--- mpp.orig/osal/mpp_runtime.cpp
++++ mpp/osal/mpp_runtime.cpp
+@@ -81,7 +81,7 @@ RK_U32 MppRuntimeService::get_allocator_
+ 
+ MppRuntimeService::MppRuntimeService()
+ {
+-    mpp_env_get_u32("mpp_rt_debug", &mpp_rt_debug, 0);
++    mpp_env_get_u32("mpp_rt_debug", &mpp_rt_debug, 1);
+ 
+     allocator_valid[MPP_BUFFER_TYPE_NORMAL] = 1;
+     allocator_valid[MPP_BUFFER_TYPE_ION] = !access("/dev/ion", F_OK | R_OK | W_OK);
+Index: mpp/mpp/base/mpp_buffer_impl.cpp
+===================================================================
+--- mpp.orig/mpp/base/mpp_buffer_impl.cpp
++++ mpp/mpp/base/mpp_buffer_impl.cpp
+@@ -1028,6 +1028,7 @@ MppBufferGroupImpl *MppBufferService::ge
+         flag += MPP_ALLOC_FLAG_CMA;
+ 
+     p->flags = (MppAllocFlagType)flag;
++    mpp_err("get group: type:0x%x, mode:0x%x, buffer type:0x%x, flag:0x%x\n", type, mode, buffer_type, flag);
+ 
+     {
+         AutoMutex auto_lock(get_lock());
+Index: mpp/osal/mpp_platform.cpp
+===================================================================
+--- mpp.orig/osal/mpp_platform.cpp
++++ mpp/osal/mpp_platform.cpp
+@@ -120,7 +120,7 @@ MppPlatformService::MppPlatformService()
+     cap->poll_cmd = MPP_CMD_POLL_BASE + 1;
+     cap->ctrl_cmd = MPP_CMD_CONTROL_BASE + 0;
+ 
+-    mpp_env_get_u32("mpp_debug", &mpp_debug, 0);
++    mpp_env_get_u32("mpp_debug", &mpp_debug, 0x10);
+ 
+     /* read soc name */
+     soc_name = mpp_get_soc_name();
+Index: mpp/osal/driver/mpp_service.c
+===================================================================
+--- mpp.orig/osal/driver/mpp_service.c
++++ mpp/osal/driver/mpp_service.c
+@@ -118,7 +118,7 @@ void check_mpp_service_cap(RK_U32 *codec
+     RK_U32 i;
+ 
+     /* for device check on startup */
+-    mpp_env_get_u32("mpp_device_debug", &mpp_device_debug, 0);
++    mpp_env_get_u32("mpp_device_debug", &mpp_device_debug, 2);
+ 
+     *codec_type = 0;
+     memset(hw_ids, 0, sizeof(RK_U32) * 32);

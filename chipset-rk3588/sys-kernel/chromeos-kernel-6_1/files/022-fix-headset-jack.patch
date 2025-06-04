@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/sound/soc/rockchip/rockchip_multicodecs.c
+Index: kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 ===================================================================
---- kernel-rockchip-6_1.orig/sound/soc/rockchip/rockchip_multicodecs.c
-+++ kernel-rockchip-6_1/sound/soc/rockchip/rockchip_multicodecs.c
+--- kernel-rockchip.orig/sound/soc/rockchip/rockchip_multicodecs.c
++++ kernel-rockchip/sound/soc/rockchip/rockchip_multicodecs.c
 @@ -43,6 +43,9 @@
  #define DEFAULT_MCLK_FS	256
  #define DAI_FMT_BASE	(SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF)
@@ -169,10 +169,10 @@ Index: kernel-rockchip-6_1/sound/soc/rockchip/rockchip_multicodecs.c
  }
  
  static const struct of_device_id rockchip_multicodecs_of_match[] = {
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 @@ -27,23 +27,9 @@
  			sound-dai = <&hdmi0>;
  		};
@@ -334,10 +334,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c.dtsi
 +        <4 RK_PD4 1 &pcfg_pull_up_drv_level_12>;
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 @@ -85,6 +85,7 @@
  		compatible = "regulator-fixed";
  		regulator-name = "combophy_avdd0v85";
@@ -394,7 +394,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  	};
  };
  
-@@ -497,7 +495,7 @@
+@@ -500,7 +498,7 @@
  		interrupts = <RK_PC4 IRQ_TYPE_LEVEL_LOW>;
  		pinctrl-names = "default";
  		pinctrl-0 = <&usbc0_int>;
@@ -403,7 +403,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		status = "okay";
  
  		ports {
-@@ -585,38 +583,38 @@
+@@ -588,38 +586,38 @@
  		status = "disabled";
  	};
  
@@ -474,7 +474,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &i2c7 {
-@@ -700,7 +698,8 @@
+@@ -703,7 +701,8 @@
  &pinctrl {
  	charger {
  		charger_ok: charger_ok {
@@ -484,7 +484,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		};
  	};
  
-@@ -817,13 +816,6 @@
+@@ -813,13 +812,6 @@
                rockchip,pins = <1 RK_PD3 RK_FUNC_GPIO &pcfg_pull_up>;
        };
    };
@@ -498,7 +498,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &pwm14 {
-@@ -872,6 +864,10 @@
+@@ -868,6 +860,10 @@
  	status = "okay";
  };
  
@@ -509,7 +509,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  &rockchip_suspend {
  	status = "okay";
  	rockchip,sleep-debug-en = <1>;
-@@ -893,28 +889,24 @@
+@@ -889,28 +885,24 @@
  	status = "okay";
  };
  
@@ -555,7 +555,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  };
  
  &tsadc {
-@@ -931,23 +923,25 @@
+@@ -927,23 +919,25 @@
  	rockchip,typec-vbus-det;
  };
  
@@ -586,7 +586,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  	port {
  		#address-cells = <1>;
  		#size-cells = <0>;
-@@ -984,8 +978,6 @@
+@@ -980,8 +974,6 @@
  	status = "disabled";
  };
  
@@ -595,10 +595,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  &vdpu {
  	status = "okay";
  };
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single.dtsi
 @@ -6,7 +6,21 @@
  
  #include <dt-bindings/gpio/gpio.h>
@@ -691,10 +691,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-12c-rk806-single
  				};
  			};
  
-Index: kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+Index: kernel-rockchip/drivers/usb/typec/tcpm/tcpci_husb311.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
-+++ kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+--- kernel-rockchip.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
++++ kernel-rockchip/drivers/usb/typec/tcpm/tcpci_husb311.c
 @@ -274,6 +274,11 @@ static int husb311_probe(struct i2c_clie
  			return ret;
  	}
@@ -707,10 +707,10 @@ Index: kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
  	ret = husb311_sw_reset(chip);
  	if (ret < 0) {
  		dev_err(chip->dev, "fail to soft reset, ret = %d\n", ret);
-Index: kernel-rockchip-6_1/drivers/power/supply/bq25700_charger.c
+Index: kernel-rockchip/drivers/power/supply/bq25700_charger.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/power/supply/bq25700_charger.c
-+++ kernel-rockchip-6_1/drivers/power/supply/bq25700_charger.c
+--- kernel-rockchip.orig/drivers/power/supply/bq25700_charger.c
++++ kernel-rockchip/drivers/power/supply/bq25700_charger.c
 @@ -25,7 +25,7 @@
  #include <linux/gpio.h>
  #include <linux/of_gpio.h>
@@ -1210,10 +1210,10 @@ Index: kernel-rockchip-6_1/drivers/power/supply/bq25700_charger.c
  static struct i2c_driver bq25700_driver = {
  	.probe		= bq25700_probe,
  	.shutdown	= bq25700_shutdown,
-Index: kernel-rockchip-6_1/drivers/cpufreq/Kconfig
+Index: kernel-rockchip/drivers/cpufreq/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/cpufreq/Kconfig
-+++ kernel-rockchip-6_1/drivers/cpufreq/Kconfig
+--- kernel-rockchip.orig/drivers/cpufreq/Kconfig
++++ kernel-rockchip/drivers/cpufreq/Kconfig
 @@ -5,8 +5,8 @@ config CPU_FREQ
  	bool "CPU Frequency scaling"
  	select SRCU
@@ -1275,10 +1275,10 @@ Index: kernel-rockchip-6_1/drivers/cpufreq/Kconfig
  comment "CPU frequency scaling drivers"
  
  config CPUFREQ_DT
-Index: kernel-rockchip-6_1/drivers/cpufreq/Makefile
+Index: kernel-rockchip/drivers/cpufreq/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/cpufreq/Makefile
-+++ kernel-rockchip-6_1/drivers/cpufreq/Makefile
+--- kernel-rockchip.orig/drivers/cpufreq/Makefile
++++ kernel-rockchip/drivers/cpufreq/Makefile
 @@ -14,6 +14,7 @@ obj-$(CONFIG_CPU_FREQ_GOV_CONSERVATIVE)
  obj-$(CONFIG_CPU_FREQ_GOV_INTERACTIVE)	+= cpufreq_interactive.o
  obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
@@ -1287,10 +1287,10 @@ Index: kernel-rockchip-6_1/drivers/cpufreq/Makefile
  
  obj-$(CONFIG_CPUFREQ_DT)		+= cpufreq-dt.o
  obj-$(CONFIG_CPUFREQ_DT_PLATDEV)	+= cpufreq-dt-platdev.o
-Index: kernel-rockchip-6_1/drivers/cpufreq/cpu-boost.c
+Index: kernel-rockchip/drivers/cpufreq/cpu-boost.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/cpufreq/cpu-boost.c
++++ kernel-rockchip/drivers/cpufreq/cpu-boost.c
 @@ -0,0 +1,306 @@
 +/*
 + * Copyright (C) 2014 Google, Inc.
@@ -1598,10 +1598,10 @@ Index: kernel-rockchip-6_1/drivers/cpufreq/cpu-boost.c
 +
 +MODULE_DESCRIPTION("Input event based short term CPU frequency booster");
 +MODULE_LICENSE("GPL v2");
-Index: kernel-rockchip-6_1/sound/soc/soc-generic-dmaengine-pcm.c
+Index: kernel-rockchip/sound/soc/soc-generic-dmaengine-pcm.c
 ===================================================================
---- kernel-rockchip-6_1.orig/sound/soc/soc-generic-dmaengine-pcm.c
-+++ kernel-rockchip-6_1/sound/soc/soc-generic-dmaengine-pcm.c
+--- kernel-rockchip.orig/sound/soc/soc-generic-dmaengine-pcm.c
++++ kernel-rockchip/sound/soc/soc-generic-dmaengine-pcm.c
 @@ -15,7 +15,7 @@
  
  #include <sound/dmaengine_pcm.h>
@@ -1611,10 +1611,10 @@ Index: kernel-rockchip-6_1/sound/soc/soc-generic-dmaengine-pcm.c
  module_param(prealloc_buffer_size_kbytes, uint, 0444);
  MODULE_PARM_DESC(prealloc_buffer_size_kbytes, "Preallocate DMA buffer size (KB).");
  
-Index: kernel-rockchip-6_1/drivers/power/supply/sbs-battery.c
+Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/power/supply/sbs-battery.c
-+++ kernel-rockchip-6_1/drivers/power/supply/sbs-battery.c
+--- kernel-rockchip.orig/drivers/power/supply/sbs-battery.c
++++ kernel-rockchip/drivers/power/supply/sbs-battery.c
 @@ -53,6 +53,8 @@ enum {
  	REG_CHARGE_VOLTAGE,
  };

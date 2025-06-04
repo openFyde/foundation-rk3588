@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/include/linux/mm.h
+Index: kernel-rockchip/include/linux/mm.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/mm.h
-+++ kernel-rockchip-6_1/include/linux/mm.h
+--- kernel-rockchip.orig/include/linux/mm.h
++++ kernel-rockchip/include/linux/mm.h
 @@ -210,7 +210,6 @@ extern unsigned long sysctl_admin_reserv
  extern int sysctl_overcommit_memory;
  extern int sysctl_overcommit_ratio;
@@ -20,10 +20,10 @@ Index: kernel-rockchip-6_1/include/linux/mm.h
  
  #ifdef CONFIG_PRINTK
  void mem_dump_obj(void *object);
-Index: kernel-rockchip-6_1/include/linux/mm_inline.h
+Index: kernel-rockchip/include/linux/mm_inline.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/mm_inline.h
-+++ kernel-rockchip-6_1/include/linux/mm_inline.h
+--- kernel-rockchip.orig/include/linux/mm_inline.h
++++ kernel-rockchip/include/linux/mm_inline.h
 @@ -122,6 +122,18 @@ static inline bool lru_gen_in_fault(void
  	return current->in_lru_fault;
  }
@@ -89,10 +89,10 @@ Index: kernel-rockchip-6_1/include/linux/mm_inline.h
 +}
 +
  #endif
-Index: kernel-rockchip-6_1/include/linux/mmu_notifier.h
+Index: kernel-rockchip/include/linux/mmu_notifier.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/mmu_notifier.h
-+++ kernel-rockchip-6_1/include/linux/mmu_notifier.h
+--- kernel-rockchip.orig/include/linux/mmu_notifier.h
++++ kernel-rockchip/include/linux/mmu_notifier.h
 @@ -122,6 +122,11 @@ struct mmu_notifier_ops {
  			  struct mm_struct *mm,
  			  unsigned long address);
@@ -161,10 +161,10 @@ Index: kernel-rockchip-6_1/include/linux/mmu_notifier.h
  
  static inline void mmu_notifier_change_pte(struct mm_struct *mm,
  					   unsigned long address, pte_t pte)
-Index: kernel-rockchip-6_1/include/linux/mmzone.h
+Index: kernel-rockchip/include/linux/mmzone.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/mmzone.h
-+++ kernel-rockchip-6_1/include/linux/mmzone.h
+--- kernel-rockchip.orig/include/linux/mmzone.h
++++ kernel-rockchip/include/linux/mmzone.h
 @@ -7,6 +7,7 @@
  
  #include <linux/spinlock.h>
@@ -426,10 +426,10 @@ Index: kernel-rockchip-6_1/include/linux/mmzone.h
  }
  #endif
  
-Index: kernel-rockchip-6_1/mm/Kconfig
+Index: kernel-rockchip/mm/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/Kconfig
-+++ kernel-rockchip-6_1/mm/Kconfig
+--- kernel-rockchip.orig/mm/Kconfig
++++ kernel-rockchip/mm/Kconfig
 @@ -264,11 +264,6 @@ config SLAB_FREELIST_HARDENED
  	  sanity-checking than others. This option is most effective with
  	  CONFIG_SLUB.
@@ -553,10 +553,10 @@ Index: kernel-rockchip-6_1/mm/Kconfig
  
  source "mm/damon/Kconfig"
  
-Index: kernel-rockchip-6_1/mm/Makefile
+Index: kernel-rockchip/mm/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/Makefile
-+++ kernel-rockchip-6_1/mm/Makefile
+--- kernel-rockchip.orig/mm/Makefile
++++ kernel-rockchip/mm/Makefile
 @@ -120,12 +120,10 @@ obj-$(CONFIG_MEMORY_BALLOON) += balloon_
  obj-$(CONFIG_PAGE_EXTENSION) += page_ext.o
  obj-$(CONFIG_PAGE_TABLE_CHECK) += page_table_check.o
@@ -570,10 +570,10 @@ Index: kernel-rockchip-6_1/mm/Makefile
  obj-$(CONFIG_DEBUG_PAGE_REF) += debug_page_ref.o
  obj-$(CONFIG_DAMON) += damon/
  obj-$(CONFIG_HARDENED_USERCOPY) += usercopy.o
-Index: kernel-rockchip-6_1/mm/cma.c
+Index: kernel-rockchip/mm/cma.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/cma.c
-+++ kernel-rockchip-6_1/mm/cma.c
+--- kernel-rockchip.orig/mm/cma.c
++++ kernel-rockchip/mm/cma.c
 @@ -102,8 +102,6 @@ static void __init cma_activate_area(str
  	if (!cma->bitmap)
  		goto out_error;
@@ -695,10 +695,10 @@ Index: kernel-rockchip-6_1/mm/cma.c
  int cma_for_each_area(int (*it)(struct cma *cma, void *data), void *data)
  {
  	int i;
-Index: kernel-rockchip-6_1/mm/compaction.c
+Index: kernel-rockchip/mm/compaction.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/compaction.c
-+++ kernel-rockchip-6_1/mm/compaction.c
+--- kernel-rockchip.orig/mm/compaction.c
++++ kernel-rockchip/mm/compaction.c
 @@ -2570,16 +2570,11 @@ enum compact_result try_to_compact_pages
  		unsigned int alloc_flags, const struct alloc_context *ac,
  		enum compact_priority prio, struct page **capture)
@@ -717,10 +717,10 @@ Index: kernel-rockchip-6_1/mm/compaction.c
  		return COMPACT_SKIPPED;
  
  	trace_mm_compaction_try_to_compact_pages(order, gfp_mask, prio);
-Index: kernel-rockchip-6_1/mm/damon/lru_sort.c
+Index: kernel-rockchip/mm/damon/lru_sort.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/damon/lru_sort.c
-+++ kernel-rockchip-6_1/mm/damon/lru_sort.c
+--- kernel-rockchip.orig/mm/damon/lru_sort.c
++++ kernel-rockchip/mm/damon/lru_sort.c
 @@ -185,9 +185,21 @@ static struct damos *damon_lru_sort_new_
  	return damon_lru_sort_new_scheme(&pattern, DAMOS_LRU_DEPRIO);
  }
@@ -786,10 +786,10 @@ Index: kernel-rockchip-6_1/mm/damon/lru_sort.c
  
  	return damon_set_region_biggest_system_ram_default(target,
  					&monitor_region_start,
-Index: kernel-rockchip-6_1/mm/damon/reclaim.c
+Index: kernel-rockchip/mm/damon/reclaim.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/damon/reclaim.c
-+++ kernel-rockchip-6_1/mm/damon/reclaim.c
+--- kernel-rockchip.orig/mm/damon/reclaim.c
++++ kernel-rockchip/mm/damon/reclaim.c
 @@ -141,9 +141,20 @@ static struct damos *damon_reclaim_new_s
  			&damon_reclaim_wmarks);
  }
@@ -824,10 +824,10 @@ Index: kernel-rockchip-6_1/mm/damon/reclaim.c
  	damon_set_schemes(ctx, &scheme, 1);
  
  	return damon_set_region_biggest_system_ram_default(target,
-Index: kernel-rockchip-6_1/mm/fadvise.c
+Index: kernel-rockchip/mm/fadvise.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/fadvise.c
-+++ kernel-rockchip-6_1/mm/fadvise.c
+--- kernel-rockchip.orig/mm/fadvise.c
++++ kernel-rockchip/mm/fadvise.c
 @@ -80,7 +80,7 @@ int generic_fadvise(struct file *file, l
  	case POSIX_FADV_NORMAL:
  		file->f_ra.ra_pages = bdi->ra_pages;
@@ -847,10 +847,10 @@ Index: kernel-rockchip-6_1/mm/fadvise.c
  		break;
  	case POSIX_FADV_DONTNEED:
  		__filemap_fdatawrite_range(mapping, offset, endbyte,
-Index: kernel-rockchip-6_1/mm/huge_memory.c
+Index: kernel-rockchip/mm/huge_memory.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/huge_memory.c
-+++ kernel-rockchip-6_1/mm/huge_memory.c
+--- kernel-rockchip.orig/mm/huge_memory.c
++++ kernel-rockchip/mm/huge_memory.c
 @@ -37,6 +37,7 @@
  #include <linux/page_owner.h>
  #include <linux/sched/sysctl.h>
@@ -879,10 +879,10 @@ Index: kernel-rockchip-6_1/mm/huge_memory.c
  	if (off_end <= off_align || (off_end - off_align) < size)
  		return 0;
  
-Index: kernel-rockchip-6_1/mm/kasan/kasan_test.c
+Index: kernel-rockchip/mm/kasan/kasan_test.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/kasan/kasan_test.c
-+++ kernel-rockchip-6_1/mm/kasan/kasan_test.c
+--- kernel-rockchip.orig/mm/kasan/kasan_test.c
++++ kernel-rockchip/mm/kasan/kasan_test.c
 @@ -415,7 +415,8 @@ static void kmalloc_oob_16(struct kunit
  	/* This test is specifically crafted for the generic mode. */
  	KASAN_TEST_NEEDS_CONFIG_ON(test, CONFIG_KASAN_GENERIC);
@@ -893,10 +893,10 @@ Index: kernel-rockchip-6_1/mm/kasan/kasan_test.c
  	KUNIT_ASSERT_NOT_ERR_OR_NULL(test, ptr1);
  
  	ptr2 = kmalloc(sizeof(*ptr2), GFP_KERNEL);
-Index: kernel-rockchip-6_1/mm/khugepaged.c
+Index: kernel-rockchip/mm/khugepaged.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/khugepaged.c
-+++ kernel-rockchip-6_1/mm/khugepaged.c
+--- kernel-rockchip.orig/mm/khugepaged.c
++++ kernel-rockchip/mm/khugepaged.c
 @@ -55,6 +55,9 @@ enum scan_result {
  	SCAN_CGROUP_CHARGE_FAIL,
  	SCAN_TRUNCATED,
@@ -1511,10 +1511,10 @@ Index: kernel-rockchip-6_1/mm/khugepaged.c
  		return -EAGAIN;
  	/*
  	 * Other: Trying again likely not to succeed / error intrinsic to
-Index: kernel-rockchip-6_1/mm/madvise.c
+Index: kernel-rockchip/mm/madvise.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/madvise.c
-+++ kernel-rockchip-6_1/mm/madvise.c
+--- kernel-rockchip.orig/mm/madvise.c
++++ kernel-rockchip/mm/madvise.c
 @@ -334,6 +334,7 @@ static int madvise_cold_or_pageout_pte_r
  	spinlock_t *ptl;
  	struct page *page = NULL;
@@ -1549,10 +1549,10 @@ Index: kernel-rockchip-6_1/mm/madvise.c
  		if (pte_none(ptent))
  			continue;
  
-Index: kernel-rockchip-6_1/mm/memblock.c
+Index: kernel-rockchip/mm/memblock.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/memblock.c
-+++ kernel-rockchip-6_1/mm/memblock.c
+--- kernel-rockchip.orig/mm/memblock.c
++++ kernel-rockchip/mm/memblock.c
 @@ -101,31 +101,6 @@ struct pglist_data __refdata contig_page
  EXPORT_SYMBOL(contig_page_data);
  #endif
@@ -1645,10 +1645,10 @@ Index: kernel-rockchip-6_1/mm/memblock.c
  	__free_pages_memory(start_pfn, end_pfn);
  
  	return end_pfn - start_pfn;
-Index: kernel-rockchip-6_1/mm/memcontrol.c
+Index: kernel-rockchip/mm/memcontrol.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/memcontrol.c
-+++ kernel-rockchip-6_1/mm/memcontrol.c
+--- kernel-rockchip.orig/mm/memcontrol.c
++++ kernel-rockchip/mm/memcontrol.c
 @@ -477,6 +477,16 @@ static void mem_cgroup_update_tree(struc
  	struct mem_cgroup_per_node *mz;
  	struct mem_cgroup_tree_per_node *mctz;
@@ -1717,10 +1717,10 @@ Index: kernel-rockchip-6_1/mm/memcontrol.c
  	return 1;
  }
  __setup("swapaccount=", setup_swap_account);
-Index: kernel-rockchip-6_1/mm/memory-failure.c
+Index: kernel-rockchip/mm/memory-failure.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/memory-failure.c
-+++ kernel-rockchip-6_1/mm/memory-failure.c
+--- kernel-rockchip.orig/mm/memory-failure.c
++++ kernel-rockchip/mm/memory-failure.c
 @@ -84,11 +84,23 @@ static int __page_handle_poison(struct p
  {
  	int ret;
@@ -1748,10 +1748,10 @@ Index: kernel-rockchip-6_1/mm/memory-failure.c
  
  	return ret;
  }
-Index: kernel-rockchip-6_1/mm/memory.c
+Index: kernel-rockchip/mm/memory.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/memory.c
-+++ kernel-rockchip-6_1/mm/memory.c
+--- kernel-rockchip.orig/mm/memory.c
++++ kernel-rockchip/mm/memory.c
 @@ -1445,8 +1445,7 @@ again:
  					force_flush = 1;
  					set_page_dirty(page);
@@ -1832,10 +1832,10 @@ Index: kernel-rockchip-6_1/mm/memory.c
  	if ((flags & FOLL_WRITE) && !pte_write(pte))
  		goto unlock;
  
-Index: kernel-rockchip-6_1/mm/memtest.c
+Index: kernel-rockchip/mm/memtest.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/memtest.c
-+++ kernel-rockchip-6_1/mm/memtest.c
+--- kernel-rockchip.orig/mm/memtest.c
++++ kernel-rockchip/mm/memtest.c
 @@ -46,10 +46,10 @@ static void __init memtest(u64 pattern,
  	last_bad = 0;
  
@@ -1849,10 +1849,10 @@ Index: kernel-rockchip-6_1/mm/memtest.c
  			continue;
  		if (start_phys_aligned == last_bad + incr) {
  			last_bad += incr;
-Index: kernel-rockchip-6_1/mm/migrate.c
+Index: kernel-rockchip/mm/migrate.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/migrate.c
-+++ kernel-rockchip-6_1/mm/migrate.c
+--- kernel-rockchip.orig/mm/migrate.c
++++ kernel-rockchip/mm/migrate.c
 @@ -423,8 +423,12 @@ int folio_migrate_mapping(struct address
  	if (folio_test_swapbacked(folio)) {
  		__folio_set_swapbacked(newfolio);
@@ -1938,10 +1938,10 @@ Index: kernel-rockchip-6_1/mm/migrate.c
  		folio_lock(src);
  	}
  
-Index: kernel-rockchip-6_1/mm/mmap.c
+Index: kernel-rockchip/mm/mmap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/mmap.c
-+++ kernel-rockchip-6_1/mm/mmap.c
+--- kernel-rockchip.orig/mm/mmap.c
++++ kernel-rockchip/mm/mmap.c
 @@ -1374,8 +1374,8 @@ unsigned long do_mmap(struct file *file,
  			if (path_noexec(&file->f_path)) {
  				if (vm_flags & VM_EXEC)
@@ -1953,10 +1953,10 @@ Index: kernel-rockchip-6_1/mm/mmap.c
  			}
  
  			if (!file->f_op->mmap)
-Index: kernel-rockchip-6_1/mm/mmu_notifier.c
+Index: kernel-rockchip/mm/mmu_notifier.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/mmu_notifier.c
-+++ kernel-rockchip-6_1/mm/mmu_notifier.c
+--- kernel-rockchip.orig/mm/mmu_notifier.c
++++ kernel-rockchip/mm/mmu_notifier.c
 @@ -441,6 +441,32 @@ void __mmu_notifier_change_pte(struct mm
  	srcu_read_unlock(&srcu, id);
  }
@@ -1990,10 +1990,10 @@ Index: kernel-rockchip-6_1/mm/mmu_notifier.c
  static int mn_itree_invalidate(struct mmu_notifier_subscriptions *subscriptions,
  			       const struct mmu_notifier_range *range)
  {
-Index: kernel-rockchip-6_1/mm/mprotect.c
+Index: kernel-rockchip/mm/mprotect.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/mprotect.c
-+++ kernel-rockchip-6_1/mm/mprotect.c
+--- kernel-rockchip.orig/mm/mprotect.c
++++ kernel-rockchip/mm/mprotect.c
 @@ -713,10 +713,8 @@ static int do_mprotect_pkey(unsigned lon
  	mas_set(&mas, start);
  	vma = mas_find(&mas, ULONG_MAX);
@@ -2026,10 +2026,10 @@ Index: kernel-rockchip-6_1/mm/mprotect.c
  }
  
  #ifdef CONFIG_ARCH_HAS_PKEYS
-Index: kernel-rockchip-6_1/mm/page-writeback.c
+Index: kernel-rockchip/mm/page-writeback.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/page-writeback.c
-+++ kernel-rockchip-6_1/mm/page-writeback.c
+--- kernel-rockchip.orig/mm/page-writeback.c
++++ kernel-rockchip/mm/page-writeback.c
 @@ -1526,7 +1526,7 @@ static inline void wb_dirty_limits(struc
  	 */
  	dtc->wb_thresh = __wb_calc_thresh(dtc);
@@ -2039,10 +2039,10 @@ Index: kernel-rockchip-6_1/mm/page-writeback.c
  
  	/*
  	 * In order to avoid the stacked BDI deadlock we need
-Index: kernel-rockchip-6_1/mm/page_alloc.c
+Index: kernel-rockchip/mm/page_alloc.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/page_alloc.c
-+++ kernel-rockchip-6_1/mm/page_alloc.c
+--- kernel-rockchip.orig/mm/page_alloc.c
++++ kernel-rockchip/mm/page_alloc.c
 @@ -76,7 +76,6 @@
  #include <linux/khugepaged.h>
  #include <linux/buffer_head.h>
@@ -2245,10 +2245,10 @@ Index: kernel-rockchip-6_1/mm/page_alloc.c
  }
  
  static void __init free_area_init_memoryless_node(int nid)
-Index: kernel-rockchip-6_1/mm/page_isolation.c
+Index: kernel-rockchip/mm/page_isolation.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/page_isolation.c
-+++ kernel-rockchip-6_1/mm/page_isolation.c
+--- kernel-rockchip.orig/mm/page_isolation.c
++++ kernel-rockchip/mm/page_isolation.c
 @@ -627,10 +627,6 @@ __test_page_isolated_in_pageblock(unsign
  		else
  			break;
@@ -2260,10 +2260,10 @@ Index: kernel-rockchip-6_1/mm/page_isolation.c
  
  	return pfn;
  }
-Index: kernel-rockchip-6_1/mm/readahead.c
+Index: kernel-rockchip/mm/readahead.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/readahead.c
-+++ kernel-rockchip-6_1/mm/readahead.c
+--- kernel-rockchip.orig/mm/readahead.c
++++ kernel-rockchip/mm/readahead.c
 @@ -132,10 +132,6 @@
  
  #include "internal.h"
@@ -2332,10 +2332,10 @@ Index: kernel-rockchip-6_1/mm/readahead.c
  			1UL << order);
  	if (index == expected || index == (ra->start + ra->size)) {
  		ra->start += ra->size;
-Index: kernel-rockchip-6_1/mm/rmap.c
+Index: kernel-rockchip/mm/rmap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/rmap.c
-+++ kernel-rockchip-6_1/mm/rmap.c
+--- kernel-rockchip.orig/mm/rmap.c
++++ kernel-rockchip/mm/rmap.c
 @@ -822,26 +822,13 @@ static bool folio_referenced_one(struct
  			return false; /* To break the loop */
  		}
@@ -2414,10 +2414,10 @@ Index: kernel-rockchip-6_1/mm/rmap.c
  	rmap_walk(folio, &rwc);
  	*vm_flags = pra.vm_flags;
  
-Index: kernel-rockchip-6_1/mm/shmem.c
+Index: kernel-rockchip/mm/shmem.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/shmem.c
-+++ kernel-rockchip-6_1/mm/shmem.c
+--- kernel-rockchip.orig/mm/shmem.c
++++ kernel-rockchip/mm/shmem.c
 @@ -462,15 +462,14 @@ static bool shmem_confirm_swap(struct ad
  
  static int shmem_huge __read_mostly = SHMEM_HUGE_NEVER;
@@ -2486,10 +2486,10 @@ Index: kernel-rockchip-6_1/mm/shmem.c
  {
  	struct shmem_inode_info *info = SHMEM_I(inode);
  
-Index: kernel-rockchip-6_1/mm/slub.c
+Index: kernel-rockchip/mm/slub.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/slub.c
-+++ kernel-rockchip-6_1/mm/slub.c
+--- kernel-rockchip.orig/mm/slub.c
++++ kernel-rockchip/mm/slub.c
 @@ -298,7 +298,7 @@ struct track {
  
  enum track_item { TRACK_ALLOC, TRACK_FREE };
@@ -2544,10 +2544,10 @@ Index: kernel-rockchip-6_1/mm/slub.c
  
  #if defined(CONFIG_SLUB_DEBUG) && defined(CONFIG_DEBUG_FS)
  static int slab_debugfs_show(struct seq_file *seq, void *v)
-Index: kernel-rockchip-6_1/mm/sparse.c
+Index: kernel-rockchip/mm/sparse.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/sparse.c
-+++ kernel-rockchip-6_1/mm/sparse.c
+--- kernel-rockchip.orig/mm/sparse.c
++++ kernel-rockchip/mm/sparse.c
 @@ -793,6 +793,13 @@ static void section_deactivate(unsigned
  		unsigned long section_nr = pfn_to_section_nr(pfn);
  
@@ -2581,10 +2581,10 @@ Index: kernel-rockchip-6_1/mm/sparse.c
  	}
  
  	/*
-Index: kernel-rockchip-6_1/mm/swap.c
+Index: kernel-rockchip/mm/swap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/swap.c
-+++ kernel-rockchip-6_1/mm/swap.c
+--- kernel-rockchip.orig/mm/swap.c
++++ kernel-rockchip/mm/swap.c
 @@ -624,6 +624,7 @@ static void lru_deactivate_fn(struct lru
  		lruvec_del_folio(lruvec, folio);
  		folio_clear_active(folio);
@@ -2593,10 +2593,10 @@ Index: kernel-rockchip-6_1/mm/swap.c
  		lruvec_add_folio(lruvec, folio);
  
  		__count_vm_events(PGDEACTIVATE, nr_pages);
-Index: kernel-rockchip-6_1/mm/swap.h
+Index: kernel-rockchip/mm/swap.h
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/swap.h
-+++ kernel-rockchip-6_1/mm/swap.h
+--- kernel-rockchip.orig/mm/swap.h
++++ kernel-rockchip/mm/swap.h
 @@ -39,6 +39,7 @@ void __delete_from_swap_cache(struct fol
  void delete_from_swap_cache(struct folio *folio);
  void clear_shadow_from_swap_cache(int type, unsigned long begin,
@@ -2616,10 +2616,10 @@ Index: kernel-rockchip-6_1/mm/swap.h
  static inline struct folio *swap_cache_get_folio(swp_entry_t entry,
  		struct vm_area_struct *vma, unsigned long addr)
  {
-Index: kernel-rockchip-6_1/mm/swapfile.c
+Index: kernel-rockchip/mm/swapfile.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/swapfile.c
-+++ kernel-rockchip-6_1/mm/swapfile.c
+--- kernel-rockchip.orig/mm/swapfile.c
++++ kernel-rockchip/mm/swapfile.c
 @@ -1222,6 +1222,18 @@ static unsigned char __swap_entry_free_l
  }
  
@@ -2778,10 +2778,10 @@ Index: kernel-rockchip-6_1/mm/swapfile.c
  struct swap_info_struct *swp_swap_info(swp_entry_t entry)
  {
  	return swap_type_to_swap_info(swp_type(entry));
-Index: kernel-rockchip-6_1/mm/userfaultfd.c
+Index: kernel-rockchip/mm/userfaultfd.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/userfaultfd.c
-+++ kernel-rockchip-6_1/mm/userfaultfd.c
+--- kernel-rockchip.orig/mm/userfaultfd.c
++++ kernel-rockchip/mm/userfaultfd.c
 @@ -327,6 +327,7 @@ static __always_inline ssize_t __mcopy_a
  					      unsigned long dst_start,
  					      unsigned long src_start,
@@ -2825,10 +2825,10 @@ Index: kernel-rockchip-6_1/mm/userfaultfd.c
  
  	if (!vma_is_anonymous(dst_vma) && !vma_is_shmem(dst_vma))
  		goto out_unlock;
-Index: kernel-rockchip-6_1/mm/vmscan.c
+Index: kernel-rockchip/mm/vmscan.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/vmscan.c
-+++ kernel-rockchip-6_1/mm/vmscan.c
+--- kernel-rockchip.orig/mm/vmscan.c
++++ kernel-rockchip/mm/vmscan.c
 @@ -54,6 +54,12 @@
  #include <linux/shmem_fs.h>
  #include <linux/ctype.h>
@@ -4546,10 +4546,10 @@ Index: kernel-rockchip-6_1/mm/vmscan.c
  	suitable = compaction_suitable(zone, sc->order, 0, sc->reclaim_idx);
  	if (suitable == COMPACT_SUCCESS)
  		/* Allocation should succeed already. Don't reclaim. */
-Index: kernel-rockchip-6_1/mm/workingset.c
+Index: kernel-rockchip/mm/workingset.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/workingset.c
-+++ kernel-rockchip-6_1/mm/workingset.c
+--- kernel-rockchip.orig/mm/workingset.c
++++ kernel-rockchip/mm/workingset.c
 @@ -223,7 +223,7 @@ static void *lru_gen_eviction(struct fol
  	unsigned long token;
  	unsigned long min_seq;
@@ -4568,10 +4568,10 @@ Index: kernel-rockchip-6_1/mm/workingset.c
  	struct mem_cgroup *memcg;
  	struct pglist_data *pgdat;
  	int type = folio_is_file_lru(folio);
-Index: kernel-rockchip-6_1/mm/zsmalloc.c
+Index: kernel-rockchip/mm/zsmalloc.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/zsmalloc.c
-+++ kernel-rockchip-6_1/mm/zsmalloc.c
+--- kernel-rockchip.orig/mm/zsmalloc.c
++++ kernel-rockchip/mm/zsmalloc.c
 @@ -33,7 +33,8 @@
  /*
   * lock ordering:
@@ -5668,10 +5668,10 @@ Index: kernel-rockchip-6_1/mm/zsmalloc.c
  		}
  		kfree(class);
  	}
-Index: kernel-rockchip-6_1/mm/zswap.c
+Index: kernel-rockchip/mm/zswap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/zswap.c
-+++ kernel-rockchip-6_1/mm/zswap.c
+--- kernel-rockchip.orig/mm/zswap.c
++++ kernel-rockchip/mm/zswap.c
 @@ -1013,6 +1013,8 @@ static int zswap_writeback_entry(struct
  		if (zswap_rb_search(&tree->rbroot, entry->offset) != entry) {
  			spin_unlock(&tree->lock);
@@ -5681,10 +5681,10 @@ Index: kernel-rockchip-6_1/mm/zswap.c
  			ret = -ENOMEM;
  			goto fail;
  		}
-Index: kernel-rockchip-6_1/include/linux/fs.h
+Index: kernel-rockchip/include/linux/fs.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/fs.h
-+++ kernel-rockchip-6_1/include/linux/fs.h
+--- kernel-rockchip.orig/include/linux/fs.h
++++ kernel-rockchip/include/linux/fs.h
 @@ -166,6 +166,8 @@ typedef int (dio_iodone_t)(struct kiocb
  /* File supports DIRECT IO */
  #define	FMODE_CAN_ODIRECT	((__force fmode_t)0x400000)
@@ -5741,10 +5741,10 @@ Index: kernel-rockchip-6_1/include/linux/fs.h
  /* fs/dcache.c -- generic fs support functions */
  extern bool is_subdir(struct dentry *, struct dentry *);
  extern bool path_is_under(const struct path *, const struct path *);
-Index: kernel-rockchip-6_1/include/linux/slub_def.h
+Index: kernel-rockchip/include/linux/slub_def.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/slub_def.h
-+++ kernel-rockchip-6_1/include/linux/slub_def.h
+--- kernel-rockchip.orig/include/linux/slub_def.h
++++ kernel-rockchip/include/linux/slub_def.h
 @@ -114,7 +114,7 @@ struct kmem_cache {
  	unsigned int red_left_pad;	/* Left redzone padding size */
  	const char *name;	/* Name (only for display!) */
@@ -5763,10 +5763,10 @@ Index: kernel-rockchip-6_1/include/linux/slub_def.h
  #define SLAB_SUPPORTS_SYSFS
  void sysfs_slab_unlink(struct kmem_cache *);
  void sysfs_slab_release(struct kmem_cache *);
-Index: kernel-rockchip-6_1/include/linux/gfp.h
+Index: kernel-rockchip/include/linux/gfp.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/gfp.h
-+++ kernel-rockchip-6_1/include/linux/gfp.h
+--- kernel-rockchip.orig/include/linux/gfp.h
++++ kernel-rockchip/include/linux/gfp.h
 @@ -341,6 +341,15 @@ bool gfp_pfmemalloc_allowed(gfp_t gfp_ma
  extern void pm_restrict_gfp_mask(void);
  extern void pm_restore_gfp_mask(void);
@@ -5783,10 +5783,10 @@ Index: kernel-rockchip-6_1/include/linux/gfp.h
  extern gfp_t vma_thp_gfp_mask(struct vm_area_struct *vma);
  
  #ifdef CONFIG_PM_SLEEP
-Index: kernel-rockchip-6_1/include/linux/memcontrol.h
+Index: kernel-rockchip/include/linux/memcontrol.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/memcontrol.h
-+++ kernel-rockchip-6_1/include/linux/memcontrol.h
+--- kernel-rockchip.orig/include/linux/memcontrol.h
++++ kernel-rockchip/include/linux/memcontrol.h
 @@ -795,6 +795,11 @@ static inline void obj_cgroup_put(struct
  	percpu_ref_put(&objcg->refcnt);
  }
@@ -5811,10 +5811,10 @@ Index: kernel-rockchip-6_1/include/linux/memcontrol.h
  static inline void mem_cgroup_put(struct mem_cgroup *memcg)
  {
  }
-Index: kernel-rockchip-6_1/kernel/sysctl.c
+Index: kernel-rockchip/kernel/sysctl.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/sysctl.c
-+++ kernel-rockchip-6_1/kernel/sysctl.c
+--- kernel-rockchip.orig/kernel/sysctl.c
++++ kernel-rockchip/kernel/sysctl.c
 @@ -2453,13 +2453,6 @@ static struct ctl_table vm_table[] = {
  		.mode		= 0644,
  		.proc_handler	= proc_doulongvec_minmax,
@@ -5829,10 +5829,10 @@ Index: kernel-rockchip-6_1/kernel/sysctl.c
  #ifdef CONFIG_HAVE_ARCH_MMAP_RND_BITS
  	{
  		.procname	= "mmap_rnd_bits",
-Index: kernel-rockchip-6_1/fs/proc/meminfo.c
+Index: kernel-rockchip/fs/proc/meminfo.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/proc/meminfo.c
-+++ kernel-rockchip-6_1/fs/proc/meminfo.c
+--- kernel-rockchip.orig/fs/proc/meminfo.c
++++ kernel-rockchip/fs/proc/meminfo.c
 @@ -151,10 +151,6 @@ static int meminfo_proc_show(struct seq_
  
  #ifdef CONFIG_CMA
@@ -5844,10 +5844,10 @@ Index: kernel-rockchip-6_1/fs/proc/meminfo.c
  	show_val_kb(m, "CmaFree:        ",
  		    global_zone_page_state(NR_FREE_CMA_PAGES));
  #endif
-Index: kernel-rockchip-6_1/kernel/rcu/rcu.h
+Index: kernel-rockchip/kernel/rcu/rcu.h
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/rcu/rcu.h
-+++ kernel-rockchip-6_1/kernel/rcu/rcu.h
+--- kernel-rockchip.orig/kernel/rcu/rcu.h
++++ kernel-rockchip/kernel/rcu/rcu.h
 @@ -443,15 +443,23 @@ do {									\
  /* Tiny RCU doesn't expedite, as its purpose in life is instead to be tiny. */
  static inline bool rcu_gp_is_normal(void) { return true; }
@@ -5887,10 +5887,10 @@ Index: kernel-rockchip-6_1/kernel/rcu/rcu.h
  #if defined(CONFIG_TREE_RCU)
  void rcutorture_get_gp_data(enum rcutorture_type test_type, int *flags,
  			    unsigned long *gp_seq);
-Index: kernel-rockchip-6_1/kernel/rcu/tree.c
+Index: kernel-rockchip/kernel/rcu/tree.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/rcu/tree.c
-+++ kernel-rockchip-6_1/kernel/rcu/tree.c
+--- kernel-rockchip.orig/kernel/rcu/tree.c
++++ kernel-rockchip/kernel/rcu/tree.c
 @@ -1051,6 +1051,38 @@ static bool rcu_future_gp_cleanup(struct
  	return needmore;
  }
@@ -6193,10 +6193,10 @@ Index: kernel-rockchip-6_1/kernel/rcu/tree.c
  		return;
  	}
  
-Index: kernel-rockchip-6_1/include/linux/cleanup.h
+Index: kernel-rockchip/include/linux/cleanup.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/cleanup.h
++++ kernel-rockchip/include/linux/cleanup.h
 @@ -0,0 +1,171 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +#ifndef __LINUX_GUARDS_H
@@ -6369,10 +6369,10 @@ Index: kernel-rockchip-6_1/include/linux/cleanup.h
 +__DEFINE_LOCK_GUARD_0(_name, _lock)
 +
 +#endif /* __LINUX_GUARDS_H */
-Index: kernel-rockchip-6_1/include/linux/rcupdate.h
+Index: kernel-rockchip/include/linux/rcupdate.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/rcupdate.h
-+++ kernel-rockchip-6_1/include/linux/rcupdate.h
+--- kernel-rockchip.orig/include/linux/rcupdate.h
++++ kernel-rockchip/include/linux/rcupdate.h
 @@ -27,6 +27,7 @@
  #include <linux/preempt.h>
  #include <linux/bottom_half.h>
@@ -6454,10 +6454,10 @@ Index: kernel-rockchip-6_1/include/linux/rcupdate.h
 +DEFINE_LOCK_GUARD_0(rcu, rcu_read_lock(), rcu_read_unlock())
 +
  #endif /* __LINUX_RCUPDATE_H */
-Index: kernel-rockchip-6_1/kernel/rcu/Kconfig
+Index: kernel-rockchip/kernel/rcu/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/rcu/Kconfig
-+++ kernel-rockchip-6_1/kernel/rcu/Kconfig
+--- kernel-rockchip.orig/kernel/rcu/Kconfig
++++ kernel-rockchip/kernel/rcu/Kconfig
 @@ -311,4 +311,33 @@ config TASKS_TRACE_RCU_READ_MB
  	  Say N here if you hate read-side memory barriers.
  	  Take the default if you are unsure.
@@ -6492,10 +6492,10 @@ Index: kernel-rockchip-6_1/kernel/rcu/Kconfig
 +    Accept the default if unsure.
 +
  endmenu # "RCU Subsystem"
-Index: kernel-rockchip-6_1/kernel/rcu/tree_nocb.h
+Index: kernel-rockchip/kernel/rcu/tree_nocb.h
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/rcu/tree_nocb.h
-+++ kernel-rockchip-6_1/kernel/rcu/tree_nocb.h
+--- kernel-rockchip.orig/kernel/rcu/tree_nocb.h
++++ kernel-rockchip/kernel/rcu/tree_nocb.h
 @@ -257,6 +257,31 @@ static bool wake_nocb_gp(struct rcu_data
  }
  
@@ -6926,10 +6926,10 @@ Index: kernel-rockchip-6_1/kernel/rcu/tree_nocb.h
  {
  	return false;
  }
-Index: kernel-rockchip-6_1/kernel/rcu/update.c
+Index: kernel-rockchip/kernel/rcu/update.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/rcu/update.c
-+++ kernel-rockchip-6_1/kernel/rcu/update.c
+--- kernel-rockchip.orig/kernel/rcu/update.c
++++ kernel-rockchip/kernel/rcu/update.c
 @@ -43,6 +43,7 @@
  #include <linux/slab.h>
  #include <linux/irq_work.h>
@@ -7078,10 +7078,10 @@ Index: kernel-rockchip-6_1/kernel/rcu/update.c
  /*
   * Let rcutorture know when it is OK to turn it up to eleven.
   */
-Index: kernel-rockchip-6_1/kernel/rcu/tree.h
+Index: kernel-rockchip/kernel/rcu/tree.h
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/rcu/tree.h
-+++ kernel-rockchip-6_1/kernel/rcu/tree.h
+--- kernel-rockchip.orig/kernel/rcu/tree.h
++++ kernel-rockchip/kernel/rcu/tree.h
 @@ -263,14 +263,16 @@ struct rcu_data {
  	unsigned long last_fqs_resched;	/* Time of last rcu_resched(). */
  	unsigned long last_sched_clock;	/* Jiffies of last rcu_sched_clock_irq(). */
@@ -7116,10 +7116,10 @@ Index: kernel-rockchip-6_1/kernel/rcu/tree.h
  static void __call_rcu_nocb_wake(struct rcu_data *rdp, bool was_empty,
  				 unsigned long flags);
  static int rcu_nocb_need_deferred_wakeup(struct rcu_data *rdp, int level);
-Index: kernel-rockchip-6_1/include/linux/shmem_fs.h
+Index: kernel-rockchip/include/linux/shmem_fs.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/shmem_fs.h
-+++ kernel-rockchip-6_1/include/linux/shmem_fs.h
+--- kernel-rockchip.orig/include/linux/shmem_fs.h
++++ kernel-rockchip/include/linux/shmem_fs.h
 @@ -92,14 +92,8 @@ extern struct page *shmem_read_mapping_p
  extern void shmem_truncate_range(struct inode *inode, loff_t start, loff_t end);
  int shmem_unuse(unsigned int type);

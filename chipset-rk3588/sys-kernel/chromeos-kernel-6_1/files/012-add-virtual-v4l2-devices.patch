@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
+Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
++++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
 @@ -0,0 +1,13 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -16,49 +16,150 @@ Index: kernel-rockchip-6_1/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
 +int init_dummy_v4l2_devices(void);
 +void cleanup_dummy_v4l2_devices(void);
 +#endif //__DUMMY_V4L2_DEVICES_H__
-Index: kernel-rockchip-6_1/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
+Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
-@@ -0,0 +1,71 @@
++++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
+@@ -0,0 +1,172 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +// Copyright 2022 The FydeOS Authors.
 +// Author: Yang Tsao<yang@fydeos.io>
++//#define DEBUG
 +#include <linux/miscdevice.h>
 +#include <linux/module.h>
 +#include <linux/uaccess.h>
++#include <linux/errno.h>
++#include <linux/dev_printk.h>
++#include <linux/poll.h>
++#include <uapi/asm-generic/poll.h>
 +#include "dummy_v4l2_devices.h"
 +#define DUMMY_DEC_NAME "video-dec0"
 +#define DUMMY_ENC_NAME "video-enc0"
++#define DUMMY_MAGIC 0x47
++#define IOCTL_GET_DEV_TYPE _IOR(DUMMY_MAGIC, 1, unsigned int)
++#define IOCTL_SET_DEV_EVENT _IOW(DUMMY_MAGIC, 2, unsigned char)
++#define IOCTL_RESET_DEV _IOW(DUMMY_MAGIC, 3, unsigned char)
++#define FIFO_SIZE 64
++#define DEC 10
++#define ENC 11
 +
-+static int dummy_v4l2_release(struct inode *inode, struct file *file) {return 0;}
++struct dummy_private_data {
++  atomic_t event;
++  struct wait_queue_head event_wait;
++  struct miscdevice *dev;
++  unsigned int type;
++};
++
++char * get_type(struct dummy_private_data *data) {
++  return data->type == DEC ? "dec":"enc";
++}
++
++#define my_fmt(fmt) "dummy %s:" fmt
++#define dummy_dbg(data, fmt, ...) \
++  dev_dbg(data->dev->this_device, my_fmt(fmt), get_type(data), ##__VA_ARGS__)
 +
 +static ssize_t dummy_v4l2_read(struct file *file, char *buf, size_t count, loff_t *ppos) {
++#if 0
 +  struct miscdevice *dev = (struct miscdevice *) file->private_data;
 +  unsigned long n;
-+  if (count < 4) 
++  if (count < 4)
 +    return -1;
 +  if (strncmp(dev->name, DUMMY_DEC_NAME, 7)) {
-+    n = copy_to_user(buf, "enc", 4);
++    n = copy_to_user(buf, "enc\n", 4);
 +  } else {
-+    n = copy_to_user(buf, "dec", 4);
++    n = copy_to_user(buf, "dec\n", 4);
 +  }
 +  if (n) return -1;
 +  return 4;
++#endif
++  return 0;
 +}
 +
 +static ssize_t dummy_v4l2_write(struct file *file, const char *buf, size_t count, loff_t *ppos) {
 +  return count;
 +}
 +
-+static long dymmy_v4l2_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {return 0;}
++static void reset_v4l2_status(struct dummy_private_data *data) {
++  dummy_dbg(data, "%s\n", __func__);
++}
++
++static int dummy_v4l2_open(struct inode *inode, struct file *file) {
++  struct miscdevice *dev = (struct miscdevice *) file->private_data;
++  struct dummy_private_data *dummy_data = kmalloc(sizeof(*dummy_data),GFP_KERNEL);
++  if (!dummy_data)
++    return -ENOMEM;
++  dummy_data->dev = dev;
++  dummy_data->type = strncmp(dev->name, DUMMY_DEC_NAME, 7) ? ENC : DEC;
++  init_waitqueue_head(&dummy_data->event_wait);
++  file->private_data = dummy_data;
++  dummy_dbg(dummy_data, "opened.\n");
++  return 0;
++}
++
++static long dummy_v4l2_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
++  struct dummy_private_data *dummy_data = (struct dummy_private_data *) file->private_data;
++  struct miscdevice *dev = dummy_data->dev;
++  int ret = -EFAULT;
++  switch (cmd) {
++    case IOCTL_GET_DEV_TYPE:
++      dummy_dbg(dummy_data, "get dev type\n");
++      if (copy_to_user((unsigned int __user *)arg, &dummy_data->type, sizeof(unsigned int)))
++        goto on_err;
++      break;
++    case IOCTL_SET_DEV_EVENT: {
++      unsigned char byte;
++      unsigned char event;
++      if (copy_from_user(&byte, (unsigned char __user*)arg, sizeof(unsigned char)))
++        goto on_err;
++      event = atomic_read(&dummy_data->event);
++      if (event == POLLPRI)
++        byte |= event;
++      atomic_set(&dummy_data->event, (int) byte);
++      dummy_dbg(dummy_data, "set event:0x%x\n", byte);
++      wake_up_all(&dummy_data->event_wait);
++      break;
++    }
++    case IOCTL_RESET_DEV:
++      reset_v4l2_status(dummy_data);
++      break;
++    default:
++      dev_err(dev->this_device, "unknown command:0x%x\n", cmd);
++      goto on_err;
++  }
++  ret = 0;
++on_err:
++  return ret;
++}
++
++static __poll_t dummy_v4l2_poll(struct file *file, struct poll_table_struct * poll_table) {
++  struct dummy_private_data *dummy_data = (struct dummy_private_data *) file->private_data;
++  __poll_t ret = 0;
++  dummy_dbg(dummy_data, "poll...\n");
++  poll_wait(file, &dummy_data->event_wait, poll_table);
++  ret = (__poll_t) atomic_read(&dummy_data->event);
++  if (ret) {
++    atomic_set(&dummy_data->event, 0);
++    dummy_dbg(dummy_data, "poll ret:%u\n", ret);
++  }
++  return (__poll_t) ret;
++}
++
++static int dummy_v4l2_release(struct inode *inode, struct file *file) {
++  struct dummy_private_data *dummy_data = (struct dummy_private_data *) file->private_data;
++  wake_up_all(&dummy_data->event_wait);
++  dummy_dbg(dummy_data, "release.\n");
++  kfree(dummy_data);
++  return 0;
++}
 +
 +struct file_operations fops = {
 +  .owner = THIS_MODULE,
++  .open = dummy_v4l2_open,
 +  .release = dummy_v4l2_release,
 +  .read = dummy_v4l2_read,
 +  .write = dummy_v4l2_write,
-+  .compat_ioctl = dymmy_v4l2_ioctl,
++  .unlocked_ioctl = dummy_v4l2_ioctl,
++  .poll = dummy_v4l2_poll,
 +};
 +
 +static struct miscdevice v4l2_dec_dev = {
@@ -92,10 +193,10 @@ Index: kernel-rockchip-6_1/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +  misc_deregister(&v4l2_dec_dev);
 +  misc_deregister(&v4l2_enc_dev);
 +}
-Index: kernel-rockchip-6_1/drivers/video/rockchip/mpp/Makefile
+Index: kernel-rockchip/drivers/video/rockchip/mpp/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/video/rockchip/mpp/Makefile
-+++ kernel-rockchip-6_1/drivers/video/rockchip/mpp/Makefile
+--- kernel-rockchip.orig/drivers/video/rockchip/mpp/Makefile
++++ kernel-rockchip/drivers/video/rockchip/mpp/Makefile
 @@ -8,7 +8,7 @@ MPP_GIT_REVISION := \
  MPP_REVISION_0 := $(subst \,\\\,$(MPP_GIT_REVISION))
  MPP_REVISION   := $(subst ",\\\",$(MPP_REVISION_0))
@@ -105,10 +206,10 @@ Index: kernel-rockchip-6_1/drivers/video/rockchip/mpp/Makefile
  CFLAGS_mpp_service.o += -DMPP_VERSION="\"$(MPP_REVISION)\""
  
  rk_vcodec-$(CONFIG_ROCKCHIP_MPP_RKVDEC) += mpp_rkvdec.o
-Index: kernel-rockchip-6_1/drivers/video/rockchip/mpp/mpp_service.c
+Index: kernel-rockchip/drivers/video/rockchip/mpp/mpp_service.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/video/rockchip/mpp/mpp_service.c
-+++ kernel-rockchip-6_1/drivers/video/rockchip/mpp/mpp_service.c
+--- kernel-rockchip.orig/drivers/video/rockchip/mpp/mpp_service.c
++++ kernel-rockchip/drivers/video/rockchip/mpp/mpp_service.c
 @@ -23,6 +23,7 @@
  #include "mpp_debug.h"
  #include "mpp_common.h"

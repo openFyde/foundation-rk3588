@@ -1,7 +1,7 @@
-Index: kernel-raspberry/fs/exec.c
+Index: kernel-rockchip/fs/exec.c
 ===================================================================
---- kernel-raspberry.orig/fs/exec.c
-+++ kernel-raspberry/fs/exec.c
+--- kernel-rockchip.orig/fs/exec.c
++++ kernel-rockchip/fs/exec.c
 @@ -69,6 +69,7 @@
  #include <asm/mmu_context.h>
  #include <asm/tlb.h>
@@ -22,10 +22,10 @@ Index: kernel-raspberry/fs/exec.c
  
  out:
  	return file;
-Index: kernel-raspberry/fs/open.c
+Index: kernel-rockchip/fs/open.c
 ===================================================================
---- kernel-raspberry.orig/fs/open.c
-+++ kernel-raspberry/fs/open.c
+--- kernel-rockchip.orig/fs/open.c
++++ kernel-rockchip/fs/open.c
 @@ -36,6 +36,9 @@
  
  #include "internal.h"
@@ -53,10 +53,10 @@ Index: kernel-raspberry/fs/open.c
  		}
  	}
  	putname(tmp);
-Index: kernel-raspberry/include/trace/events/fs_trace.h
+Index: kernel-rockchip/include/trace/events/fs_trace.h
 ===================================================================
 --- /dev/null
-+++ kernel-raspberry/include/trace/events/fs_trace.h
++++ kernel-rockchip/include/trace/events/fs_trace.h
 @@ -0,0 +1,55 @@
 +#undef TRACE_SYSTEM
 +#define TRACE_SYSTEM fs

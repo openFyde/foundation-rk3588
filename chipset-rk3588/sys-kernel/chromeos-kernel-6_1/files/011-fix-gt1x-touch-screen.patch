@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linux.dts
 @@ -44,3 +44,11 @@
  		regulator-suspend-microvolt = <3300000>;
  	};
@@ -14,10 +14,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4-v10-linu
 +&cluster0_opp_table {
 +  rockchip,pvtm-temp-prop = <244 500>;
 +};
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/gt1x/gt1x.c
+Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/gt1x/gt1x.c
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/gt1x/gt1x.c
+--- kernel-rockchip.orig/drivers/input/touchscreen/gt1x/gt1x.c
++++ kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x.c
 @@ -167,11 +167,14 @@ void gt1x_touch_down(s32 x, s32 y, s32 s
  
  	if (gt1x_ics_slot_report) {
@@ -72,10 +72,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/gt1x/gt1x.c
  	input_dev->name = gt1x_ts_name;
  	input_dev->phys = input_dev_phys;
  	input_dev->id.bustype = BUS_I2C;
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/gt1x/gt1x_generic.c
+Index: kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x_generic.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/gt1x/gt1x_generic.c
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/gt1x/gt1x_generic.c
+--- kernel-rockchip.orig/drivers/input/touchscreen/gt1x/gt1x_generic.c
++++ kernel-rockchip/drivers/input/touchscreen/gt1x/gt1x_generic.c
 @@ -1315,6 +1315,8 @@ s32 gt1x_touch_event_handler(u8 *data, s
  
  	if (CHK_BIT(cur_event, BIT_TOUCH_KEY | BIT_TOUCH)

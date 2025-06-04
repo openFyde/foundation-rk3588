@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/Kconfig
+Index: kernel-rockchip/arch/arm64/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/Kconfig
-+++ kernel-rockchip-6_1/arch/arm64/Kconfig
+--- kernel-rockchip.orig/arch/arm64/Kconfig
++++ kernel-rockchip/arch/arm64/Kconfig
 @@ -24,6 +24,7 @@ config ARM64
  	select ARCH_HAS_DEBUG_VM_PGTABLE
  	select ARCH_HAS_DMA_PREP_COHERENT
@@ -10,10 +10,10 @@ Index: kernel-rockchip-6_1/arch/arm64/Kconfig
  	select ARCH_HAS_FAST_MULTIPLIER
  	select ARCH_HAS_FORTIFY_SOURCE
  	select ARCH_HAS_GCOV_PROFILE_ALL
-Index: kernel-rockchip-6_1/arch/arm64/include/asm/thread_info.h
+Index: kernel-rockchip/arch/arm64/include/asm/thread_info.h
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/include/asm/thread_info.h
-+++ kernel-rockchip-6_1/arch/arm64/include/asm/thread_info.h
+--- kernel-rockchip.orig/arch/arm64/include/asm/thread_info.h
++++ kernel-rockchip/arch/arm64/include/asm/thread_info.h
 @@ -17,6 +17,7 @@ struct task_struct;
  #include <asm/memory.h>
  #include <asm/stack_pointer.h>
@@ -63,10 +63,10 @@ Index: kernel-rockchip-6_1/arch/arm64/include/asm/thread_info.h
  }
  
  #endif /* __ASM_THREAD_INFO_H */
-Index: kernel-rockchip-6_1/arch/arm64/include/asm/unistd.h
+Index: kernel-rockchip/arch/arm64/include/asm/unistd.h
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/include/asm/unistd.h
-+++ kernel-rockchip-6_1/arch/arm64/include/asm/unistd.h
+--- kernel-rockchip.orig/arch/arm64/include/asm/unistd.h
++++ kernel-rockchip/arch/arm64/include/asm/unistd.h
 @@ -21,13 +21,349 @@
   */
  #define __NR_compat_restart_syscall	0
@@ -417,10 +417,10 @@ Index: kernel-rockchip-6_1/arch/arm64/include/asm/unistd.h
  #define __NR_compat_clock_gettime64	403
  #define __NR_compat_clock_getres_time64	406
  
-Index: kernel-rockchip-6_1/arch/arm64/kernel/syscall.c
+Index: kernel-rockchip/arch/arm64/kernel/syscall.c
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/kernel/syscall.c
-+++ kernel-rockchip-6_1/arch/arm64/kernel/syscall.c
+--- kernel-rockchip.orig/arch/arm64/kernel/syscall.c
++++ kernel-rockchip/arch/arm64/kernel/syscall.c
 @@ -202,14 +202,28 @@ static inline void fp_user_discard(void)
  
  void do_el0_svc(struct pt_regs *regs)
@@ -450,10 +450,10 @@ Index: kernel-rockchip-6_1/arch/arm64/kernel/syscall.c
 +#endif
  }
  #endif
-Index: kernel-rockchip-6_1/include/linux/alt-syscall.h
+Index: kernel-rockchip/include/linux/alt-syscall.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/alt-syscall.h
++++ kernel-rockchip/include/linux/alt-syscall.h
 @@ -0,0 +1,60 @@
 +#ifndef _ALT_SYSCALL_H
 +#define _ALT_SYSCALL_H
@@ -515,10 +515,10 @@ Index: kernel-rockchip-6_1/include/linux/alt-syscall.h
 +#endif
 +
 +#endif /* _ALT_SYSCALL_H */
-Index: kernel-rockchip-6_1/include/linux/android_aid.h
+Index: kernel-rockchip/include/linux/android_aid.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/android_aid.h
++++ kernel-rockchip/include/linux/android_aid.h
 @@ -0,0 +1,28 @@
 +/* include/linux/android_aid.h
 + *
@@ -548,10 +548,10 @@ Index: kernel-rockchip-6_1/include/linux/android_aid.h
 +#define AID_NET_BW_ACCT  (3007)  /* change bandwidth statistics accounting */
 +
 +#endif
-Index: kernel-rockchip-6_1/include/net/netns/core.h
+Index: kernel-rockchip/include/net/netns/core.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/net/netns/core.h
-+++ kernel-rockchip-6_1/include/net/netns/core.h
+--- kernel-rockchip.orig/include/net/netns/core.h
++++ kernel-rockchip/include/net/netns/core.h
 @@ -12,6 +12,7 @@ struct netns_core {
  	struct ctl_table_header	*sysctl_hdr;
  
@@ -560,10 +560,10 @@ Index: kernel-rockchip-6_1/include/net/netns/core.h
  	u8	sysctl_txrehash;
  
  #ifdef CONFIG_PROC_FS
-Index: kernel-rockchip-6_1/include/net/sock.h
+Index: kernel-rockchip/include/net/sock.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/net/sock.h
-+++ kernel-rockchip-6_1/include/net/sock.h
+--- kernel-rockchip.orig/include/net/sock.h
++++ kernel-rockchip/include/net/sock.h
 @@ -2935,6 +2935,8 @@ bool sk_ns_capable(const struct sock *sk
  		   struct user_namespace *user_ns, int cap);
  bool sk_capable(const struct sock *sk, int cap);
@@ -573,10 +573,10 @@ Index: kernel-rockchip-6_1/include/net/sock.h
  
  void sk_get_meminfo(const struct sock *sk, u32 *meminfo);
  
-Index: kernel-rockchip-6_1/net/core/sock.c
+Index: kernel-rockchip/net/core/sock.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/core/sock.c
-+++ kernel-rockchip-6_1/net/core/sock.c
+--- kernel-rockchip.orig/net/core/sock.c
++++ kernel-rockchip/net/core/sock.c
 @@ -114,6 +114,9 @@
  #include <linux/memcontrol.h>
  #include <linux/prefetch.h>
@@ -649,10 +649,10 @@ Index: kernel-rockchip-6_1/net/core/sock.c
  		sock_valbool_flag(sk, SOCK_RCVMARK, valbool);
  		break;
  
-Index: kernel-rockchip-6_1/net/ipv4/af_inet.c
+Index: kernel-rockchip/net/ipv4/af_inet.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/ipv4/af_inet.c
-+++ kernel-rockchip-6_1/net/ipv4/af_inet.c
+--- kernel-rockchip.orig/net/ipv4/af_inet.c
++++ kernel-rockchip/net/ipv4/af_inet.c
 @@ -85,6 +85,7 @@
  #include <linux/netfilter_ipv4.h>
  #include <linux/random.h>
@@ -680,10 +680,10 @@ Index: kernel-rockchip-6_1/net/ipv4/af_inet.c
  		goto out_rcu_unlock;
  
  	sock->ops = answer->ops;
-Index: kernel-rockchip-6_1/net/socket.c
+Index: kernel-rockchip/net/socket.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/socket.c
-+++ kernel-rockchip-6_1/net/socket.c
+--- kernel-rockchip.orig/net/socket.c
++++ kernel-rockchip/net/socket.c
 @@ -367,7 +367,7 @@ static const struct dentry_operations so
  
  static int sockfs_xattr_get(const struct xattr_handler *handler,
@@ -693,10 +693,10 @@ Index: kernel-rockchip-6_1/net/socket.c
  {
  	if (value) {
  		if (dentry->d_name.len + 1 > size)
-Index: kernel-rockchip-6_1/security/Kconfig
+Index: kernel-rockchip/security/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/security/Kconfig
-+++ kernel-rockchip-6_1/security/Kconfig
+--- kernel-rockchip.orig/security/Kconfig
++++ kernel-rockchip/security/Kconfig
 @@ -207,11 +207,13 @@ source "security/yama/Kconfig"
  source "security/safesetid/Kconfig"
  source "security/lockdown/Kconfig"
@@ -744,10 +744,10 @@ Index: kernel-rockchip-6_1/security/Kconfig
 +	  Allow syscall table to be swapped on a running process.
 +
 +endmenu
-Index: kernel-rockchip-6_1/fs/ecryptfs/inode.c
+Index: kernel-rockchip/fs/ecryptfs/inode.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ecryptfs/inode.c
-+++ kernel-rockchip-6_1/fs/ecryptfs/inode.c
+--- kernel-rockchip.orig/fs/ecryptfs/inode.c
++++ kernel-rockchip/fs/ecryptfs/inode.c
 @@ -382,39 +382,54 @@ static struct dentry *ecryptfs_lookup(st
  				      unsigned int flags)
  {
@@ -855,10 +855,10 @@ Index: kernel-rockchip-6_1/fs/ecryptfs/inode.c
  {
  	return ecryptfs_getxattr(dentry, inode, name, buffer, size);
  }
-Index: kernel-rockchip-6_1/security/Makefile
+Index: kernel-rockchip/security/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/security/Makefile
-+++ kernel-rockchip-6_1/security/Makefile
+--- kernel-rockchip.orig/security/Makefile
++++ kernel-rockchip/security/Makefile
 @@ -12,6 +12,7 @@ obj-$(CONFIG_MMU)			+= min_addr.o
  # Object file lists
  obj-$(CONFIG_SECURITY)			+= security.o
@@ -867,10 +867,10 @@ Index: kernel-rockchip-6_1/security/Makefile
  obj-$(CONFIG_SECURITY_SELINUX)		+= selinux/
  obj-$(CONFIG_SECURITY_SMACK)		+= smack/
  obj-$(CONFIG_SECURITY)			+= lsm_audit.o
-Index: kernel-rockchip-6_1/fs/ecryptfs/mmap.c
+Index: kernel-rockchip/fs/ecryptfs/mmap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ecryptfs/mmap.c
-+++ kernel-rockchip-6_1/fs/ecryptfs/mmap.c
+--- kernel-rockchip.orig/fs/ecryptfs/mmap.c
++++ kernel-rockchip/fs/ecryptfs/mmap.c
 @@ -423,8 +423,9 @@ static int ecryptfs_write_inode_size_to_
  		goto out;
  	}
@@ -883,10 +883,10 @@ Index: kernel-rockchip-6_1/fs/ecryptfs/mmap.c
  	if (size < 0)
  		size = 8;
  	put_unaligned_be64(i_size_read(ecryptfs_inode), xattr_virt);
-Index: kernel-rockchip-6_1/fs/xattr.c
+Index: kernel-rockchip/fs/xattr.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/xattr.c
-+++ kernel-rockchip-6_1/fs/xattr.c
+--- kernel-rockchip.orig/fs/xattr.c
++++ kernel-rockchip/fs/xattr.c
 @@ -377,7 +377,7 @@ vfs_getxattr_alloc(struct user_namespace
  		return PTR_ERR(handler);
  	if (!handler->get)
@@ -961,10 +961,10 @@ Index: kernel-rockchip-6_1/fs/xattr.c
  }
  EXPORT_SYMBOL_GPL(vfs_getxattr);
  
-Index: kernel-rockchip-6_1/include/uapi/linux/xattr.h
+Index: kernel-rockchip/include/uapi/linux/xattr.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/uapi/linux/xattr.h
-+++ kernel-rockchip-6_1/include/uapi/linux/xattr.h
+--- kernel-rockchip.orig/include/uapi/linux/xattr.h
++++ kernel-rockchip/include/uapi/linux/xattr.h
 @@ -20,6 +20,9 @@
  
  #define XATTR_CREATE	0x1	/* set value, fail if attr already exists */
@@ -975,10 +975,10 @@ Index: kernel-rockchip-6_1/include/uapi/linux/xattr.h
  #endif
  
  /* Namespaces */
-Index: kernel-rockchip-6_1/net/ipv6/af_inet6.c
+Index: kernel-rockchip/net/ipv6/af_inet6.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/ipv6/af_inet6.c
-+++ kernel-rockchip-6_1/net/ipv6/af_inet6.c
+--- kernel-rockchip.orig/net/ipv6/af_inet6.c
++++ kernel-rockchip/net/ipv6/af_inet6.c
 @@ -39,6 +39,7 @@
  #include <linux/netdevice.h>
  #include <linux/icmpv6.h>
@@ -1005,10 +1005,10 @@ Index: kernel-rockchip-6_1/net/ipv6/af_inet6.c
  		goto out_rcu_unlock;
  
  	sock->ops = answer->ops;
-Index: kernel-rockchip-6_1/security/commoncap.c
+Index: kernel-rockchip/security/commoncap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/commoncap.c
-+++ kernel-rockchip-6_1/security/commoncap.c
+--- kernel-rockchip.orig/security/commoncap.c
++++ kernel-rockchip/security/commoncap.c
 @@ -298,7 +298,8 @@ int cap_inode_need_killpriv(struct dentr
  	struct inode *inode = d_backing_inode(dentry);
  	int error;
@@ -1031,10 +1031,10 @@ Index: kernel-rockchip-6_1/security/commoncap.c
  	if (size == -ENODATA || size == -EOPNOTSUPP)
  		/* no data, that's ok */
  		return -ENODATA;
-Index: kernel-rockchip-6_1/security/integrity/evm/evm_main.c
+Index: kernel-rockchip/security/integrity/evm/evm_main.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/integrity/evm/evm_main.c
-+++ kernel-rockchip-6_1/security/integrity/evm/evm_main.c
+--- kernel-rockchip.orig/security/integrity/evm/evm_main.c
++++ kernel-rockchip/security/integrity/evm/evm_main.c
 @@ -139,7 +139,7 @@ static int evm_find_protected_xattrs(str
  		return -EOPNOTSUPP;
  
@@ -1068,10 +1068,10 @@ Index: kernel-rockchip-6_1/security/integrity/evm/evm_main.c
  				if (rc < 0)
  					return rc;
  			}
-Index: kernel-rockchip-6_1/security/selinux/Kconfig
+Index: kernel-rockchip/security/selinux/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/Kconfig
-+++ kernel-rockchip-6_1/security/selinux/Kconfig
+--- kernel-rockchip.orig/security/selinux/Kconfig
++++ kernel-rockchip/security/selinux/Kconfig
 @@ -61,6 +61,16 @@ config SECURITY_SELINUX_DEVELOP
  	  permissive mode (if permitted by the policy) via
  	  /sys/fs/selinux/enforce.
@@ -1089,10 +1089,10 @@ Index: kernel-rockchip-6_1/security/selinux/Kconfig
  config SECURITY_SELINUX_AVC_STATS
  	bool "NSA SELinux AVC Statistics"
  	depends on SECURITY_SELINUX
-Index: kernel-rockchip-6_1/security/selinux/avc.c
+Index: kernel-rockchip/security/selinux/avc.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/avc.c
-+++ kernel-rockchip-6_1/security/selinux/avc.c
+--- kernel-rockchip.orig/security/selinux/avc.c
++++ kernel-rockchip/security/selinux/avc.c
 @@ -777,6 +777,15 @@ noinline int slow_avc_audit(struct selin
  	if (WARN_ON(!tclass || tclass >= ARRAY_SIZE(secclass_map)))
  		return -EINVAL;
@@ -1109,10 +1109,10 @@ Index: kernel-rockchip-6_1/security/selinux/avc.c
  	if (!a) {
  		a = &stack_data;
  		a->type = LSM_AUDIT_DATA_NONE;
-Index: kernel-rockchip-6_1/security/selinux/hooks.c
+Index: kernel-rockchip/security/selinux/hooks.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/hooks.c
-+++ kernel-rockchip-6_1/security/selinux/hooks.c
+--- kernel-rockchip.orig/security/selinux/hooks.c
++++ kernel-rockchip/security/selinux/hooks.c
 @@ -495,7 +495,7 @@ static int sb_check_xattr_support(struct
  		goto fallback;
  	}
@@ -1148,10 +1148,10 @@ Index: kernel-rockchip-6_1/security/selinux/hooks.c
  	}
  	if (rc < 0) {
  		kfree(context);
-Index: kernel-rockchip-6_1/security/selinux/include/classmap.h
+Index: kernel-rockchip/security/selinux/include/classmap.h
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/include/classmap.h
-+++ kernel-rockchip-6_1/security/selinux/include/classmap.h
+--- kernel-rockchip.orig/security/selinux/include/classmap.h
++++ kernel-rockchip/security/selinux/include/classmap.h
 @@ -117,7 +117,8 @@ const struct security_class_mapping secc
  	  { COMMON_IPC_PERMS, NULL } },
  	{ "netlink_route_socket",
@@ -1162,10 +1162,10 @@ Index: kernel-rockchip-6_1/security/selinux/include/classmap.h
  	{ "netlink_tcpdiag_socket",
  	  { COMMON_SOCK_PERMS,
  	    "nlmsg_read", "nlmsg_write", NULL } },
-Index: kernel-rockchip-6_1/security/selinux/include/security.h
+Index: kernel-rockchip/security/selinux/include/security.h
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/include/security.h
-+++ kernel-rockchip-6_1/security/selinux/include/security.h
+--- kernel-rockchip.orig/security/selinux/include/security.h
++++ kernel-rockchip/security/selinux/include/security.h
 @@ -99,6 +99,8 @@ struct selinux_state {
  	bool checkreqprot;
  	bool initialized;
@@ -1210,10 +1210,10 @@ Index: kernel-rockchip-6_1/security/selinux/include/security.h
 +extern void selinux_nlmsg_init(void);
  
  #endif /* _SELINUX_SECURITY_H_ */
-Index: kernel-rockchip-6_1/security/selinux/nlmsgtab.c
+Index: kernel-rockchip/security/selinux/nlmsgtab.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/nlmsgtab.c
-+++ kernel-rockchip-6_1/security/selinux/nlmsgtab.c
+--- kernel-rockchip.orig/security/selinux/nlmsgtab.c
++++ kernel-rockchip/security/selinux/nlmsgtab.c
 @@ -25,7 +25,8 @@ struct nlmsg_perm {
  	u32	perm;
  };
@@ -1268,10 +1268,10 @@ Index: kernel-rockchip-6_1/security/selinux/nlmsgtab.c
 +					RTM_GETNEIGHTBL);
 +	}
 +}
-Index: kernel-rockchip-6_1/security/selinux/ss/policydb.c
+Index: kernel-rockchip/security/selinux/ss/policydb.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/ss/policydb.c
-+++ kernel-rockchip-6_1/security/selinux/ss/policydb.c
+--- kernel-rockchip.orig/security/selinux/ss/policydb.c
++++ kernel-rockchip/security/selinux/ss/policydb.c
 @@ -2005,7 +2005,6 @@ static int filename_trans_read_helper(st
  		if (!datum)
  			goto out;
@@ -1303,10 +1303,10 @@ Index: kernel-rockchip-6_1/security/selinux/ss/policydb.c
  	if (p->policyvers >= POLICYDB_VERSION_POLCAP) {
  		rc = ebitmap_read(&p->policycaps, fp);
  		if (rc)
-Index: kernel-rockchip-6_1/security/selinux/ss/policydb.h
+Index: kernel-rockchip/security/selinux/ss/policydb.h
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/ss/policydb.h
-+++ kernel-rockchip-6_1/security/selinux/ss/policydb.h
+--- kernel-rockchip.orig/security/selinux/ss/policydb.h
++++ kernel-rockchip/security/selinux/ss/policydb.h
 @@ -238,6 +238,8 @@ struct genfs {
  /* The policy database */
  struct policydb {
@@ -1325,10 +1325,10 @@ Index: kernel-rockchip-6_1/security/selinux/ss/policydb.h
  
  /* the config flags related to unknown classes/perms are bits 2 and 3 */
  #define REJECT_UNKNOWN	0x00000002
-Index: kernel-rockchip-6_1/security/selinux/ss/services.c
+Index: kernel-rockchip/security/selinux/ss/services.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/selinux/ss/services.c
-+++ kernel-rockchip-6_1/security/selinux/ss/services.c
+--- kernel-rockchip.orig/security/selinux/ss/services.c
++++ kernel-rockchip/security/selinux/ss/services.c
 @@ -2166,6 +2166,10 @@ static void security_load_policycaps(str
  			pr_info("SELinux:  unknown policy capability %u\n",
  				i);
@@ -1340,10 +1340,10 @@ Index: kernel-rockchip-6_1/security/selinux/ss/services.c
  }
  
  static int security_preserve_bools(struct selinux_policy *oldpolicy,
-Index: kernel-rockchip-6_1/security/smack/smack_lsm.c
+Index: kernel-rockchip/security/smack/smack_lsm.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/smack/smack_lsm.c
-+++ kernel-rockchip-6_1/security/smack/smack_lsm.c
+--- kernel-rockchip.orig/security/smack/smack_lsm.c
++++ kernel-rockchip/security/smack/smack_lsm.c
 @@ -292,7 +292,7 @@ static struct smack_known *smk_fetch(con
  	if (buffer == NULL)
  		return ERR_PTR(-ENOMEM);
@@ -1365,10 +1365,10 @@ Index: kernel-rockchip-6_1/security/smack/smack_lsm.c
  				if (rc >= 0 && strncmp(trattr, TRANS_TRUE,
  						       TRANS_TRUE_SIZE) != 0)
  					rc = -EINVAL;
-Index: kernel-rockchip-6_1/drivers/net/tun.c
+Index: kernel-rockchip/drivers/net/tun.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/net/tun.c
-+++ kernel-rockchip-6_1/drivers/net/tun.c
+--- kernel-rockchip.orig/drivers/net/tun.c
++++ kernel-rockchip/drivers/net/tun.c
 @@ -3067,6 +3067,12 @@ static long __tun_chr_ioctl(struct file
  	int ret;
  	bool do_notify = false;
@@ -1391,10 +1391,10 @@ Index: kernel-rockchip-6_1/drivers/net/tun.c
  
  	tfile->sk.sk_write_space = tun_sock_write_space;
  	tfile->sk.sk_sndbuf = INT_MAX;
-Index: kernel-rockchip-6_1/fs/ext4/xattr_security.c
+Index: kernel-rockchip/fs/ext4/xattr_security.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ext4/xattr_security.c
-+++ kernel-rockchip-6_1/fs/ext4/xattr_security.c
+--- kernel-rockchip.orig/fs/ext4/xattr_security.c
++++ kernel-rockchip/fs/ext4/xattr_security.c
 @@ -15,7 +15,7 @@
  static int
  ext4_xattr_security_get(const struct xattr_handler *handler,
@@ -1404,10 +1404,10 @@ Index: kernel-rockchip-6_1/fs/ext4/xattr_security.c
  {
  	return ext4_xattr_get(inode, EXT4_XATTR_INDEX_SECURITY,
  			      name, buffer, size);
-Index: kernel-rockchip-6_1/fs/fuse/xattr.c
+Index: kernel-rockchip/fs/fuse/xattr.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/fuse/xattr.c
-+++ kernel-rockchip-6_1/fs/fuse/xattr.c
+--- kernel-rockchip.orig/fs/fuse/xattr.c
++++ kernel-rockchip/fs/fuse/xattr.c
 @@ -180,7 +180,7 @@ int fuse_removexattr(struct inode *inode
  
  static int fuse_xattr_get(const struct xattr_handler *handler,
@@ -1426,10 +1426,10 @@ Index: kernel-rockchip-6_1/fs/fuse/xattr.c
  {
  	return -EOPNOTSUPP;
  }
-Index: kernel-rockchip-6_1/fs/overlayfs/inode.c
+Index: kernel-rockchip/fs/overlayfs/inode.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/overlayfs/inode.c
-+++ kernel-rockchip-6_1/fs/overlayfs/inode.c
+--- kernel-rockchip.orig/fs/overlayfs/inode.c
++++ kernel-rockchip/fs/overlayfs/inode.c
 @@ -392,7 +392,7 @@ out:
  }
  
@@ -1439,10 +1439,10 @@ Index: kernel-rockchip-6_1/fs/overlayfs/inode.c
  {
  	ssize_t res;
  	const struct cred *old_cred;
-Index: kernel-rockchip-6_1/fs/posix_acl.c
+Index: kernel-rockchip/fs/posix_acl.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/posix_acl.c
-+++ kernel-rockchip-6_1/fs/posix_acl.c
+--- kernel-rockchip.orig/fs/posix_acl.c
++++ kernel-rockchip/fs/posix_acl.c
 @@ -1116,7 +1116,7 @@ EXPORT_SYMBOL (posix_acl_to_xattr);
  static int
  posix_acl_xattr_get(const struct xattr_handler *handler,
@@ -1452,10 +1452,10 @@ Index: kernel-rockchip-6_1/fs/posix_acl.c
  {
  	struct posix_acl *acl;
  	int error;
-Index: kernel-rockchip-6_1/fs/squashfs/xattr.c
+Index: kernel-rockchip/fs/squashfs/xattr.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/squashfs/xattr.c
-+++ kernel-rockchip-6_1/fs/squashfs/xattr.c
+--- kernel-rockchip.orig/fs/squashfs/xattr.c
++++ kernel-rockchip/fs/squashfs/xattr.c
 @@ -204,7 +204,7 @@ static int squashfs_xattr_handler_get(co
  				      struct dentry *unused,
  				      struct inode *inode,
@@ -1465,10 +1465,10 @@ Index: kernel-rockchip-6_1/fs/squashfs/xattr.c
  {
  	return squashfs_xattr_get(inode, handler->flags, name,
  		buffer, size);
-Index: kernel-rockchip-6_1/net/ipv4/devinet.c
+Index: kernel-rockchip/net/ipv4/devinet.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/ipv4/devinet.c
-+++ kernel-rockchip-6_1/net/ipv4/devinet.c
+--- kernel-rockchip.orig/net/ipv4/devinet.c
++++ kernel-rockchip/net/ipv4/devinet.c
 @@ -61,6 +61,7 @@
  #include <net/rtnetlink.h>
  #include <net/net_namespace.h>
@@ -1495,10 +1495,10 @@ Index: kernel-rockchip-6_1/net/ipv4/devinet.c
  			goto out;
  		ret = -EINVAL;
  		if (sin->sin_family != AF_INET)
-Index: kernel-rockchip-6_1/security/chromiumos/Kconfig
+Index: kernel-rockchip/security/chromiumos/Kconfig
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/Kconfig
++++ kernel-rockchip/security/chromiumos/Kconfig
 @@ -0,0 +1,45 @@
 +config SECURITY_CHROMIUMOS
 +	bool "Chromium OS Security Module"
@@ -1545,20 +1545,20 @@ Index: kernel-rockchip-6_1/security/chromiumos/Kconfig
 +	  When enabled, attempts to open /proc/self/mem for write access
 +	  will always fail.  Write access to this file allows bypassing
 +	  of memory map permissions (such as modifying read-only code).
-Index: kernel-rockchip-6_1/security/chromiumos/Makefile
+Index: kernel-rockchip/security/chromiumos/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/Makefile
++++ kernel-rockchip/security/chromiumos/Makefile
 @@ -0,0 +1,5 @@
 +obj-$(CONFIG_SECURITY_CHROMIUMOS) := chromiumos_lsm.o
 +
 +chromiumos_lsm-y := inode_mark.o lsm.o securityfs.o utils.o
 +
 +obj-$(CONFIG_ALT_SYSCALL_CHROMIUMOS) += alt-syscall.o
-Index: kernel-rockchip-6_1/security/chromiumos/alt-syscall.c
+Index: kernel-rockchip/security/chromiumos/alt-syscall.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/alt-syscall.c
++++ kernel-rockchip/security/chromiumos/alt-syscall.c
 @@ -0,0 +1,558 @@
 +/*
 + * Chromium OS alt-syscall tables
@@ -2118,10 +2118,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/alt-syscall.c
 +	return 0;
 +}
 +module_init(chromiumos_alt_syscall_init);
-Index: kernel-rockchip-6_1/security/chromiumos/alt-syscall.h
+Index: kernel-rockchip/security/chromiumos/alt-syscall.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/alt-syscall.h
++++ kernel-rockchip/security/chromiumos/alt-syscall.h
 @@ -0,0 +1,386 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -2509,10 +2509,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/alt-syscall.h
 +#endif
 +
 +#endif /* ALT_SYSCALL_H */
-Index: kernel-rockchip-6_1/security/chromiumos/android_whitelists.h
+Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/android_whitelists.h
++++ kernel-rockchip/security/chromiumos/android_whitelists.h
 @@ -0,0 +1,653 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -3167,10 +3167,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/android_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* ANDROID_WHITELISTS_H */
-Index: kernel-rockchip-6_1/security/chromiumos/complete_whitelists.h
+Index: kernel-rockchip/security/chromiumos/complete_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/complete_whitelists.h
++++ kernel-rockchip/security/chromiumos/complete_whitelists.h
 @@ -0,0 +1,373 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -3545,10 +3545,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/complete_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* COMPLETE_WHITELISTS_H */
-Index: kernel-rockchip-6_1/security/chromiumos/inode_mark.c
+Index: kernel-rockchip/security/chromiumos/inode_mark.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/inode_mark.c
++++ kernel-rockchip/security/chromiumos/inode_mark.c
 @@ -0,0 +1,353 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -3903,10 +3903,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/inode_mark.c
 +
 +	return policy;
 +}
-Index: kernel-rockchip-6_1/security/chromiumos/inode_mark.h
+Index: kernel-rockchip/security/chromiumos/inode_mark.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/inode_mark.h
++++ kernel-rockchip/security/chromiumos/inode_mark.h
 @@ -0,0 +1,47 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -3955,10 +3955,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/inode_mark.h
 +chromiumos_get_inode_security_policy(
 +	struct dentry *dentry, struct inode *inode,
 +	enum chromiumos_inode_security_policy_type type);
-Index: kernel-rockchip-6_1/security/chromiumos/lsm.c
+Index: kernel-rockchip/security/chromiumos/lsm.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/lsm.c
++++ kernel-rockchip/security/chromiumos/lsm.c
 @@ -0,0 +1,341 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -4301,10 +4301,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/lsm.c
 +	.name = "chromiumos",
 +	.init = chromiumos_security_init
 +};
-Index: kernel-rockchip-6_1/security/chromiumos/read_write_test_whitelists.h
+Index: kernel-rockchip/security/chromiumos/read_write_test_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/read_write_test_whitelists.h
++++ kernel-rockchip/security/chromiumos/read_write_test_whitelists.h
 @@ -0,0 +1,56 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -4362,10 +4362,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/read_write_test_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* READ_WRITE_TESTS_WHITELISTS_H */
-Index: kernel-rockchip-6_1/security/chromiumos/securityfs.c
+Index: kernel-rockchip/security/chromiumos/securityfs.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/securityfs.c
++++ kernel-rockchip/security/chromiumos/securityfs.c
 @@ -0,0 +1,241 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -4608,10 +4608,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/securityfs.c
 +	return ret;
 +}
 +fs_initcall(chromiumos_init_securityfs);
-Index: kernel-rockchip-6_1/security/chromiumos/third_party_whitelists.h
+Index: kernel-rockchip/security/chromiumos/third_party_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/third_party_whitelists.h
++++ kernel-rockchip/security/chromiumos/third_party_whitelists.h
 @@ -0,0 +1,252 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -4865,10 +4865,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/third_party_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* THIRD_PARTY_WHITELISTS_H */
-Index: kernel-rockchip-6_1/security/chromiumos/utils.c
+Index: kernel-rockchip/security/chromiumos/utils.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/utils.c
++++ kernel-rockchip/security/chromiumos/utils.c
 @@ -0,0 +1,157 @@
 +/*
 + * Utilities for the Linux Security Module for Chromium OS
@@ -5027,10 +5027,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/utils.c
 +out:
 +	return buffer;
 +}
-Index: kernel-rockchip-6_1/security/chromiumos/utils.h
+Index: kernel-rockchip/security/chromiumos/utils.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/security/chromiumos/utils.h
++++ kernel-rockchip/security/chromiumos/utils.h
 @@ -0,0 +1,30 @@
 +/*
 + * Utilities for the Linux Security Module for Chromium OS
@@ -5062,10 +5062,10 @@ Index: kernel-rockchip-6_1/security/chromiumos/utils.h
 +char *printable_cmdline(struct task_struct *task);
 +
 +#endif /* _SECURITY_CHROMIUMOS_UTILS_H */
-Index: kernel-rockchip-6_1/net/core/sysctl_net_core.c
+Index: kernel-rockchip/net/core/sysctl_net_core.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/core/sysctl_net_core.c
-+++ kernel-rockchip-6_1/net/core/sysctl_net_core.c
+--- kernel-rockchip.orig/net/core/sysctl_net_core.c
++++ kernel-rockchip/net/core/sysctl_net_core.c
 @@ -599,6 +599,15 @@ static struct ctl_table net_core_table[]
  
  static struct ctl_table netns_core_table[] = {
@@ -5106,10 +5106,10 @@ Index: kernel-rockchip-6_1/net/core/sysctl_net_core.c
  		}
  	}
  
-Index: kernel-rockchip-6_1/arch/arm64/include/asm/syscall.h
+Index: kernel-rockchip/arch/arm64/include/asm/syscall.h
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/include/asm/syscall.h
-+++ kernel-rockchip-6_1/arch/arm64/include/asm/syscall.h
+--- kernel-rockchip.orig/arch/arm64/include/asm/syscall.h
++++ kernel-rockchip/arch/arm64/include/asm/syscall.h
 @@ -17,6 +17,8 @@ extern const syscall_fn_t sys_call_table
  extern const syscall_fn_t compat_sys_call_table[];
  #endif
@@ -5119,10 +5119,10 @@ Index: kernel-rockchip-6_1/arch/arm64/include/asm/syscall.h
  static inline int syscall_get_nr(struct task_struct *task,
  				 struct pt_regs *regs)
  {
-Index: kernel-rockchip-6_1/arch/arm64/kernel/Makefile
+Index: kernel-rockchip/arch/arm64/kernel/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/kernel/Makefile
-+++ kernel-rockchip-6_1/arch/arm64/kernel/Makefile
+--- kernel-rockchip.orig/arch/arm64/kernel/Makefile
++++ kernel-rockchip/arch/arm64/kernel/Makefile
 @@ -85,6 +85,8 @@ obj-$(CONFIG_COMPAT_VDSO)		+= vdso32-wra
  $(obj)/vdso-wrap.o: $(obj)/vdso/vdso.so
  $(obj)/vdso32-wrap.o: $(obj)/vdso32/vdso.so
@@ -5132,10 +5132,10 @@ Index: kernel-rockchip-6_1/arch/arm64/kernel/Makefile
  obj-y					+= probes/
  obj-y					+= head.o
  extra-y					+= vmlinux.lds
-Index: kernel-rockchip-6_1/arch/arm64/kernel/alt-syscall.c
+Index: kernel-rockchip/arch/arm64/kernel/alt-syscall.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/kernel/alt-syscall.c
++++ kernel-rockchip/arch/arm64/kernel/alt-syscall.c
 @@ -0,0 +1,78 @@
 +/*
 + * AArch64 alt-syscall implementation
@@ -5215,10 +5215,10 @@ Index: kernel-rockchip-6_1/arch/arm64/kernel/alt-syscall.c
 +
 +	return 0;
 +}
-Index: kernel-rockchip-6_1/include/linux/syscalls.h
+Index: kernel-rockchip/include/linux/syscalls.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/syscalls.h
-+++ kernel-rockchip-6_1/include/linux/syscalls.h
+--- kernel-rockchip.orig/include/linux/syscalls.h
++++ kernel-rockchip/include/linux/syscalls.h
 @@ -1385,4 +1385,24 @@ int __sys_getsockopt(int fd, int level,
  		int __user *optlen);
  int __sys_setsockopt(int fd, int level, int optname, char __user *optval,
@@ -5244,10 +5244,10 @@ Index: kernel-rockchip-6_1/include/linux/syscalls.h
 +int ksys_adjtimex_time32(struct old_timex32 __user *utp);
 +
  #endif
-Index: kernel-rockchip-6_1/include/uapi/linux/prctl.h
+Index: kernel-rockchip/include/uapi/linux/prctl.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/uapi/linux/prctl.h
-+++ kernel-rockchip-6_1/include/uapi/linux/prctl.h
+--- kernel-rockchip.orig/include/uapi/linux/prctl.h
++++ kernel-rockchip/include/uapi/linux/prctl.h
 @@ -155,6 +155,9 @@ struct prctl_mm_map {
  #define PR_SET_PTRACER 0x59616d61
  # define PR_SET_PTRACER_ANY ((unsigned long)-1)
@@ -5258,10 +5258,10 @@ Index: kernel-rockchip-6_1/include/uapi/linux/prctl.h
  #define PR_SET_CHILD_SUBREAPER	36
  #define PR_GET_CHILD_SUBREAPER	37
  
-Index: kernel-rockchip-6_1/kernel/Makefile
+Index: kernel-rockchip/kernel/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/Makefile
-+++ kernel-rockchip-6_1/kernel/Makefile
+--- kernel-rockchip.orig/kernel/Makefile
++++ kernel-rockchip/kernel/Makefile
 @@ -52,6 +52,8 @@ obj-y += dma/
  obj-y += entry/
  obj-$(CONFIG_MODULES) += module/
@@ -5271,10 +5271,10 @@ Index: kernel-rockchip-6_1/kernel/Makefile
  obj-$(CONFIG_KCMP) += kcmp.o
  obj-$(CONFIG_FREEZER) += freezer.o
  obj-$(CONFIG_PROFILING) += profile.o
-Index: kernel-rockchip-6_1/kernel/alt-syscall.c
+Index: kernel-rockchip/kernel/alt-syscall.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/kernel/alt-syscall.c
++++ kernel-rockchip/kernel/alt-syscall.c
 @@ -0,0 +1,65 @@
 +/*
 + * Alternate Syscall Table Infrastructure
@@ -5341,10 +5341,10 @@ Index: kernel-rockchip-6_1/kernel/alt-syscall.c
 +
 +	return -ENOENT;
 +}
-Index: kernel-rockchip-6_1/kernel/sys.c
+Index: kernel-rockchip/kernel/sys.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/sys.c
-+++ kernel-rockchip-6_1/kernel/sys.c
+--- kernel-rockchip.orig/kernel/sys.c
++++ kernel-rockchip/kernel/sys.c
 @@ -47,6 +47,7 @@
  
  #include <linux/compat.h>
@@ -5552,10 +5552,10 @@ Index: kernel-rockchip-6_1/kernel/sys.c
  /**
   * do_sysinfo - fill in sysinfo struct
   * @info: pointer to buffer to fill
-Index: kernel-rockchip-6_1/security/security.c
+Index: kernel-rockchip/security/security.c
 ===================================================================
---- kernel-rockchip-6_1.orig/security/security.c
-+++ kernel-rockchip-6_1/security/security.c
+--- kernel-rockchip.orig/security/security.c
++++ kernel-rockchip/security/security.c
 @@ -1239,6 +1239,7 @@ int security_path_chown(const struct pat
  		return 0;
  	return call_int_hook(path_chown, 0, path, uid, gid);
@@ -5564,10 +5564,10 @@ Index: kernel-rockchip-6_1/security/security.c
  
  int security_path_chroot(const struct path *path)
  {
-Index: kernel-rockchip-6_1/kernel/time/time.c
+Index: kernel-rockchip/kernel/time/time.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/time/time.c
-+++ kernel-rockchip-6_1/kernel/time/time.c
+--- kernel-rockchip.orig/kernel/time/time.c
++++ kernel-rockchip/kernel/time/time.c
 @@ -266,7 +266,7 @@ COMPAT_SYSCALL_DEFINE2(settimeofday, str
  #endif
  
@@ -5611,10 +5611,10 @@ Index: kernel-rockchip-6_1/kernel/time/time.c
  #endif
  
  /*
-Index: kernel-rockchip-6_1/kernel/time/posix-timers.c
+Index: kernel-rockchip/kernel/time/posix-timers.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/time/posix-timers.c
-+++ kernel-rockchip-6_1/kernel/time/posix-timers.c
+--- kernel-rockchip.orig/kernel/time/posix-timers.c
++++ kernel-rockchip/kernel/time/posix-timers.c
 @@ -1149,8 +1149,8 @@ int do_clock_adjtime(const clockid_t whi
  	return kc->clock_adj(which_clock, ktx);
  }
@@ -5662,10 +5662,10 @@ Index: kernel-rockchip-6_1/kernel/time/posix-timers.c
  SYSCALL_DEFINE2(clock_getres_time32, clockid_t, which_clock,
  		struct old_timespec32 __user *, tp)
  {
-Index: kernel-rockchip-6_1/fs/overlayfs/overlayfs.h
+Index: kernel-rockchip/fs/overlayfs/overlayfs.h
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/overlayfs/overlayfs.h
-+++ kernel-rockchip-6_1/fs/overlayfs/overlayfs.h
+--- kernel-rockchip.orig/fs/overlayfs/overlayfs.h
++++ kernel-rockchip/fs/overlayfs/overlayfs.h
 @@ -211,12 +211,13 @@ static inline int ovl_do_symlink(struct
  static inline ssize_t ovl_do_getxattr(const struct path *path, const char *name,
  				      void *value, size_t size)
@@ -5691,10 +5691,10 @@ Index: kernel-rockchip-6_1/fs/overlayfs/overlayfs.h
  ssize_t ovl_listxattr(struct dentry *dentry, char *list, size_t size);
  
  #ifdef CONFIG_FS_POSIX_ACL
-Index: kernel-rockchip-6_1/include/linux/xattr.h
+Index: kernel-rockchip/include/linux/xattr.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/xattr.h
-+++ kernel-rockchip-6_1/include/linux/xattr.h
+--- kernel-rockchip.orig/include/linux/xattr.h
++++ kernel-rockchip/include/linux/xattr.h
 @@ -32,10 +32,10 @@ struct xattr_handler {
  	const char *prefix;
  	int flags;      /* fs private flags */
@@ -5720,10 +5720,10 @@ Index: kernel-rockchip-6_1/include/linux/xattr.h
  ssize_t vfs_getxattr(struct user_namespace *, struct dentry *, const char *,
  		     void *, size_t);
  ssize_t vfs_listxattr(struct dentry *d, char *list, size_t size);
-Index: kernel-rockchip-6_1/fs/overlayfs/super.c
+Index: kernel-rockchip/fs/overlayfs/super.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/overlayfs/super.c
-+++ kernel-rockchip-6_1/fs/overlayfs/super.c
+--- kernel-rockchip.orig/fs/overlayfs/super.c
++++ kernel-rockchip/fs/overlayfs/super.c
 @@ -1009,9 +1009,9 @@ static unsigned int ovl_split_lowerdirs(
  static int __maybe_unused
  ovl_posix_acl_xattr_get(const struct xattr_handler *handler,
@@ -5757,10 +5757,10 @@ Index: kernel-rockchip-6_1/fs/overlayfs/super.c
  }
  
  static int ovl_other_xattr_set(const struct xattr_handler *handler,
-Index: kernel-rockchip-6_1/fs/kernfs/inode.c
+Index: kernel-rockchip/fs/kernfs/inode.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/kernfs/inode.c
-+++ kernel-rockchip-6_1/fs/kernfs/inode.c
+--- kernel-rockchip.orig/fs/kernfs/inode.c
++++ kernel-rockchip/fs/kernfs/inode.c
 @@ -319,7 +319,8 @@ int kernfs_xattr_set(struct kernfs_node
  
  static int kernfs_vfs_xattr_get(const struct xattr_handler *handler,
@@ -5771,10 +5771,10 @@ Index: kernel-rockchip-6_1/fs/kernfs/inode.c
  {
  	const char *name = xattr_full_name(handler, suffix);
  	struct kernfs_node *kn = inode->i_private;
-Index: kernel-rockchip-6_1/fs/ext4/xattr_trusted.c
+Index: kernel-rockchip/fs/ext4/xattr_trusted.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ext4/xattr_trusted.c
-+++ kernel-rockchip-6_1/fs/ext4/xattr_trusted.c
+--- kernel-rockchip.orig/fs/ext4/xattr_trusted.c
++++ kernel-rockchip/fs/ext4/xattr_trusted.c
 @@ -22,7 +22,7 @@ ext4_xattr_trusted_list(struct dentry *d
  static int
  ext4_xattr_trusted_get(const struct xattr_handler *handler,
@@ -5784,10 +5784,10 @@ Index: kernel-rockchip-6_1/fs/ext4/xattr_trusted.c
  {
  	return ext4_xattr_get(inode, EXT4_XATTR_INDEX_TRUSTED,
  			      name, buffer, size);
-Index: kernel-rockchip-6_1/fs/ext4/xattr_user.c
+Index: kernel-rockchip/fs/ext4/xattr_user.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ext4/xattr_user.c
-+++ kernel-rockchip-6_1/fs/ext4/xattr_user.c
+--- kernel-rockchip.orig/fs/ext4/xattr_user.c
++++ kernel-rockchip/fs/ext4/xattr_user.c
 @@ -21,7 +21,7 @@ ext4_xattr_user_list(struct dentry *dent
  static int
  ext4_xattr_user_get(const struct xattr_handler *handler,
@@ -5797,10 +5797,10 @@ Index: kernel-rockchip-6_1/fs/ext4/xattr_user.c
  {
  	if (!test_opt(inode->i_sb, XATTR_USER))
  		return -EOPNOTSUPP;
-Index: kernel-rockchip-6_1/fs/ecryptfs/ecryptfs_kernel.h
+Index: kernel-rockchip/fs/ecryptfs/ecryptfs_kernel.h
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ecryptfs/ecryptfs_kernel.h
-+++ kernel-rockchip-6_1/fs/ecryptfs/ecryptfs_kernel.h
+--- kernel-rockchip.orig/fs/ecryptfs/ecryptfs_kernel.h
++++ kernel-rockchip/fs/ecryptfs/ecryptfs_kernel.h
 @@ -662,6 +662,7 @@ int ecryptfs_read_lower_page_segment(str
  				     pgoff_t page_index,
  				     size_t offset_in_page, size_t size,
@@ -5809,10 +5809,10 @@ Index: kernel-rockchip-6_1/fs/ecryptfs/ecryptfs_kernel.h
  struct page *ecryptfs_get_locked_page(struct inode *inode, loff_t index);
  int ecryptfs_parse_packet_length(unsigned char *data, size_t *size,
  				 size_t *length_size);
-Index: kernel-rockchip-6_1/fs/ecryptfs/read_write.c
+Index: kernel-rockchip/fs/ecryptfs/read_write.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ecryptfs/read_write.c
-+++ kernel-rockchip-6_1/fs/ecryptfs/read_write.c
+--- kernel-rockchip.orig/fs/ecryptfs/read_write.c
++++ kernel-rockchip/fs/ecryptfs/read_write.c
 @@ -261,3 +261,25 @@ int ecryptfs_read_lower_page_segment(str
  	flush_dcache_page(page_for_ecryptfs);
  	return rc;
@@ -5839,10 +5839,10 @@ Index: kernel-rockchip-6_1/fs/ecryptfs/read_write.c
 +		return 0;
 +	return vfs_fsync(lower_file, datasync);
 +}
-Index: kernel-rockchip-6_1/fs/ext4/xattr_hurd.c
+Index: kernel-rockchip/fs/ext4/xattr_hurd.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/ext4/xattr_hurd.c
-+++ kernel-rockchip-6_1/fs/ext4/xattr_hurd.c
+--- kernel-rockchip.orig/fs/ext4/xattr_hurd.c
++++ kernel-rockchip/fs/ext4/xattr_hurd.c
 @@ -21,7 +21,8 @@ ext4_xattr_hurd_list(struct dentry *dent
  static int
  ext4_xattr_hurd_get(const struct xattr_handler *handler,
@@ -5853,10 +5853,10 @@ Index: kernel-rockchip-6_1/fs/ext4/xattr_hurd.c
  {
  	if (!test_opt(inode->i_sb, XATTR_USER))
  		return -EOPNOTSUPP;
-Index: kernel-rockchip-6_1/mm/shmem.c
+Index: kernel-rockchip/mm/shmem.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/shmem.c
-+++ kernel-rockchip-6_1/mm/shmem.c
+--- kernel-rockchip.orig/mm/shmem.c
++++ kernel-rockchip/mm/shmem.c
 @@ -3308,7 +3308,7 @@ static int shmem_initxattrs(struct inode
  
  static int shmem_xattr_handler_get(const struct xattr_handler *handler,
@@ -5866,10 +5866,10 @@ Index: kernel-rockchip-6_1/mm/shmem.c
  {
  	struct shmem_inode_info *info = SHMEM_I(inode);
  
-Index: kernel-rockchip-6_1/kernel/events/core.c
+Index: kernel-rockchip/kernel/events/core.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/events/core.c
-+++ kernel-rockchip-6_1/kernel/events/core.c
+--- kernel-rockchip.orig/kernel/events/core.c
++++ kernel-rockchip/kernel/events/core.c
 @@ -12264,9 +12264,8 @@ perf_check_permission(struct perf_event_
   * @group_fd:		group leader event fd
   * @flags:		perf event open flags
@@ -5895,10 +5895,10 @@ Index: kernel-rockchip-6_1/kernel/events/core.c
  /**
   * perf_event_create_kernel_counter
   *
-Index: kernel-rockchip-6_1/kernel/kcmp.c
+Index: kernel-rockchip/kernel/kcmp.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/kcmp.c
-+++ kernel-rockchip-6_1/kernel/kcmp.c
+--- kernel-rockchip.orig/kernel/kcmp.c
++++ kernel-rockchip/kernel/kcmp.c
 @@ -132,8 +132,8 @@ static int kcmp_epoll_target(struct task
  }
  #endif

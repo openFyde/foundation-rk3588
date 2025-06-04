@@ -1,7 +1,7 @@
-Index: kernel-raspberry/drivers/base/dd.c
+Index: kernel-rockchip/drivers/base/dd.c
 ===================================================================
---- kernel-raspberry.orig/drivers/base/dd.c
-+++ kernel-raspberry/drivers/base/dd.c
+--- kernel-rockchip.orig/drivers/base/dd.c
++++ kernel-rockchip/drivers/base/dd.c
 @@ -745,6 +745,7 @@ int driver_probe_done(void)
  		return -EBUSY;
  	return 0;

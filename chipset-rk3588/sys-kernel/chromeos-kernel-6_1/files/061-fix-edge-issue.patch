@@ -1,0 +1,40 @@
+Index: kernel-rockchip/drivers/misc/khadas-mcu.c
+===================================================================
+--- kernel-rockchip.orig/drivers/misc/khadas-mcu.c
++++ kernel-rockchip/drivers/misc/khadas-mcu.c
+@@ -91,7 +91,7 @@ struct mcu_data {
+ 	struct mcu_fan_data fan_data;
+ };
+ 
+-struct mcu_data *g_mcu_data;
++struct mcu_data *g_mcu_data = NULL;
+ 
+ static int i2c_master_reg8_send(const struct i2c_client *client,
+ 		const char reg, const char *buf, int count)
+@@ -628,10 +628,10 @@ static int mcu_probe(struct i2c_client *
+ 	return 0;
+ }
+ 
+-static int mcu_remove(struct i2c_client *client)
++static void mcu_remove(struct i2c_client *client)
+ {
+-	kfree(g_mcu_data);
+-	return 0;
++  if (g_mcu_data)
++	  kfree(g_mcu_data);
+ }
+ 
+ static void khadas_fan_shutdown(struct i2c_client *client)
+Index: kernel-rockchip/drivers/thermal/rockchip_thermal.c
+===================================================================
+--- kernel-rockchip.orig/drivers/thermal/rockchip_thermal.c
++++ kernel-rockchip/drivers/thermal/rockchip_thermal.c
+@@ -2160,7 +2160,7 @@ int rk_get_temperature(void)
+   int ret;
+   if (!g_tsensor_data_ptr)
+    return -ENODEV;
+-  ret = rockchip_thermal_get_temp(g_tsensor_data_ptr, &temp);
++  ret = rockchip_thermal_get_temp(g_tsensor_data_ptr->tzd, &temp);
+     if (ret) {
+       pr_debug("rk_get_temp failed!\n");
+       return ret;

@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/gpu/drm/rockchip/dw-dp.c
+Index: kernel-rockchip/drivers/gpu/drm/rockchip/dw-dp.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpu/drm/rockchip/dw-dp.c
-+++ kernel-rockchip-6_1/drivers/gpu/drm/rockchip/dw-dp.c
+--- kernel-rockchip.orig/drivers/gpu/drm/rockchip/dw-dp.c
++++ kernel-rockchip/drivers/gpu/drm/rockchip/dw-dp.c
 @@ -3099,6 +3099,8 @@ static ssize_t dw_dp_aux_transfer(struct
  	u32 status, value;
  	ssize_t ret = 0;

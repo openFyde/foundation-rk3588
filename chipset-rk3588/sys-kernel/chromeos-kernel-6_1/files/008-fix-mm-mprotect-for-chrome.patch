@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/mm/mprotect.c
+Index: kernel-rockchip/mm/mprotect.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/mprotect.c
-+++ kernel-rockchip-6_1/mm/mprotect.c
+--- kernel-rockchip.orig/mm/mprotect.c
++++ kernel-rockchip/mm/mprotect.c
 @@ -713,8 +713,10 @@ static int do_mprotect_pkey(unsigned lon
  	mas_set(&mas, start);
  	vma = mas_find(&mas, ULONG_MAX);

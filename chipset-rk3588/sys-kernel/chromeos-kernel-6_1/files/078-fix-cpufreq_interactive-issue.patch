@@ -1,0 +1,21 @@
+Index: kernel-rockchip/drivers/cpufreq/cpufreq_interactive.c
+===================================================================
+--- kernel-rockchip.orig/drivers/cpufreq/cpufreq_interactive.c
++++ kernel-rockchip/drivers/cpufreq/cpufreq_interactive.c
+@@ -1587,7 +1587,6 @@ static void cpufreq_interactive_nop_time
+ 
+ static int __init cpufreq_interactive_gov_init(void)
+ {
+-	struct sched_param param = { .sched_priority = MAX_RT_PRIO - 1 };
+ 	struct interactive_cpu *icpu;
+ 	unsigned int cpu;
+ 
+@@ -1610,7 +1609,7 @@ static int __init cpufreq_interactive_go
+ 	if (IS_ERR(speedchange_task))
+ 		return PTR_ERR(speedchange_task);
+ 
+-	sched_setscheduler_nocheck(speedchange_task, SCHED_FIFO, &param);
++  sched_set_fifo(speedchange_task);
+ 	get_task_struct(speedchange_task);
+ 
+ 	/* wake up so the thread does not look hung to the freezer */

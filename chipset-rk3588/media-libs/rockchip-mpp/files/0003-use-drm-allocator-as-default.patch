@@ -1,0 +1,46 @@
+Index: mpp/osal/mpp_allocator.cpp
+===================================================================
+--- mpp.orig/osal/mpp_allocator.cpp
++++ mpp/osal/mpp_allocator.cpp
+@@ -137,6 +137,11 @@ MPP_RET mpp_allocator_get(MppAllocator *
+ {
+     MppBufferType buffer_type = (MppBufferType)(type & MPP_BUFFER_TYPE_MASK);
+     MppAllocatorImpl *p = NULL;
++        mpp_err_f("buffer_type:%d, valid_drm:%d, valid_ion:%d, valid_dma_heap:%d\n",
++          buffer_type,
++          mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DRM),
++          mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION),
++          mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP));
+ 
+     do {
+         if (NULL == allocator || NULL == api || buffer_type >= MPP_BUFFER_TYPE_BUTT) {
+@@ -159,17 +164,17 @@ MPP_RET mpp_allocator_get(MppAllocator *
+             p->os_api = allocator_std;
+         } break;
+         case MPP_BUFFER_TYPE_ION : {
+-            p->os_api = (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP)) ? allocator_dma_heap :
+-                        (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION)) ? allocator_ion :
++            p->os_api = (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION)) ? allocator_ion :
+                         (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DRM)) ? allocator_drm :
++                        (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP)) ? allocator_dma_heap :
+                         allocator_std;
+         } break;
+         case MPP_BUFFER_TYPE_EXT_DMA: {
+             p->os_api = allocator_ext_dma;
+         } break;
+         case MPP_BUFFER_TYPE_DRM : {
+-            p->os_api = (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP)) ? allocator_dma_heap :
+-                        (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DRM)) ? allocator_drm :
++            p->os_api = (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DRM)) ? allocator_drm :
++                        (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP)) ? allocator_dma_heap :
+                         (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION)) ? allocator_ion :
+                         allocator_std;
+         } break;
+@@ -202,7 +207,6 @@ MPP_RET mpp_allocator_get(MppAllocator *
+ 
+         *allocator = p;
+         *api = &mpp_allocator_api;
+-
+         return MPP_OK;
+     } while (0);
+ 

@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h66k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h66k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h66k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h66k.dts
 @@ -0,0 +1,23 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -26,10 +26,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h66k.dts
 +&vcc3v3_pcie {
 +	gpio = <&gpio0 RK_PC4 GPIO_ACTIVE_HIGH>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h68k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h68k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h68k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h68k.dts
 @@ -0,0 +1,91 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -122,10 +122,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h68k.dts
 +&vcc3v3_pcie {
 +	gpio = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h6xk.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h6xk.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h6xk.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h6xk.dtsi
 @@ -0,0 +1,963 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1090,10 +1090,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-hinlink-h6xk.dtsi
 +	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER1 | 1 << ROCKCHIP_VOP2_ESMART1)>;
 +	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART1>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-radxa-e25.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-radxa-e25.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-radxa-e25.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-radxa-e25.dts
 @@ -0,0 +1,325 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -1420,10 +1420,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-radxa-e25.dts
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-radxa-rock-3-compute-module-plus.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-radxa-rock-3-compute-module-plus.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-radxa-rock-3-compute-module-plus.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-radxa-rock-3-compute-module-plus.dtsi
 @@ -0,0 +1,717 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -2142,10 +2142,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-radxa-rock-3-comp
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3a-display.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-rock-3a-display.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3a-display.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-rock-3a-display.dtsi
 @@ -0,0 +1,100 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -2247,10 +2247,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3a-display.d
 +		status = "disabled";
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3ab-cameras.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-rock-3ab-cameras.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3ab-cameras.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-rock-3ab-cameras.dtsi
 @@ -0,0 +1,152 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -2404,10 +2404,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3ab-cameras.
 +&rkcif {
 +	status = "disabled";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blade3-v101-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blade3-v101-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blade3-v101-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blade3-v101-linux.dts
 @@ -0,0 +1,1019 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -3428,10 +3428,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blade3-v101-linux
 +&sata0 {
 +	status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10-linux.dts
 @@ -0,0 +1,120 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -3553,10 +3553,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v1
 +		<0x4d KEY_POWER>;     //power (for 2.4g)
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v10.dtsi
 @@ -0,0 +1,854 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -4412,10 +4412,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v1
 +	regulator-init-microvolt = <750000>;
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-linux.dts
 @@ -0,0 +1,120 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -4537,10 +4537,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v1
 +		<0x4d KEY_POWER>;     //power (for 2.4g)
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-maizhuo-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-maizhuo-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-maizhuo-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12-maizhuo-linux.dts
 @@ -0,0 +1,44 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -4586,10 +4586,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v1
 +		wakeup-source;
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v12.dtsi
 @@ -0,0 +1,899 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -5490,10 +5490,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v1
 +	regulator-init-microvolt = <750000>;
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14-linux.dts
 @@ -0,0 +1,120 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -5615,10 +5615,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v1
 +		<0x4d KEY_POWER>;     //power (for 2.4g)
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v14.dtsi
 @@ -0,0 +1,1063 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -6683,10 +6683,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-edge-v1
 +	regulator-init-microvolt = <750000>;
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-linux.dts
 @@ -0,0 +1,120 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -6808,10 +6808,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-
 +		<0x4d KEY_POWER>;     //power (for 2.4g)
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-mizhuo-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-mizhuo-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-mizhuo-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-mizhuo-linux.dts
 @@ -0,0 +1,125 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -6938,10 +6938,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc-
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc.dtsi
 @@ -0,0 +1,755 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -7698,10 +7698,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry-minipc.
 +	regulator-init-microvolt = <750000>;
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
 @@ -0,0 +1,335 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -8038,10 +8038,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
 +	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
 +	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART3>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-hinlink-h88k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-hinlink-h88k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-hinlink-h88k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-hinlink-h88k.dts
 @@ -0,0 +1,1096 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -9139,10 +9139,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-hinlink-h88k.dts
 +	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
 +	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART3>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
 @@ -0,0 +1,692 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -9836,10 +9836,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
 +	clock-names = "hdmi0_phy_pll", "hdmi1_phy_pll";
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-camera1.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-camera1.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-camera1.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-camera1.dtsi
 @@ -0,0 +1,170 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -10011,10 +10011,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-lcd.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-lcd.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-lcd.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-lcd.dtsi
 @@ -0,0 +1,45 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +
@@ -10061,10 +10061,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus-l
 +		status = "okay";
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dts
 @@ -0,0 +1,327 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -10393,10 +10393,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.d
 +&hdmirx_ctrler {
 +	status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtsi
 @@ -0,0 +1,763 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -11161,10 +11161,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.d
 +&usbhost_dwc3_0 {
 +	status = "disabled";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
 @@ -0,0 +1,647 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -11813,10 +11813,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
 +	cpu-supply = <&vdd_cpu_big1_s0>;
 +	mem-supply = <&vdd_cpu_big1_mem_s0>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rk806-single-khadas.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rk806-single-khadas.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rk806-single-khadas.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rk806-single-khadas.dtsi
 @@ -0,0 +1,396 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -12214,10 +12214,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rk806-single-khad
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-camera.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-camera.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-camera.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-camera.dtsi
 @@ -0,0 +1,208 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -12428,10 +12428,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-camera.dt
 +	};
 +};
 \ No newline at end of file
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-display.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-display.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-display.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-display.dtsi
 @@ -0,0 +1,193 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -12626,10 +12626,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b-display.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 @@ -0,0 +1,1340 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -13971,10 +13971,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 +		/* GPIO4_D4-D7 */
 +		"", "", "", "";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
 @@ -0,0 +1,1214 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -15190,10 +15190,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dt
 +        pinctrl-0 = <&pwm15m1_pins>;
 +        status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2-camera.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2-camera.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2-camera.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2-camera.dtsi
 @@ -0,0 +1,492 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -15687,11 +15687,11 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2-cam
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
-@@ -0,0 +1,943 @@
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
+@@ -0,0 +1,945 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * Copyright (c) 2023 Wesion Technology Co., Ltd.
@@ -15760,6 +15760,9 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
 +		simple-audio-card,format = "i2s";
 +		simple-audio-card,mclk-fs = <256>;
 +		simple-audio-card,name = "rockchip,es8316-codec";
++    simple-audio-card,hp-det-gpio = <&gpio1 RK_PD3 GPIO_ACTIVE_LOW>;
++    pinctrl-names = "hp_det";
++    pinctrl-0 = <&hp_det>;
 +		simple-audio-card,dai-link@0 {
 +			format = "i2s";
 +			cpu {
@@ -16248,10 +16251,9 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
 +		clock-names = "mclk";
 +		assigned-clocks = <&mclkout_i2s0>;
 +		assigned-clock-rates = <12288000>;
-+		pinctrl-names = "default","hp_det","spk_con";
-+		pinctrl-0 = <&i2s0_mclk>,<&hp_det>,<&spk_con>;
++		pinctrl-names = "default","spk_con";
++		pinctrl-0 = <&i2s0_mclk>,<&spk_con>;
 +		spk-con-gpio = <&gpio1 RK_PD0 GPIO_ACTIVE_HIGH>;
-+		hp-det-gpio = <&gpio1 RK_PD3 GPIO_ACTIVE_LOW>;
 +	};
 +
 +};
@@ -16635,10 +16637,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
 +		regulator-suspend-microvolt = <3300000>;
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
 @@ -0,0 +1,1780 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -18420,10 +18422,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
 +	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
 +	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART3>;
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
 @@ -0,0 +1,699 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -19125,10 +19127,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common
 +	clock-names = "hdmi0_phy_pll";
 +};
 \ No newline at end of file
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6c.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6c.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6c.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6c.dts
 @@ -0,0 +1,28 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -19159,10 +19161,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6c.dts
 +	/delete-node/ pcie@40;
 +};
 \ No newline at end of file
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
 @@ -0,0 +1,178 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -19342,10 +19344,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
 +	status = "okay";
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera1.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera1.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera1.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera1.dtsi
 @@ -0,0 +1,170 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -19517,10 +19519,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camer
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera2.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera2.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera2.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera2.dtsi
 @@ -0,0 +1,182 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -19704,10 +19706,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camer
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera3.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera3.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera3.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camera3.dtsi
 @@ -0,0 +1,179 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -19888,10 +19890,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-camer
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd.dtsi
 @@ -0,0 +1,101 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +
@@ -19994,10 +19996,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-lcd.d
 +		status = "okay";
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
 @@ -0,0 +1,441 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -20440,10 +20442,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
 +	rockchip,skip-scan-in-resume;
 +	status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
 @@ -0,0 +1,387 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -20832,10 +20834,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dtsi
 +&usbhost_dwc3_0 {
 +	status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5b.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5b.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5b.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5b.dts
 @@ -0,0 +1,30 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -20867,10 +20869,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5b.dts
 +&wireless_wlan {
 +	status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 @@ -0,0 +1,611 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -21483,10 +21485,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 +	clocks = <&hdptxphy_hdmi_clk0>;
 +	clock-names = "hdmi0_phy_pll";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
 @@ -0,0 +1,536 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -22024,10 +22026,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
 +};
 +
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5.dtsi
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5.dtsi
 @@ -0,0 +1,293 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -22322,10 +22324,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5.dtsi
 +	phy-handle = <&rgmii_phy1>;
 +	status = "okay";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
 @@ -0,0 +1,1010 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -23337,10 +23339,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
 +		/* GPIO4_D4-D7 */
 +		"", "", "", "";
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/Makefile
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/Makefile
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/Makefile
 @@ -0,0 +1,133 @@
 +# SPDX-License-Identifier: GPL-2.0
 +dtbo-$(CONFIG_ARCH_ROCKCHIP) += \
@@ -23475,17 +23477,17 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/Makefile
 +always-y		:= $(dtbo-y) $(dtbotxt-y)
 +clean-files		:= *.dtbo
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/README.rockchip-overlays
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/README.rockchip-overlays
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/README.rockchip-overlays
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/README.rockchip-overlays
 @@ -0,0 +1 @@
 +## Introduction
 \ No newline at end of file
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/mixtile-blade3-sata2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/mixtile-blade3-sata2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/mixtile-blade3-sata2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/mixtile-blade3-sata2.dts
 @@ -0,0 +1,20 @@
 +/dts-v1/;
 +/plugin/;
@@ -23507,10 +23509,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/mixtile-blade3-s
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-ap6275p.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-ap6275p.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-ap6275p.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-ap6275p.dts
 @@ -0,0 +1,19 @@
 +/dts-v1/;
 +/plugin/;
@@ -23531,10 +23533,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-ap627
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-disable-led.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-disable-led.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-disable-led.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-disable-led.dts
 @@ -0,0 +1,17 @@
 +/dts-v1/;
 +/plugin/;
@@ -23553,10 +23555,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-disab
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd1.dts
 @@ -0,0 +1,88 @@
 +/dts-v1/;
 +/plugin/;
@@ -23646,10 +23648,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd2.dts
 @@ -0,0 +1,88 @@
 +/dts-v1/;
 +/plugin/;
@@ -23739,10 +23741,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-lcd2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-disable-leds.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-disable-leds.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-disable-leds.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-disable-leds.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -23765,10 +23767,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-hdmi2-8k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-hdmi2-8k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-hdmi2-8k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-hdmi2-8k.dts
 @@ -0,0 +1,37 @@
 +/dts-v1/;
 +/plugin/;
@@ -23807,10 +23809,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-lcd.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-lcd.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-lcd.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-lcd.dts
 @@ -0,0 +1,26 @@
 +/dts-v1/;
 +/plugin/;
@@ -23838,10 +23840,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13850.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13850.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13850.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13850.dts
 @@ -0,0 +1,101 @@
 +/dts-v1/;
 +/plugin/;
@@ -23944,10 +23946,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13855.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13855.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13855.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-ov13855.dts
 @@ -0,0 +1,101 @@
 +/dts-v1/;
 +/plugin/;
@@ -24050,10 +24052,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-sata2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-sata2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-sata2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-sata2.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24076,10 +24078,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-plus-
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-sata.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-sata.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-sata.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-sata.dts
 @@ -0,0 +1,20 @@
 +/dts-v1/;
 +/plugin/;
@@ -24101,10 +24103,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/orangepi-5-sata.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can0-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can0-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can0-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can0-m0.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24120,10 +24122,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can0-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m0.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24139,10 +24141,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m1.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24158,10 +24160,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can1-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can2-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can2-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can2-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-can2-m1.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24177,10 +24179,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-can2-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-host.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-host.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-host.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-host.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24203,10 +24205,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-host
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-peripheral.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-peripheral.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-peripheral.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-peripheral.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24229,10 +24231,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-dwc3-peri
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c0-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c0-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c0-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c0-m1.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24255,10 +24257,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c0-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m0.dts
 @@ -0,0 +1,29 @@
 +/dts-v1/;
 +/plugin/;
@@ -24289,10 +24291,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m2.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24308,10 +24310,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m2.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m4.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m4.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m4.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m4.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24327,10 +24329,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c1-m4.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m0.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24346,10 +24348,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m4.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m4.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m4.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m4.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24365,10 +24367,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c2-m4.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m0.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24384,10 +24386,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m1.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24410,10 +24412,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c3-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c4-m3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c4-m3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c4-m3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c4-m3.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24429,10 +24431,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c4-m3.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c5-m3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c5-m3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c5-m3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c5-m3.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24448,10 +24450,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c5-m3.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m0.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24474,10 +24476,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m3.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24500,10 +24502,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m3.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m4.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m4.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m4.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m4.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24519,10 +24521,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c6-m4.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c7-m3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c7-m3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c7-m3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c7-m3.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24545,10 +24547,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c7-m3.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m2.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -24564,10 +24566,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m2.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m4.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m4.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m4.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m4.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -24590,10 +24592,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-i2c8-m4.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c1.dts
 @@ -0,0 +1,100 @@
 +/dts-v1/;
 +/plugin/;
@@ -24695,10 +24697,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c2.dts
 @@ -0,0 +1,94 @@
 +/dts-v1/;
 +/plugin/;
@@ -24794,10 +24796,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c3.dts
 @@ -0,0 +1,94 @@
 +/dts-v1/;
 +/plugin/;
@@ -24893,10 +24895,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13850-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c1.dts
 @@ -0,0 +1,100 @@
 +/dts-v1/;
 +/plugin/;
@@ -24998,10 +25000,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c2.dts
 @@ -0,0 +1,94 @@
 +/dts-v1/;
 +/plugin/;
@@ -25097,10 +25099,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c3.dts
 @@ -0,0 +1,94 @@
 +/dts-v1/;
 +/plugin/;
@@ -25196,10 +25198,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-ov13855-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m0.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -25215,10 +25217,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m1.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25233,10 +25235,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25251,10 +25253,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm0-m2.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m0.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -25270,10 +25272,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m1.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25288,10 +25290,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25306,10 +25308,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm1-m2.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm10-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm10-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm10-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm10-m0.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25324,10 +25326,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm10-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m0.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25342,10 +25344,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m1.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25368,10 +25370,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm11-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm12-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm12-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm12-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm12-m0.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25386,10 +25388,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm12-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m0.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25404,10 +25406,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25422,10 +25424,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm13-m2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m0.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -25441,10 +25443,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m1.dts
 @@ -0,0 +1,14 @@
 +/dts-v1/;
 +/plugin/;
@@ -25460,10 +25462,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25478,10 +25480,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm14-m2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m0.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25504,10 +25506,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m1.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25522,10 +25524,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25540,10 +25542,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m3.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25566,10 +25568,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm15-m3.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm2-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm2-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm2-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm2-m1.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25592,10 +25594,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm2-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m0.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25610,10 +25612,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m1.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25636,10 +25638,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m1.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25654,10 +25656,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m2.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m3.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -25672,10 +25674,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm3-m3.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm5-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm5-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm5-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm5-m2.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25698,10 +25700,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm5-m2.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m0.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25724,10 +25726,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m2.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25750,10 +25752,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm6-m2.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m0.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25776,10 +25778,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m3.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25802,10 +25804,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm7-m3.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm8-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm8-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm8-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm8-m0.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -25828,10 +25830,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-pwm8-m0.d
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs0-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs0-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs0-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs0-spidev.dts
 @@ -0,0 +1,32 @@
 +/dts-v1/;
 +/plugin/;
@@ -25865,10 +25867,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs1-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs1-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs1-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-cs1-spidev.dts
 @@ -0,0 +1,32 @@
 +/dts-v1/;
 +/plugin/;
@@ -25902,10 +25904,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m1-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-cs1-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-cs1-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-cs1-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-cs1-spidev.dts
 @@ -0,0 +1,31 @@
 +/dts-v1/;
 +/plugin/;
@@ -25938,10 +25940,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs0-spidev.dts
 @@ -0,0 +1,24 @@
 +/dts-v1/;
 +/plugin/;
@@ -25967,10 +25969,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs1-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs1-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs1-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-cs1-spidev.dts
 @@ -0,0 +1,24 @@
 +/dts-v1/;
 +/plugin/;
@@ -25996,10 +25998,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi0-m2-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs0-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs0-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs0-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs0-spidev.dts
 @@ -0,0 +1,32 @@
 +/dts-v1/;
 +/plugin/;
@@ -26033,10 +26035,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-mcp2515-8mhz.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-mcp2515-8mhz.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-mcp2515-8mhz.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-mcp2515-8mhz.dts
 @@ -0,0 +1,60 @@
 +/dts-v1/;
 +/plugin/;
@@ -26099,10 +26101,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-c
 +	};
 +};
 \ No newline at end of file
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-cs1-spidev.dts
 @@ -0,0 +1,32 @@
 +/dts-v1/;
 +/plugin/;
@@ -26136,10 +26138,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi1-m1-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m0-cs1-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m0-cs1-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m0-cs1-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m0-cs1-spidev.dts
 @@ -0,0 +1,23 @@
 +/dts-v1/;
 +/plugin/;
@@ -26164,10 +26166,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m0-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-cs1-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-cs1-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-cs1-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-cs1-spidev.dts
 @@ -0,0 +1,30 @@
 +/dts-v1/;
 +/plugin/;
@@ -26199,10 +26201,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs0-spidev.dts
 @@ -0,0 +1,23 @@
 +/dts-v1/;
 +/plugin/;
@@ -26227,10 +26229,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs1-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs1-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs1-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-cs1-spidev.dts
 @@ -0,0 +1,23 @@
 +/dts-v1/;
 +/plugin/;
@@ -26255,10 +26257,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m1-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m2-cs0-spidev.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m2-cs0-spidev.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m2-cs0-spidev.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m2-cs0-spidev.dts
 @@ -0,0 +1,23 @@
 +/dts-v1/;
 +/plugin/;
@@ -26283,10 +26285,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-spi4-m2-c
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart0-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart0-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart0-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart0-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26301,10 +26303,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart0-m2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart1-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart1-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart1-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart1-m1.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26319,10 +26321,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart1-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m0.dts
 @@ -0,0 +1,29 @@
 +/dts-v1/;
 +/plugin/;
@@ -26353,10 +26355,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m2.dts
 @@ -0,0 +1,30 @@
 +/dts-v1/;
 +/plugin/;
@@ -26388,10 +26390,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart2-m2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m0.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26406,10 +26408,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m1.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26424,10 +26426,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart3-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m0.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26442,10 +26444,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m2.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26460,10 +26462,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart4-m2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1-full.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1-full.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1-full.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1-full.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -26486,10 +26488,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1-
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26504,10 +26506,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart6-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1-full.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1-full.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1-full.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1-full.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -26530,10 +26532,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1-
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -26556,10 +26558,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m2.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -26582,10 +26584,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart7-m2.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0-full.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0-full.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0-full.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0-full.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -26608,10 +26610,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0-
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -26634,10 +26636,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m0.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m1.dts
 @@ -0,0 +1,13 @@
 +/dts-v1/;
 +/plugin/;
@@ -26652,10 +26654,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-uart8-m1.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio3-b3.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio3-b3.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio3-b3.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio3-b3.dts
 @@ -0,0 +1,27 @@
 +/dts-v1/;
 +/plugin/;
@@ -26684,10 +26686,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio3-
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio4-b1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio4-b1.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio4-b1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio4-b1.dts
 @@ -0,0 +1,27 @@
 +/dts-v1/;
 +/plugin/;
@@ -26716,10 +26718,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rk3588-w1-gpio4-
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-hdmi-8k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-hdmi-8k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-hdmi-8k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-hdmi-8k.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -26742,10 +26744,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-hdmi-8k.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-i2c5-rtc-hym8563.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-i2c5-rtc-hym8563.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-i2c5-rtc-hym8563.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-i2c5-rtc-hym8563.dts
 @@ -0,0 +1,51 @@
 +/dts-v1/;
 +/plugin/;
@@ -26798,10 +26800,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-i2c5-rtc
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-camera-4k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-camera-4k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-camera-4k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-camera-4k.dts
 @@ -0,0 +1,208 @@
 +/dts-v1/;
 +/plugin/;
@@ -27011,10 +27013,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-ca
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10fhd.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10fhd.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10fhd.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10fhd.dts
 @@ -0,0 +1,85 @@
 +// ROCK 5A Radxa Display 10FHD
 +/dts-v1/;
@@ -27101,10 +27103,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-di
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10hd.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10hd.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10hd.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-10hd.dts
 @@ -0,0 +1,228 @@
 +/dts-v1/;
 +/plugin/;
@@ -27334,10 +27336,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-di
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-8hd.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-8hd.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-8hd.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-display-8hd.dts
 @@ -0,0 +1,231 @@
 +/dts-v1/;
 +/plugin/;
@@ -27570,10 +27572,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-radxa-di
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-rpi-camera-v2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-rpi-camera-v2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-rpi-camera-v2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-rpi-camera-v2.dts
 @@ -0,0 +1,237 @@
 +/dts-v1/;
 +/plugin/;
@@ -27812,10 +27814,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-rpi-came
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-sata.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-sata.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-sata.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-sata.dts
 @@ -0,0 +1,29 @@
 +/dts-v1/;
 +/plugin/;
@@ -27846,10 +27848,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-sata.dts
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-spi-nor-flash.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-spi-nor-flash.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-spi-nor-flash.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-spi-nor-flash.dts
 @@ -0,0 +1,54 @@
 +/dts-v1/;
 +/plugin/;
@@ -27905,10 +27907,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-spi-nor-
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-usb-otg.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-usb-otg.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-usb-otg.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5a-usb-otg.dts
 @@ -0,0 +1,21 @@
 +/dts-v1/;
 +/plugin/;
@@ -27931,10 +27933,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5a-usb-otg.
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi1-8k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi1-8k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi1-8k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi1-8k.dts
 @@ -0,0 +1,63 @@
 +/dts-v1/;
 +/plugin/;
@@ -27999,10 +28001,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi1-8k
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi2-8k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi2-8k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi2-8k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi2-8k.dts
 @@ -0,0 +1,79 @@
 +/dts-v1/;
 +/plugin/;
@@ -28083,10 +28085,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-hdmi2-8k
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-pd-max-voltage-12v.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-pd-max-voltage-12v.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-pd-max-voltage-12v.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-pd-max-voltage-12v.dts
 @@ -0,0 +1,24 @@
 +/dts-v1/;
 +/plugin/;
@@ -28112,10 +28114,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-pd-max-v
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-camera-4k.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-camera-4k.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-camera-4k.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-camera-4k.dts
 @@ -0,0 +1,208 @@
 +/dts-v1/;
 +/plugin/;
@@ -28325,10 +28327,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-ca
 +	};
 +};
 +
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10fhd.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10fhd.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10fhd.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10fhd.dts
 @@ -0,0 +1,85 @@
 +// ROCK 5B Radxa Display 10FHD
 +/dts-v1/;
@@ -28415,10 +28417,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-di
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10hd.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10hd.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10hd.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-10hd.dts
 @@ -0,0 +1,221 @@
 +/dts-v1/;
 +/plugin/;
@@ -28641,10 +28643,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-di
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-8hd.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-8hd.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-8hd.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-display-8hd.dts
 @@ -0,0 +1,219 @@
 +/dts-v1/;
 +/plugin/;
@@ -28865,10 +28867,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-radxa-di
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-rpi-camera-v2.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-rpi-camera-v2.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-rpi-camera-v2.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-rpi-camera-v2.dts
 @@ -0,0 +1,237 @@
 +/dts-v1/;
 +/plugin/;
@@ -29107,10 +29109,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-rpi-came
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-sata.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-sata.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-sata.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rock-5b-sata.dts
 @@ -0,0 +1,44 @@
 +// ROCK 5B Pcie M.2 to sata
 +/dts-v1/;
@@ -29156,10 +29158,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rock-5b-sata.dts
 +		};
 +	};
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3588-opp-oc-24ghz.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3588-opp-oc-24ghz.dts
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3588-opp-oc-24ghz.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3588-opp-oc-24ghz.dts
 @@ -0,0 +1,355 @@
 +// RK3588 CPU Overclock to 2.4 GHz
 +
@@ -29516,10 +29518,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3588-
 +        };
 +    };
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/Makefile
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 @@ -1,278 +1,4 @@
  # SPDX-License-Identifier: GPL-2.0
 -dtb-$(CONFIG_ARCH_ROCKCHIP) += px30-evb.dtb
@@ -29824,10 +29826,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5b.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-radxa-cm5-io.dtb
 +dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-rock-5a.dtb
-Index: kernel-rockchip-6_1/drivers/block/Kconfig
+Index: kernel-rockchip/drivers/block/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/block/Kconfig
-+++ kernel-rockchip-6_1/drivers/block/Kconfig
+--- kernel-rockchip.orig/drivers/block/Kconfig
++++ kernel-rockchip/drivers/block/Kconfig
 @@ -248,6 +248,15 @@ config BLK_DEV_NBD
  
  	  If unsure, say N.
@@ -29844,10 +29846,10 @@ Index: kernel-rockchip-6_1/drivers/block/Kconfig
  config BLK_DEV_RAM
  	tristate "RAM block device support"
  	help
-Index: kernel-rockchip-6_1/drivers/block/Makefile
+Index: kernel-rockchip/drivers/block/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/block/Makefile
-+++ kernel-rockchip-6_1/drivers/block/Makefile
+--- kernel-rockchip.orig/drivers/block/Makefile
++++ kernel-rockchip/drivers/block/Makefile
 @@ -4,7 +4,7 @@
  #
  # 12 June 2000, Christoph Hellwig <hch@infradead.org>
@@ -29866,10 +29868,10 @@ Index: kernel-rockchip-6_1/drivers/block/Makefile
  obj-$(CONFIG_XEN_BLKDEV_FRONTEND)	+= xen-blkfront.o
  obj-$(CONFIG_XEN_BLKDEV_BACKEND)	+= xen-blkback/
  obj-$(CONFIG_BLK_DEV_DRBD)     += drbd/
-Index: kernel-rockchip-6_1/drivers/block/sx8.c
+Index: kernel-rockchip/drivers/block/sx8.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/block/sx8.c
++++ kernel-rockchip/drivers/block/sx8.c
 @@ -0,0 +1,1586 @@
 +/*
 + *  sx8.c: Driver for Promise SATA SX8 looks-like-I2O hardware
@@ -31457,10 +31459,10 @@ Index: kernel-rockchip-6_1/drivers/block/sx8.c
 +}
 +
 +module_pci_driver(carm_driver);
-Index: kernel-rockchip-6_1/drivers/char/lcd_vk2c21.c
+Index: kernel-rockchip/drivers/char/lcd_vk2c21.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/char/lcd_vk2c21.c
++++ kernel-rockchip/drivers/char/lcd_vk2c21.c
 @@ -0,0 +1,707 @@
 +#include <linux/kernel.h>
 +#include <linux/init.h>
@@ -32169,10 +32171,10 @@ Index: kernel-rockchip-6_1/drivers/char/lcd_vk2c21.c
 +MODULE_AUTHOR("Hugsun");
 +MODULE_DESCRIPTION("LCD Extern driver for lcd_vk2c21");
 +MODULE_LICENSE("GPL");
-Index: kernel-rockchip-6_1/drivers/char/lcd_vk2c21.h
+Index: kernel-rockchip/drivers/char/lcd_vk2c21.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/char/lcd_vk2c21.h
++++ kernel-rockchip/drivers/char/lcd_vk2c21.h
 @@ -0,0 +1,63 @@
 +#ifndef __LCD_VK2C21_H__
 +#define __LCD_VK2C21_H__
@@ -32237,19 +32239,19 @@ Index: kernel-rockchip-6_1/drivers/char/lcd_vk2c21.h
 +#define SEGSEL_IVA0FH 		0x3F  	// SEG/VLCD共用脚设为SEG，内部偏置电压调整：1/3bias=0.529VDD 1/4bias=0.600VDD
 +
 +#endif
-Index: kernel-rockchip-6_1/drivers/char/Makefile
+Index: kernel-rockchip/drivers/char/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/char/Makefile
-+++ kernel-rockchip-6_1/drivers/char/Makefile
+--- kernel-rockchip.orig/drivers/char/Makefile
++++ kernel-rockchip/drivers/char/Makefile
 @@ -45,3 +45,4 @@ obj-$(CONFIG_PS3_FLASH)		+= ps3flash.o
  obj-$(CONFIG_XILLYBUS_CLASS)	+= xillybus/
  obj-$(CONFIG_POWERNV_OP_PANEL)	+= powernv-op-panel.o
  obj-$(CONFIG_ADI)		+= adi.o
 +obj-y += lcd_vk2c21.o
-Index: kernel-rockchip-6_1/drivers/extcon/Kconfig
+Index: kernel-rockchip/drivers/extcon/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/extcon/Kconfig
-+++ kernel-rockchip-6_1/drivers/extcon/Kconfig
+--- kernel-rockchip.orig/drivers/extcon/Kconfig
++++ kernel-rockchip/drivers/extcon/Kconfig
 @@ -190,4 +190,14 @@ config EXTCON_USBC_TUSB320
  	  Say Y here to enable support for USB Type C cable detection extcon
  	  support using a TUSB320.
@@ -32265,19 +32267,19 @@ Index: kernel-rockchip-6_1/drivers/extcon/Kconfig
 +    instead of accessing Altmode Display Port in Type-C connector.
 +
  endif
-Index: kernel-rockchip-6_1/drivers/extcon/Makefile
+Index: kernel-rockchip/drivers/extcon/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/extcon/Makefile
-+++ kernel-rockchip-6_1/drivers/extcon/Makefile
+--- kernel-rockchip.orig/drivers/extcon/Makefile
++++ kernel-rockchip/drivers/extcon/Makefile
 @@ -25,3 +25,4 @@ obj-$(CONFIG_EXTCON_SM5502)	+= extcon-sm
  obj-$(CONFIG_EXTCON_USB_GPIO)	+= extcon-usb-gpio.o
  obj-$(CONFIG_EXTCON_USBC_CROS_EC) += extcon-usbc-cros-ec.o
  obj-$(CONFIG_EXTCON_USBC_TUSB320) += extcon-usbc-tusb320.o
 +obj-$(CONFIG_EXTCON_USBC_VIRTUAL_PD) += extcon-pd-virtual.o
-Index: kernel-rockchip-6_1/drivers/extcon/extcon-pd-virtual.c
+Index: kernel-rockchip/drivers/extcon/extcon-pd-virtual.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/extcon/extcon-pd-virtual.c
++++ kernel-rockchip/drivers/extcon/extcon-pd-virtual.c
 @@ -0,0 +1,429 @@
 +/*
 + * Copyright (c) 2016, Fuzhou Rockchip Electronics Co., Ltd
@@ -32709,10 +32711,10 @@ Index: kernel-rockchip-6_1/drivers/extcon/extcon-pd-virtual.c
 +MODULE_AUTHOR("rockchip");
 +MODULE_DESCRIPTION("Virtual Typec-pd extcon driver");
 \ No newline at end of file
-Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/Kconfig
+Index: kernel-rockchip/drivers/gpu/drm/panel/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpu/drm/panel/Kconfig
-+++ kernel-rockchip-6_1/drivers/gpu/drm/panel/Kconfig
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/Kconfig
++++ kernel-rockchip/drivers/gpu/drm/panel/Kconfig
 @@ -739,4 +739,34 @@ config DRM_PANEL_FYDETAB
    depends on DRM_PANEL_SIMPLE
    help
@@ -32748,10 +32750,10 @@ Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/Kconfig
 +    Say Y here if you want to enable support for Radxa Display 8HD panel.
 +    The panel support TFT dot matrix LCD with 800RGBx1280 dots at maximum.
  endmenu
-Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/Makefile
+Index: kernel-rockchip/drivers/gpu/drm/panel/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpu/drm/panel/Makefile
-+++ kernel-rockchip-6_1/drivers/gpu/drm/panel/Makefile
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/Makefile
++++ kernel-rockchip/drivers/gpu/drm/panel/Makefile
 @@ -76,3 +76,6 @@ obj-$(CONFIG_DRM_PANEL_TRULY_NT35597_WQX
  obj-$(CONFIG_DRM_PANEL_VISIONOX_RM69299) += panel-visionox-rm69299.o
  obj-$(CONFIG_DRM_PANEL_WIDECHIPS_WS2401) += panel-widechips-ws2401.o
@@ -32759,10 +32761,10 @@ Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/Makefile
 +obj-$(CONFIG_DRM_PANEL_INNOLUX_AFJ101_BA2131) += panel-innolux-afj101-ba2131.o
 +obj-$(CONFIG_DRM_PANEL_JADARD_JD9365DA_H3) += panel-jadard-jd9365da-h3.o
 +obj-$(CONFIG_DRM_PANEL_RADXA_DISPLAY_8HD) += panel-radxa-display-8hd.o
-Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
 @@ -0,0 +1,492 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
@@ -33256,10 +33258,10 @@ Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
 +MODULE_AUTHOR("Kali Prasad <kprasadvnsi@protonmail.com>");
 +MODULE_DESCRIPTION("Innolux AFJ101 BA2131 MIPI-DSI LCD panel");
 +MODULE_LICENSE("GPL");
-Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
 @@ -0,0 +1,691 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
@@ -33952,10 +33954,10 @@ Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
 +MODULE_AUTHOR("Stephen Chen <stephen@radxa.com>");
 +MODULE_DESCRIPTION("Jadard JD9365DA-H3 WXGA DSI panel");
 +MODULE_LICENSE("GPL");
-Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
 @@ -0,0 +1,441 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
@@ -34398,17 +34400,17 @@ Index: kernel-rockchip-6_1/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
 +MODULE_AUTHOR("Stephen Chen <stephen@radxa.com>");
 +MODULE_DESCRIPTION("Radxa Display 8HD panel driver");
 +MODULE_LICENSE("GPL v2");
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/gt9xx/CJ080258_GT911_Config_20221117_085548.cfg
+Index: kernel-rockchip/drivers/input/touchscreen/gt9xx/CJ080258_GT911_Config_20221117_085548.cfg
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/gt9xx/CJ080258_GT911_Config_20221117_085548.cfg
++++ kernel-rockchip/drivers/input/touchscreen/gt9xx/CJ080258_GT911_Config_20221117_085548.cfg
 @@ -0,0 +1 @@
 +0x62,0x20,0x03,0x00,0x05,0x0A,0x05,0x00,0x01,0x08,0x28,0x05,0x50,0x32,0x03,0x05,0x00,0x00,0x00,0x00,0x55,0x55,0x00,0x00,0x00,0x00,0x00,0x8C,0x2A,0x0E,0x17,0x15,0x31,0x0D,0x00,0x00,0x01,0x9A,0x04,0x1D,0x00,0x00,0x00,0x00,0x00,0x03,0x64,0x32,0x00,0x00,0x00,0x0F,0x36,0x94,0xC5,0x02,0x07,0x00,0x00,0x04,0x9B,0x11,0x00,0x7B,0x16,0x00,0x64,0x1C,0x00,0x4F,0x25,0x00,0x41,0x2F,0x00,0x41,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1C,0x1A,0x18,0x16,0x14,0x12,0x10,0x0E,0x0C,0x0A,0x08,0x06,0x04,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x24,0x22,0x21,0x20,0x1F,0x1E,0x1D,0x1C,0x18,0x16,0x14,0x13,0x12,0x10,0x0F,0x0C,0x0A,0x08,0x06,0x04,0x02,0x00,0xFF,0xFF,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x72,0x01
 \ No newline at end of file
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/gt9xx/gt9xx_cfg.h
+Index: kernel-rockchip/drivers/input/touchscreen/gt9xx/gt9xx_cfg.h
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/gt9xx/gt9xx_cfg.h
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/gt9xx/gt9xx_cfg.h
+--- kernel-rockchip.orig/drivers/input/touchscreen/gt9xx/gt9xx_cfg.h
++++ kernel-rockchip/drivers/input/touchscreen/gt9xx/gt9xx_cfg.h
 @@ -33,6 +33,11 @@ static u8 gtp_dat_gt9111[] = {
  	#include "HLS-0102-1398V1-1060-GT911_Config_20201204_V66.cfg"
  };
@@ -34421,10 +34423,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/gt9xx/gt9xx_cfg.h
  static u8 gtp_dat_8_9[] = {
  	/* TODO:Puts your update firmware data here! */
  	/* <1920, 1200> 8.9 */
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/Kconfig
+Index: kernel-rockchip/drivers/input/touchscreen/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/Kconfig
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/Kconfig
+--- kernel-rockchip.orig/drivers/input/touchscreen/Kconfig
++++ kernel-rockchip/drivers/input/touchscreen/Kconfig
 @@ -1456,4 +1456,9 @@ config TOUCHSCREEN_HIMAX_CHIPSET
  
  source "drivers/input/touchscreen/hxchipset/Kconfig"
@@ -34435,19 +34437,19 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/Kconfig
 +  help
 +    Control FT5426 touch IC.
  endif
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/Makefile
+Index: kernel-rockchip/drivers/input/touchscreen/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/Makefile
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/Makefile
+--- kernel-rockchip.orig/drivers/input/touchscreen/Makefile
++++ kernel-rockchip/drivers/input/touchscreen/Makefile
 @@ -132,3 +132,4 @@ obj-$(CONFIG_TOUCHSCREEN_RASPBERRYPI_FW)
  obj-$(CONFIG_TOUCHSCREEN_IQS5XX)	+= iqs5xx.o
  obj-$(CONFIG_TOUCHSCREEN_ZINITIX)	+= zinitix.o
  obj-$(CONFIG_TOUCHSCREEN_HIMAX_CHIPSET) += hxchipset/
 +obj-$(CONFIG_TOUCHSCREEN_RASPITS_FT5426)  += raspits_ft5426.o
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/raspits_ft5426.c
+Index: kernel-rockchip/drivers/input/touchscreen/raspits_ft5426.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/raspits_ft5426.c
++++ kernel-rockchip/drivers/input/touchscreen/raspits_ft5426.c
 @@ -0,0 +1,309 @@
 +/*
 + *
@@ -34758,10 +34760,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/raspits_ft5426.c
 +MODULE_DESCRIPTION("Raspberry Pi 7 inch Touchscreen FT5426 Touch driver");
 +MODULE_LICENSE("GPL v2");
 +
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/raspits_ft5426.h
+Index: kernel-rockchip/drivers/input/touchscreen/raspits_ft5426.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/raspits_ft5426.h
++++ kernel-rockchip/drivers/input/touchscreen/raspits_ft5426.h
 @@ -0,0 +1,64 @@
 +#ifndef _RASPITS_FT5426_H_
 +#define _RASPITS_FT5426_H_
@@ -34827,10 +34829,10 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/raspits_ft5426.h
 +
 +#endif
 +
-Index: kernel-rockchip-6_1/drivers/misc/Kconfig
+Index: kernel-rockchip/drivers/misc/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/misc/Kconfig
-+++ kernel-rockchip-6_1/drivers/misc/Kconfig
+--- kernel-rockchip.orig/drivers/misc/Kconfig
++++ kernel-rockchip/drivers/misc/Kconfig
 @@ -520,6 +520,12 @@ config VCPU_STALL_DETECTOR
  
  	  If you do not intend to run this kernel as a guest, say N.
@@ -34844,19 +34846,19 @@ Index: kernel-rockchip-6_1/drivers/misc/Kconfig
  source "drivers/misc/c2port/Kconfig"
  source "drivers/misc/eeprom/Kconfig"
  source "drivers/misc/cb710/Kconfig"
-Index: kernel-rockchip-6_1/drivers/misc/Makefile
+Index: kernel-rockchip/drivers/misc/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/misc/Makefile
-+++ kernel-rockchip-6_1/drivers/misc/Makefile
+--- kernel-rockchip.orig/drivers/misc/Makefile
++++ kernel-rockchip/drivers/misc/Makefile
 @@ -68,3 +68,4 @@ obj-$(CONFIG_GP_PCI1XXXX)	+= mchp_pci1xx
  obj-$(CONFIG_VCPU_STALL_DETECTOR)	+= vcpu_stall_detector.o
  obj-$(CONFIG_JW_IO)     += jw_io_core.o
  obj-y   += redriver/
 +obj-$(CONFIG_KHADAS_MCU) += khadas-mcu.o
-Index: kernel-rockchip-6_1/drivers/misc/khadas-mcu.c
+Index: kernel-rockchip/drivers/misc/khadas-mcu.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/misc/khadas-mcu.c
++++ kernel-rockchip/drivers/misc/khadas-mcu.c
 @@ -0,0 +1,698 @@
 +/*
 + * Khadas Edge2 MCU control driver
@@ -35556,10 +35558,10 @@ Index: kernel-rockchip-6_1/drivers/misc/khadas-mcu.c
 +MODULE_AUTHOR("Nick <nick@khadas.com>");
 +MODULE_DESCRIPTION("Khadas Edge2 MCU control driver");
 +MODULE_LICENSE("GPL");
-Index: kernel-rockchip-6_1/drivers/watchdog/Kconfig
+Index: kernel-rockchip/drivers/watchdog/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/watchdog/Kconfig
-+++ kernel-rockchip-6_1/drivers/watchdog/Kconfig
+--- kernel-rockchip.orig/drivers/watchdog/Kconfig
++++ kernel-rockchip/drivers/watchdog/Kconfig
 @@ -2204,4 +2204,14 @@ config KEEMBAY_WATCHDOG
  	  To compile this driver as a module, choose M here: the
  	  module will be called keembay_wdt.
@@ -35575,19 +35577,19 @@ Index: kernel-rockchip-6_1/drivers/watchdog/Kconfig
 +   module will be called KHADAS_wdt.
 +
  endif # WATCHDOG
-Index: kernel-rockchip-6_1/drivers/watchdog/Makefile
+Index: kernel-rockchip/drivers/watchdog/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/watchdog/Makefile
-+++ kernel-rockchip-6_1/drivers/watchdog/Makefile
+--- kernel-rockchip.orig/drivers/watchdog/Makefile
++++ kernel-rockchip/drivers/watchdog/Makefile
 @@ -229,3 +229,4 @@ obj-$(CONFIG_MENZ069_WATCHDOG) += menz69
  obj-$(CONFIG_RAVE_SP_WATCHDOG) += rave-sp-wdt.o
  obj-$(CONFIG_STPMIC1_WATCHDOG) += stpmic1_wdt.o
  obj-$(CONFIG_SL28CPLD_WATCHDOG) += sl28cpld_wdt.o
 +obj-$(CONFIG_KHADAS_WATCHDOG) += khadas_wdt.o
-Index: kernel-rockchip-6_1/drivers/watchdog/khadas_wdt.c
+Index: kernel-rockchip/drivers/watchdog/khadas_wdt.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/watchdog/khadas_wdt.c
++++ kernel-rockchip/drivers/watchdog/khadas_wdt.c
 @@ -0,0 +1,157 @@
 +//#define DEBUG
 +
@@ -35746,10 +35748,10 @@ Index: kernel-rockchip-6_1/drivers/watchdog/khadas_wdt.c
 +arch_initcall(wdt_drv_init);
 +
 +MODULE_LICENSE("GPL");
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/Makefile
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/Makefile
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/Makefile
 @@ -0,0 +1,121 @@
 +# SPDX-License-Identifier: GPL-2.0-only
 +################################################################################
@@ -35872,10 +35874,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/Makefile
 +ifeq ($(DISABLE_MULTI_MSIX_VECTOR), y)
 +	EXTRA_CFLAGS += -DDISABLE_MULTI_MSIX_VECTOR
 +endif
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125.h
 @@ -0,0 +1,2536 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -38413,10 +38415,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125.h
 +#endif
 +
 +#endif /* __R8125_H */
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_dash.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_dash.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_dash.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_dash.h
 @@ -0,0 +1,261 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -38679,10 +38681,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_dash.h
 +
 +
 +#endif /* _LINUX_R8125_DASH_H */
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_firmware.c
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_firmware.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_firmware.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_firmware.c
 @@ -0,0 +1,264 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -38948,10 +38950,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_firmware.c
 +                rtl_fw->fw_name, rc);
 +        return rc;
 +}
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_firmware.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_firmware.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_firmware.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_firmware.h
 @@ -0,0 +1,68 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -39021,10 +39023,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_firmware.h
 +void rtl8125_fw_write_firmware(struct rtl8125_private *tp, struct rtl8125_fw *rtl_fw);
 +
 +#endif /* _LINUX_rtl8125_FIRMWARE_H */
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_n.c
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_n.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_n.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_n.c
 @@ -0,0 +1,15801 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -54827,10 +54829,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_n.c
 +
 +module_init(rtl8125_init_module);
 +module_exit(rtl8125_cleanup_module);
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_ptp.c
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_ptp.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_ptp.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_ptp.c
 @@ -0,0 +1,594 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -55426,10 +55428,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_ptp.c
 +
 +        skb_hwtstamps(skb)->hwtstamp = ktime_set(tv_sec, tv_nsec);
 +}
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_ptp.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_ptp.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_ptp.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_ptp.h
 @@ -0,0 +1,81 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -55512,10 +55514,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_ptp.h
 +                             struct RxDescV3 *descv3);
 +
 +#endif /* _LINUX_rtl8125_PTP_H */
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_realwow.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_realwow.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_realwow.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_realwow.h
 @@ -0,0 +1,118 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -55635,10 +55637,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_realwow.h
 +void rtl8125_set_realwow_d3_para(struct net_device *dev);
 +
 +#endif /* _LINUX_R8125_REALWOW_H */
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_rss.c
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_rss.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_rss.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_rss.c
 @@ -0,0 +1,481 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -56121,10 +56123,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_rss.c
 +
 +        netdev_rss_key_fill(tp->rss_key, RTL8125_RSS_KEY_SIZE);
 +}
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_rss.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_rss.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_rss.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_rss.h
 @@ -0,0 +1,69 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -56195,10 +56197,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/r8125_rss.h
 +void rtl8125_disable_rss(struct rtl8125_private *tp);
 +
 +#endif /* _LINUX_rtl8125_RSS_H */
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtl_eeprom.c
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtl_eeprom.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtl_eeprom.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtl_eeprom.c
 @@ -0,0 +1,289 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -56489,10 +56491,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtl_eeprom.c
 +
 +        RTL_W8(tp, Cfg9346, Cfg9346_EEM1);
 +}
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtl_eeprom.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtl_eeprom.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtl_eeprom.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtl_eeprom.h
 @@ -0,0 +1,53 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -56547,10 +56549,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtl_eeprom.h
 +void rtl8125_lower_clock(struct rtl8125_private *tp, u8 *x);
 +void rtl8125_stand_by(struct rtl8125_private *tp);
 +void rtl8125_set_eeprom_sel_low(struct rtl8125_private *tp);
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtltool.c
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtltool.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtltool.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtltool.c
 @@ -0,0 +1,260 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -56812,10 +56814,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtltool.c
 +
 +        return ret;
 +}
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtltool.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtltool.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtltool.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/rtltool.h
 @@ -0,0 +1,86 @@
 +/* SPDX-License-Identifier: GPL-2.0-only */
 +/*
@@ -56903,17 +56905,17 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/r8125/rtltool.h
 +#endif
 +
 +#endif /* _LINUX_RTLTOOL_H */
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/Makefile
+Index: kernel-rockchip/drivers/net/ethernet/realtek/realtek_pgtool/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/Makefile
++++ kernel-rockchip/drivers/net/ethernet/realtek/realtek_pgtool/Makefile
 @@ -0,0 +1 @@
 +obj-m	 := pgdrv.o
 \ No newline at end of file
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.c
+Index: kernel-rockchip/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.c
 @@ -0,0 +1,586 @@
 +#include <linux/version.h>
 +#include <linux/module.h>
@@ -57501,10 +57503,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.c
 +MODULE_AUTHOR("Network Interface Controllers crew <nicfae@realtek.com>");
 +MODULE_VERSION("1.00.00");
 +MODULE_DESCRIPTION("RealTek driver of Ethernet PG tool");
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.h
+Index: kernel-rockchip/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.h
 @@ -0,0 +1,90 @@
 +#ifndef _PG_DRV_H
 +#define _PG_DRV_H
@@ -57596,10 +57598,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/realtek_pgtool/pgdrv.h
 +#endif
 +
 +#endif // end of #ifndef _PG_DRV_H
-Index: kernel-rockchip-6_1/scripts/Makefile.lib
+Index: kernel-rockchip/scripts/Makefile.lib
 ===================================================================
---- kernel-rockchip-6_1.orig/scripts/Makefile.lib
-+++ kernel-rockchip-6_1/scripts/Makefile.lib
+--- kernel-rockchip.orig/scripts/Makefile.lib
++++ kernel-rockchip/scripts/Makefile.lib
 @@ -349,6 +349,9 @@ ifeq ($(CONFIG_DTC_OMIT_EMPTY),y)
  DTC_FLAGS += -Wnode_empty
  endif
@@ -57628,10 +57630,10 @@ Index: kernel-rockchip-6_1/scripts/Makefile.lib
  dtc-tmp = $(subst $(comma),_,$(dot-target).dts.tmp)
  
  # Bzip2
-Index: kernel-rockchip-6_1/scripts/Makefile.dtbinst
+Index: kernel-rockchip/scripts/Makefile.dtbinst
 ===================================================================
---- kernel-rockchip-6_1.orig/scripts/Makefile.dtbinst
-+++ kernel-rockchip-6_1/scripts/Makefile.dtbinst
+--- kernel-rockchip.orig/scripts/Makefile.dtbinst
++++ kernel-rockchip/scripts/Makefile.dtbinst
 @@ -18,9 +18,11 @@ include $(srctree)/scripts/Kbuild.includ
  include $(src)/Makefile
  
@@ -57658,10 +57660,10 @@ Index: kernel-rockchip-6_1/scripts/Makefile.dtbinst
  PHONY += $(subdirs)
  $(subdirs):
  	$(Q)$(MAKE) $(dtbinst)=$@ dst=$(patsubst $(obj)/%,$(dst)/%,$@)
-Index: kernel-rockchip-6_1/scripts/dtc/dtc.c
+Index: kernel-rockchip/scripts/dtc/dtc.c
 ===================================================================
---- kernel-rockchip-6_1.orig/scripts/dtc/dtc.c
-+++ kernel-rockchip-6_1/scripts/dtc/dtc.c
+--- kernel-rockchip.orig/scripts/dtc/dtc.c
++++ kernel-rockchip/scripts/dtc/dtc.c
 @@ -359,6 +359,8 @@ int main(int argc, char *argv[])
  #endif
  	} else if (streq(outform, "dtb")) {
@@ -57671,10 +57673,10 @@ Index: kernel-rockchip-6_1/scripts/dtc/dtc.c
  	} else if (streq(outform, "asm")) {
  		dt_to_asm(outf, dti, outversion);
  	} else if (streq(outform, "null")) {
-Index: kernel-rockchip-6_1/drivers/thermal/rockchip_thermal.c
+Index: kernel-rockchip/drivers/thermal/rockchip_thermal.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/thermal/rockchip_thermal.c
-+++ kernel-rockchip-6_1/drivers/thermal/rockchip_thermal.c
+--- kernel-rockchip.orig/drivers/thermal/rockchip_thermal.c
++++ kernel-rockchip/drivers/thermal/rockchip_thermal.c
 @@ -343,6 +343,10 @@ struct tsadc_table {
  	int temp;
  };
@@ -57721,10 +57723,10 @@ Index: kernel-rockchip-6_1/drivers/thermal/rockchip_thermal.c
  	dev_info(&pdev->dev, "tsadc is probed successfully!\n");
  
  	return 0;
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/Kconfig
+Index: kernel-rockchip/drivers/net/ethernet/realtek/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/net/ethernet/realtek/Kconfig
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/Kconfig
+--- kernel-rockchip.orig/drivers/net/ethernet/realtek/Kconfig
++++ kernel-rockchip/drivers/net/ethernet/realtek/Kconfig
 @@ -126,4 +126,21 @@ config R8169
  	  To compile this driver as a module, choose M here: the module
  	  will be called r8169.  This is recommended.
@@ -57747,10 +57749,10 @@ Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/Kconfig
 +    Realtek PG Tool.
 +
  endif # NET_VENDOR_REALTEK
-Index: kernel-rockchip-6_1/drivers/net/ethernet/realtek/Makefile
+Index: kernel-rockchip/drivers/net/ethernet/realtek/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/net/ethernet/realtek/Makefile
-+++ kernel-rockchip-6_1/drivers/net/ethernet/realtek/Makefile
+--- kernel-rockchip.orig/drivers/net/ethernet/realtek/Makefile
++++ kernel-rockchip/drivers/net/ethernet/realtek/Makefile
 @@ -9,3 +9,6 @@ obj-$(CONFIG_ATP) += atp.o
  obj-$(CONFIG_R8168) += r8168/
  r8169-objs += r8169_main.o r8169_firmware.o r8169_phy_config.o

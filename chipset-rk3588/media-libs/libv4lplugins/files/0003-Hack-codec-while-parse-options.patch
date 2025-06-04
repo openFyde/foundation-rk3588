@@ -2,7 +2,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
 ===================================================================
 --- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
 +++ libv4l-rkmpp/src/libv4l-rkmpp.c
-@@ -961,6 +961,12 @@ static void *plugin_init(int fd)
+@@ -988,6 +988,12 @@ static void *plugin_init(int fd)
  		goto err_free_ctx;
  	}
  

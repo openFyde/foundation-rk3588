@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/sound/soc/rockchip/rockchip_hdmi.c
+Index: kernel-rockchip/sound/soc/rockchip/rockchip_hdmi.c
 ===================================================================
---- kernel-rockchip-6_1.orig/sound/soc/rockchip/rockchip_hdmi.c
-+++ kernel-rockchip-6_1/sound/soc/rockchip/rockchip_hdmi.c
+--- kernel-rockchip.orig/sound/soc/rockchip/rockchip_hdmi.c
++++ kernel-rockchip/sound/soc/rockchip/rockchip_hdmi.c
 @@ -21,6 +21,7 @@
  #define DRV_NAME "rk-hdmi-sound"
  #define MAX_CODECS	2

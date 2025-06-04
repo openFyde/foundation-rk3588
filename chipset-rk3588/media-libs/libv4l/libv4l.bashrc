@@ -4,6 +4,6 @@ cros_pre_src_prepare_chipset3588_patch() {
     ${CHIPSET_RK3588_BASHRC_FILESDIR}/0002-libv4l-mplane-Filter-out-multiplane-formats.patch
     ${CHIPSET_RK3588_BASHRC_FILESDIR}/0003-libv4l-Support-V4L2_MEMORY_DMABUF.patch
     ${CHIPSET_RK3588_BASHRC_FILESDIR}/0004-libv4l-mplane-Support-VIDIOC_EXPBUF-for-dmabuf.patch
-    ${CHIPSET_RK3588_BASHRC_FILESDIR}/0005-debug-fd-open.patch
+    ${CHIPSET_RK3588_BASHRC_FILESDIR}/0006-dont-close-v4l2-fd-to-make-chromium-happy.patch
   )
 }

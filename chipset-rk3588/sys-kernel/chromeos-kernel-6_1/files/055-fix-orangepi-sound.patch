@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 @@ -126,7 +126,7 @@
  	dp0_sound: dp0-sound {
  		status = "disabled";
@@ -20,10 +20,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
  		rockchip,cpu = <&i2s5_8ch>;
  		rockchip,codec = <&hdmi0>;
  		rockchip,jack-det;
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
 @@ -87,7 +87,7 @@
  	dp0_sound: dp0-sound {
  		status = "disabled";

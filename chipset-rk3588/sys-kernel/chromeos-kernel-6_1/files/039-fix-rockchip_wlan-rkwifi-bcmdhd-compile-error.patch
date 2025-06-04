@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-+++ kernel-rockchip-6_1/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 @@ -474,7 +474,7 @@ BCMDHD_ROOT = $(src)
  #$(warning "BCMDHD_ROOT=$(BCMDHD_ROOT)")
  EXTRA_CFLAGS = $(DHDCFLAGS)

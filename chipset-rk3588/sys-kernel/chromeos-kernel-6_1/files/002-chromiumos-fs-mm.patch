@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/Kconfig
+Index: kernel-rockchip/drivers/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/Kconfig
-+++ kernel-rockchip-6_1/drivers/Kconfig
+--- kernel-rockchip.orig/drivers/Kconfig
++++ kernel-rockchip/drivers/Kconfig
 @@ -247,4 +247,6 @@ source "drivers/headset_observe/Kconfig"
  
  source "drivers/rknpu/Kconfig"
@@ -9,10 +9,10 @@ Index: kernel-rockchip-6_1/drivers/Kconfig
 +source "drivers/pkglist/Kconfig"
 +
  endmenu
-Index: kernel-rockchip-6_1/drivers/pkglist/Kconfig
+Index: kernel-rockchip/drivers/pkglist/Kconfig
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/pkglist/Kconfig
++++ kernel-rockchip/drivers/pkglist/Kconfig
 @@ -0,0 +1,30 @@
 +config PKGLIST
 +	tristate "Package list for emulated 'SD card' file system for Android"
@@ -44,18 +44,18 @@ Index: kernel-rockchip-6_1/drivers/pkglist/Kconfig
 +	help
 +	  This does not allow configuration of sdcardfs.
 +endchoice
-Index: kernel-rockchip-6_1/drivers/pkglist/Makefile
+Index: kernel-rockchip/drivers/pkglist/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/pkglist/Makefile
++++ kernel-rockchip/drivers/pkglist/Makefile
 @@ -0,0 +1,3 @@
 +obj-$(CONFIG_PKGLIST) += pkg.o
 +pkg-$(CONFIG_PKGLIST_USE_CONFIGFS) += pkglist.o
 +pkg-$(CONFIG_PKGLIST_NO_CONFIG) += pkglist_none.o
-Index: kernel-rockchip-6_1/drivers/pkglist/pkglist.c
+Index: kernel-rockchip/drivers/pkglist/pkglist.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/pkglist/pkglist.c
++++ kernel-rockchip/drivers/pkglist/pkglist.c
 @@ -0,0 +1,966 @@
 +/*
 + * Copyright (C) 2017 Google Inc., Author: Daniel Rosenberg <drosen@google.com>
@@ -1023,10 +1023,10 @@ Index: kernel-rockchip-6_1/drivers/pkglist/pkglist.c
 +MODULE_AUTHOR("Daniel Rosenberg, Google");
 +MODULE_DESCRIPTION("Configfs Pkglist implementation");
 +MODULE_LICENSE("GPL v2");
-Index: kernel-rockchip-6_1/drivers/pkglist/pkglist_none.c
+Index: kernel-rockchip/drivers/pkglist/pkglist_none.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/pkglist/pkglist_none.c
++++ kernel-rockchip/drivers/pkglist/pkglist_none.c
 @@ -0,0 +1,57 @@
 +/*
 + * Copyright (C) 2017 Google Inc., Author: Daniel Rosenberg <drosen@google.com>
@@ -1085,19 +1085,19 @@ Index: kernel-rockchip-6_1/drivers/pkglist/pkglist_none.c
 +MODULE_AUTHOR("Daniel Rosenberg, Google");
 +MODULE_DESCRIPTION("Empty Pkglist implementation");
 +MODULE_LICENSE("GPL v2");
-Index: kernel-rockchip-6_1/drivers/Makefile
+Index: kernel-rockchip/drivers/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/Makefile
-+++ kernel-rockchip-6_1/drivers/Makefile
+--- kernel-rockchip.orig/drivers/Makefile
++++ kernel-rockchip/drivers/Makefile
 @@ -193,3 +193,4 @@ obj-$(CONFIG_RK_FLASH)		+= rkflash/
  obj-$(CONFIG_RK_HEADSET)	+= headset_observe/
  obj-$(CONFIG_RK_NAND)		+= rk_nand/
  obj-$(CONFIG_ROCKCHIP_RKNPU)	+= rknpu/
 +obj-$(CONFIG_PKGLIST)          += pkglist/
-Index: kernel-rockchip-6_1/drivers/char/mem.c
+Index: kernel-rockchip/drivers/char/mem.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/char/mem.c
-+++ kernel-rockchip-6_1/drivers/char/mem.c
+--- kernel-rockchip.orig/drivers/char/mem.c
++++ kernel-rockchip/drivers/char/mem.c
 @@ -30,6 +30,7 @@
  #include <linux/uio.h>
  #include <linux/uaccess.h>
@@ -1116,10 +1116,10 @@ Index: kernel-rockchip-6_1/drivers/char/mem.c
  };
  
  static int memory_open(struct inode *inode, struct file *filp)
-Index: kernel-rockchip-6_1/fs/Kconfig
+Index: kernel-rockchip/fs/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/Kconfig
-+++ kernel-rockchip-6_1/fs/Kconfig
+--- kernel-rockchip.orig/fs/Kconfig
++++ kernel-rockchip/fs/Kconfig
 @@ -297,6 +297,7 @@ source "fs/orangefs/Kconfig"
  source "fs/adfs/Kconfig"
  source "fs/affs/Kconfig"
@@ -1128,10 +1128,10 @@ Index: kernel-rockchip-6_1/fs/Kconfig
  source "fs/hfs/Kconfig"
  source "fs/hfsplus/Kconfig"
  source "fs/befs/Kconfig"
-Index: kernel-rockchip-6_1/fs/Makefile
+Index: kernel-rockchip/fs/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/Makefile
-+++ kernel-rockchip-6_1/fs/Makefile
+--- kernel-rockchip.orig/fs/Makefile
++++ kernel-rockchip/fs/Makefile
 @@ -4,7 +4,7 @@
  #
  # 14 Sep 2000, Christoph Hellwig <hch@infradead.org>
@@ -1158,10 +1158,10 @@ Index: kernel-rockchip-6_1/fs/Makefile
  obj-$(CONFIG_VXFS_FS)		+= freevxfs/
  obj-$(CONFIG_NFS_FS)		+= nfs/
  obj-$(CONFIG_EXPORTFS)		+= exportfs/
-Index: kernel-rockchip-6_1/fs/esdfs/Kconfig
+Index: kernel-rockchip/fs/esdfs/Kconfig
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/Kconfig
++++ kernel-rockchip/fs/esdfs/Kconfig
 @@ -0,0 +1,7 @@
 +config ESD_FS
 +	tristate "Emulated 'SD card' file system for Android (EXPERIMENTAL)"
@@ -1170,10 +1170,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/Kconfig
 +	help
 +	  Esdfs is a wrapfs-based file system, designed to implement the
 +	  Android "sdcard" FUSE-backed file system from within the kernel.
-Index: kernel-rockchip-6_1/fs/esdfs/Makefile
+Index: kernel-rockchip/fs/esdfs/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/Makefile
++++ kernel-rockchip/fs/esdfs/Makefile
 @@ -0,0 +1,7 @@
 +ESDFS_VERSION="0.2"
 +
@@ -1182,10 +1182,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/Makefile
 +obj-$(CONFIG_ESD_FS) += esdfs.o
 +
 +esdfs-y := dentry.o file.o inode.o main.o super.o lookup.o mmap.o derive.o
-Index: kernel-rockchip-6_1/fs/esdfs/dentry.c
+Index: kernel-rockchip/fs/esdfs/dentry.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/dentry.c
++++ kernel-rockchip/fs/esdfs/dentry.c
 @@ -0,0 +1,158 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -1345,10 +1345,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/dentry.c
 +	.d_compare	= esdfs_d_compare,
 +	.d_release	= esdfs_d_release,
 +};
-Index: kernel-rockchip-6_1/fs/esdfs/derive.c
+Index: kernel-rockchip/fs/esdfs/derive.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/derive.c
++++ kernel-rockchip/fs/esdfs/derive.c
 @@ -0,0 +1,608 @@
 +/*
 + * Copyright (c) 2013-2014 Motorola Mobility LLC
@@ -1958,10 +1958,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/derive.c
 +	esdfs_revert_creds(creds, &mask);
 +	return err;
 +}
-Index: kernel-rockchip-6_1/fs/esdfs/esdfs.h
+Index: kernel-rockchip/fs/esdfs/esdfs.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/esdfs.h
++++ kernel-rockchip/fs/esdfs/esdfs.h
 @@ -0,0 +1,627 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -2590,10 +2590,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/esdfs.h
 +}
 +
 +#endif	/* not _ESDFS_H_ */
-Index: kernel-rockchip-6_1/fs/esdfs/file.c
+Index: kernel-rockchip/fs/esdfs/file.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/file.c
++++ kernel-rockchip/fs/esdfs/file.c
 @@ -0,0 +1,473 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -3068,10 +3068,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/file.c
 +	.fsync		= esdfs_fsync,
 +	.fasync		= esdfs_fasync,
 +};
-Index: kernel-rockchip-6_1/fs/esdfs/inode.c
+Index: kernel-rockchip/fs/esdfs/inode.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/inode.c
++++ kernel-rockchip/fs/esdfs/inode.c
 @@ -0,0 +1,550 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -3623,10 +3623,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/inode.c
 +	.setattr	= esdfs_setattr,
 +	.getattr	= esdfs_getattr,
 +};
-Index: kernel-rockchip-6_1/fs/esdfs/lookup.c
+Index: kernel-rockchip/fs/esdfs/lookup.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/lookup.c
++++ kernel-rockchip/fs/esdfs/lookup.c
 @@ -0,0 +1,474 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -4102,10 +4102,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/lookup.c
 +		dput(real_parent);
 +	return ret;
 +}
-Index: kernel-rockchip-6_1/fs/esdfs/main.c
+Index: kernel-rockchip/fs/esdfs/main.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/main.c
++++ kernel-rockchip/fs/esdfs/main.c
 @@ -0,0 +1,725 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -4832,10 +4832,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/main.c
 +
 +module_init(init_esdfs_fs);
 +module_exit(exit_esdfs_fs);
-Index: kernel-rockchip-6_1/fs/esdfs/mmap.c
+Index: kernel-rockchip/fs/esdfs/mmap.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/mmap.c
++++ kernel-rockchip/fs/esdfs/mmap.c
 @@ -0,0 +1,98 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -4935,10 +4935,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/mmap.c
 +	.open		= esdfs_vm_open,
 +	.close		= esdfs_vm_close,
 +};
-Index: kernel-rockchip-6_1/fs/esdfs/super.c
+Index: kernel-rockchip/fs/esdfs/super.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/esdfs/super.c
++++ kernel-rockchip/fs/esdfs/super.c
 @@ -0,0 +1,290 @@
 +/*
 + * Copyright (c) 1998-2014 Erez Zadok
@@ -5230,10 +5230,10 @@ Index: kernel-rockchip-6_1/fs/esdfs/super.c
 +	.destroy_inode	= esdfs_destroy_inode,
 +	.drop_inode	= generic_delete_inode,
 +};
-Index: kernel-rockchip-6_1/include/linux/low-mem-notify.h
+Index: kernel-rockchip/include/linux/low-mem-notify.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/low-mem-notify.h
++++ kernel-rockchip/include/linux/low-mem-notify.h
 @@ -0,0 +1,22 @@
 +#ifndef _LINUX_LOW_MEM_NOTIFY_H
 +#define _LINUX_LOW_MEM_NOTIFY_H
@@ -5257,10 +5257,10 @@ Index: kernel-rockchip-6_1/include/linux/low-mem-notify.h
 +#endif
 +
 +#endif
-Index: kernel-rockchip-6_1/include/linux/mm.h
+Index: kernel-rockchip/include/linux/mm.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/mm.h
-+++ kernel-rockchip-6_1/include/linux/mm.h
+--- kernel-rockchip.orig/include/linux/mm.h
++++ kernel-rockchip/include/linux/mm.h
 @@ -202,6 +202,7 @@ static inline void __mm_zero_struct_page
  #define DEFAULT_MAX_MAP_COUNT	(USHRT_MAX - MAPCOUNT_ELF_CORE_MARGIN)
  
@@ -5287,10 +5287,10 @@ Index: kernel-rockchip-6_1/include/linux/mm.h
  
  #ifdef CONFIG_PRINTK
  void mem_dump_obj(void *object);
-Index: kernel-rockchip-6_1/mm/vmscan.c
+Index: kernel-rockchip/mm/vmscan.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/vmscan.c
-+++ kernel-rockchip-6_1/mm/vmscan.c
+--- kernel-rockchip.orig/mm/vmscan.c
++++ kernel-rockchip/mm/vmscan.c
 @@ -203,6 +203,28 @@ static void set_task_reclaim_state(struc
  	task->reclaim_state = rs;
  }
@@ -5361,10 +5361,10 @@ Index: kernel-rockchip-6_1/mm/vmscan.c
  	/*
  	 * Do not apply any pressure balancing cleverness when the
  	 * system is close to OOM, scan both anon and file equally
-Index: kernel-rockchip-6_1/fs/proc/task_mmu.c
+Index: kernel-rockchip/fs/proc/task_mmu.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/proc/task_mmu.c
-+++ kernel-rockchip-6_1/fs/proc/task_mmu.c
+--- kernel-rockchip.orig/fs/proc/task_mmu.c
++++ kernel-rockchip/fs/proc/task_mmu.c
 @@ -19,6 +19,8 @@
  #include <linux/shmem_fs.h>
  #include <linux/uaccess.h>
@@ -5932,10 +5932,10 @@ Index: kernel-rockchip-6_1/fs/proc/task_mmu.c
  #ifdef CONFIG_NUMA
  
  struct numa_maps {
-Index: kernel-rockchip-6_1/mm/mmap.c
+Index: kernel-rockchip/mm/mmap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/mmap.c
-+++ kernel-rockchip-6_1/mm/mmap.c
+--- kernel-rockchip.orig/mm/mmap.c
++++ kernel-rockchip/mm/mmap.c
 @@ -1374,7 +1374,8 @@ unsigned long do_mmap(struct file *file,
  			if (path_noexec(&file->f_path)) {
  				if (vm_flags & VM_EXEC)
@@ -5946,10 +5946,10 @@ Index: kernel-rockchip-6_1/mm/mmap.c
  			}
  
  			if (!file->f_op->mmap)
-Index: kernel-rockchip-6_1/net/netfilter/Makefile
+Index: kernel-rockchip/net/netfilter/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/net/netfilter/Makefile
-+++ kernel-rockchip-6_1/net/netfilter/Makefile
+--- kernel-rockchip.orig/net/netfilter/Makefile
++++ kernel-rockchip/net/netfilter/Makefile
 @@ -206,6 +206,7 @@ obj-$(CONFIG_NETFILTER_XT_MATCH_PHYSDEV)
  obj-$(CONFIG_NETFILTER_XT_MATCH_PKTTYPE) += xt_pkttype.o
  obj-$(CONFIG_NETFILTER_XT_MATCH_POLICY) += xt_policy.o
@@ -5958,10 +5958,10 @@ Index: kernel-rockchip-6_1/net/netfilter/Makefile
  obj-$(CONFIG_NETFILTER_XT_MATCH_RATEEST) += xt_rateest.o
  obj-$(CONFIG_NETFILTER_XT_MATCH_REALM) += xt_realm.o
  obj-$(CONFIG_NETFILTER_XT_MATCH_RECENT) += xt_recent.o
-Index: kernel-rockchip-6_1/net/netfilter/xt_quota2.c
+Index: kernel-rockchip/net/netfilter/xt_quota2.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/net/netfilter/xt_quota2.c
++++ kernel-rockchip/net/netfilter/xt_quota2.c
 @@ -0,0 +1,397 @@
 +/*
 + * xt_quota2 - enhanced xt_quota that can count upwards and in packets
@@ -6360,10 +6360,10 @@ Index: kernel-rockchip-6_1/net/netfilter/xt_quota2.c
 +MODULE_LICENSE("GPL");
 +MODULE_ALIAS("ipt_quota2");
 +MODULE_ALIAS("ip6t_quota2");
-Index: kernel-rockchip-6_1/net/netfilter/Kconfig
+Index: kernel-rockchip/net/netfilter/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/net/netfilter/Kconfig
-+++ kernel-rockchip-6_1/net/netfilter/Kconfig
+--- kernel-rockchip.orig/net/netfilter/Kconfig
++++ kernel-rockchip/net/netfilter/Kconfig
 @@ -1523,6 +1523,29 @@ config NETFILTER_XT_MATCH_QUOTA
  	  If you want to compile it as a module, say M here and read
  	  <file:Documentation/kbuild/modules.rst>.  If unsure, say `N'.
@@ -6394,10 +6394,10 @@ Index: kernel-rockchip-6_1/net/netfilter/Kconfig
  config NETFILTER_XT_MATCH_RATEEST
  	tristate '"rateest" match support'
  	depends on NETFILTER_ADVANCED
-Index: kernel-rockchip-6_1/include/linux/netfilter/xt_quota2.h
+Index: kernel-rockchip/include/linux/netfilter/xt_quota2.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/netfilter/xt_quota2.h
++++ kernel-rockchip/include/linux/netfilter/xt_quota2.h
 @@ -0,0 +1,26 @@
 +#ifndef _XT_QUOTA_H
 +#define _XT_QUOTA_H
@@ -6425,10 +6425,10 @@ Index: kernel-rockchip-6_1/include/linux/netfilter/xt_quota2.h
 +};
 +
 +#endif /* _XT_QUOTA_H */
-Index: kernel-rockchip-6_1/fs/namespace.c
+Index: kernel-rockchip/fs/namespace.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/namespace.c
-+++ kernel-rockchip-6_1/fs/namespace.c
+--- kernel-rockchip.orig/fs/namespace.c
++++ kernel-rockchip/fs/namespace.c
 @@ -790,8 +790,14 @@ mountpoint:
  			goto done;
  	}
@@ -6471,10 +6471,10 @@ Index: kernel-rockchip-6_1/fs/namespace.c
  	/* Separate the per-mountpoint flags */
  	if (flags & MS_NOSUID)
  		mnt_flags |= MNT_NOSUID;
-Index: kernel-rockchip-6_1/net/netfilter/xt_IDLETIMER.c
+Index: kernel-rockchip/net/netfilter/xt_IDLETIMER.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/netfilter/xt_IDLETIMER.c
-+++ kernel-rockchip-6_1/net/netfilter/xt_IDLETIMER.c
+--- kernel-rockchip.orig/net/netfilter/xt_IDLETIMER.c
++++ kernel-rockchip/net/netfilter/xt_IDLETIMER.c
 @@ -28,6 +28,11 @@
  #include <linux/kobject.h>
  #include <linux/workqueue.h>
@@ -6958,10 +6958,10 @@ Index: kernel-rockchip-6_1/net/netfilter/xt_IDLETIMER.c
  MODULE_ALIAS("ipt_IDLETIMER");
  MODULE_ALIAS("ip6t_IDLETIMER");
 +MODULE_ALIAS("arpt_IDLETIMER");
-Index: kernel-rockchip-6_1/include/linux/pkglist.h
+Index: kernel-rockchip/include/linux/pkglist.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/pkglist.h
++++ kernel-rockchip/include/linux/pkglist.h
 @@ -0,0 +1,38 @@
 +#ifndef _PKGLIST_H_
 +#define _PKGLIST_H_
@@ -7001,10 +7001,10 @@ Index: kernel-rockchip-6_1/include/linux/pkglist.h
 +void pkglist_register_update_listener(struct pkg_list *pkg);
 +void pkglist_unregister_update_listener(struct pkg_list *pkg);
 +#endif
-Index: kernel-rockchip-6_1/include/uapi/linux/magic.h
+Index: kernel-rockchip/include/uapi/linux/magic.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/uapi/linux/magic.h
-+++ kernel-rockchip-6_1/include/uapi/linux/magic.h
+--- kernel-rockchip.orig/include/uapi/linux/magic.h
++++ kernel-rockchip/include/uapi/linux/magic.h
 @@ -62,6 +62,8 @@
  #define REISER2FS_SUPER_MAGIC_STRING	"ReIsEr2Fs"
  #define REISER2FS_JR_SUPER_MAGIC_STRING	"ReIsEr3Fs"
@@ -7014,10 +7014,10 @@ Index: kernel-rockchip-6_1/include/uapi/linux/magic.h
  #define SMB_SUPER_MAGIC		0x517B
  #define CIFS_SUPER_MAGIC	0xFF534D42      /* the first four bytes of SMB PDUs */
  #define SMB2_SUPER_MAGIC	0xFE534D42
-Index: kernel-rockchip-6_1/kernel/sysctl.c
+Index: kernel-rockchip/kernel/sysctl.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/sysctl.c
-+++ kernel-rockchip-6_1/kernel/sysctl.c
+--- kernel-rockchip.orig/kernel/sysctl.c
++++ kernel-rockchip/kernel/sysctl.c
 @@ -1659,6 +1659,20 @@ static struct ctl_table kern_table[] = {
  		.mode		= 0644,
  		.proc_handler	= proc_dointvec,
@@ -7087,10 +7087,10 @@ Index: kernel-rockchip-6_1/kernel/sysctl.c
  		.extra2		= SYSCTL_ONE,
  	},
  #endif
-Index: kernel-rockchip-6_1/include/linux/sched/sysctl.h
+Index: kernel-rockchip/include/linux/sched/sysctl.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/sched/sysctl.h
-+++ kernel-rockchip-6_1/include/linux/sched/sysctl.h
+--- kernel-rockchip.orig/include/linux/sched/sysctl.h
++++ kernel-rockchip/include/linux/sched/sysctl.h
 @@ -21,6 +21,9 @@ enum sched_tunable_scaling {
  	SCHED_TUNABLESCALING_END,
  };
@@ -7101,10 +7101,10 @@ Index: kernel-rockchip-6_1/include/linux/sched/sysctl.h
  #define NUMA_BALANCING_DISABLED		0x0
  #define NUMA_BALANCING_NORMAL		0x1
  #define NUMA_BALANCING_MEMORY_TIERING	0x2
-Index: kernel-rockchip-6_1/kernel/sched/core.c
+Index: kernel-rockchip/kernel/sched/core.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/sched/core.c
-+++ kernel-rockchip-6_1/kernel/sched/core.c
+--- kernel-rockchip.orig/kernel/sched/core.c
++++ kernel-rockchip/kernel/sched/core.c
 @@ -145,6 +145,9 @@ __read_mostly int sysctl_resched_latency
   */
  const_debug unsigned int sysctl_sched_nr_migrate = SCHED_NR_MIGRATE_BREAK;
@@ -7204,10 +7204,10 @@ Index: kernel-rockchip-6_1/kernel/sched/core.c
  #endif
  	{ }	/* terminate */
  };
-Index: kernel-rockchip-6_1/kernel/sched/cpufreq_schedutil.c
+Index: kernel-rockchip/kernel/sched/cpufreq_schedutil.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/sched/cpufreq_schedutil.c
-+++ kernel-rockchip-6_1/kernel/sched/cpufreq_schedutil.c
+--- kernel-rockchip.orig/kernel/sched/cpufreq_schedutil.c
++++ kernel-rockchip/kernel/sched/cpufreq_schedutil.c
 @@ -23,6 +23,7 @@ struct sugov_policy {
  	struct list_head	tunables_hook;
  
@@ -7258,10 +7258,10 @@ Index: kernel-rockchip-6_1/kernel/sched/cpufreq_schedutil.c
  		if (sg_policy->policy->fast_switch_enabled)
  			cpufreq_driver_fast_switch(sg_policy->policy, next_f);
  		else
-Index: kernel-rockchip-6_1/kernel/sched/sched.h
+Index: kernel-rockchip/kernel/sched/sched.h
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/sched/sched.h
-+++ kernel-rockchip-6_1/kernel/sched/sched.h
+--- kernel-rockchip.orig/kernel/sched/sched.h
++++ kernel-rockchip/kernel/sched/sched.h
 @@ -10,6 +10,7 @@
  #include <linux/sched/cpufreq.h>
  #include <linux/sched/deadline.h>
@@ -7343,10 +7343,10 @@ Index: kernel-rockchip-6_1/kernel/sched/sched.h
  #ifdef CONFIG_HAVE_SCHED_AVG_IRQ
  static inline unsigned long cpu_util_irq(struct rq *rq)
  {
-Index: kernel-rockchip-6_1/mm/Kconfig
+Index: kernel-rockchip/mm/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/Kconfig
-+++ kernel-rockchip-6_1/mm/Kconfig
+--- kernel-rockchip.orig/mm/Kconfig
++++ kernel-rockchip/mm/Kconfig
 @@ -595,6 +595,17 @@ config PAGE_REPORTING
  	  those pages to another entity, such as a hypervisor, so that the
  	  memory can be freed within the host for other uses.
@@ -7411,10 +7411,10 @@ Index: kernel-rockchip-6_1/mm/Kconfig
  
  source "mm/damon/Kconfig"
  
-Index: kernel-rockchip-6_1/fs/proc/base.c
+Index: kernel-rockchip/fs/proc/base.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/proc/base.c
-+++ kernel-rockchip-6_1/fs/proc/base.c
+--- kernel-rockchip.orig/fs/proc/base.c
++++ kernel-rockchip/fs/proc/base.c
 @@ -96,6 +96,7 @@
  #include <linux/time_namespace.h>
  #include <linux/resctrl.h>
@@ -7522,10 +7522,10 @@ Index: kernel-rockchip-6_1/fs/proc/base.c
  };
  
  static int proc_tid_base_readdir(struct file *file, struct dir_context *ctx)
-Index: kernel-rockchip-6_1/mm/low-mem-notify.c
+Index: kernel-rockchip/mm/low-mem-notify.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/mm/low-mem-notify.c
++++ kernel-rockchip/mm/low-mem-notify.c
 @@ -0,0 +1,399 @@
 +/*
 + * mm/low-mem-notify.c
@@ -7926,10 +7926,10 @@ Index: kernel-rockchip-6_1/mm/low-mem-notify.c
 +module_init(low_mem_init)
 +
 +#endif
-Index: kernel-rockchip-6_1/mm/util.c
+Index: kernel-rockchip/mm/util.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/util.c
-+++ kernel-rockchip-6_1/mm/util.c
+--- kernel-rockchip.orig/mm/util.c
++++ kernel-rockchip/mm/util.c
 @@ -863,6 +863,7 @@ int sysctl_overcommit_memory __read_most
  int sysctl_overcommit_ratio __read_mostly = 50;
  unsigned long sysctl_overcommit_kbytes __read_mostly;
@@ -7938,10 +7938,10 @@ Index: kernel-rockchip-6_1/mm/util.c
  unsigned long sysctl_user_reserve_kbytes __read_mostly = 1UL << 17; /* 128MB */
  unsigned long sysctl_admin_reserve_kbytes __read_mostly = 1UL << 13; /* 8MB */
  
-Index: kernel-rockchip-6_1/mm/Makefile
+Index: kernel-rockchip/mm/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/Makefile
-+++ kernel-rockchip-6_1/mm/Makefile
+--- kernel-rockchip.orig/mm/Makefile
++++ kernel-rockchip/mm/Makefile
 @@ -125,6 +125,7 @@ obj-$(CONFIG_SECRETMEM) += secretmem.o
  obj-$(CONFIG_CMA_SYSFS) += cma_sysfs.o
  obj-$(CONFIG_USERFAULTFD) += userfaultfd.o
@@ -7950,10 +7950,10 @@ Index: kernel-rockchip-6_1/mm/Makefile
  obj-$(CONFIG_DEBUG_PAGE_REF) += debug_page_ref.o
  obj-$(CONFIG_DAMON) += damon/
  obj-$(CONFIG_HARDENED_USERCOPY) += usercopy.o
-Index: kernel-rockchip-6_1/net/core/dev_ioctl.c
+Index: kernel-rockchip/net/core/dev_ioctl.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/core/dev_ioctl.c
-+++ kernel-rockchip-6_1/net/core/dev_ioctl.c
+--- kernel-rockchip.orig/net/core/dev_ioctl.c
++++ kernel-rockchip/net/core/dev_ioctl.c
 @@ -8,6 +8,7 @@
  #include <linux/wireless.h>
  #include <linux/if_bridge.h>
@@ -7971,10 +7971,10 @@ Index: kernel-rockchip-6_1/net/core/dev_ioctl.c
  			return -EPERM;
  		fallthrough;
  	case SIOCBONDSLAVEINFOQUERY:
-Index: kernel-rockchip-6_1/net/xfrm/xfrm_algo.c
+Index: kernel-rockchip/net/xfrm/xfrm_algo.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/xfrm/xfrm_algo.c
-+++ kernel-rockchip-6_1/net/xfrm/xfrm_algo.c
+--- kernel-rockchip.orig/net/xfrm/xfrm_algo.c
++++ kernel-rockchip/net/xfrm/xfrm_algo.c
 @@ -237,7 +237,7 @@ static struct xfrm_algo_desc aalg_list[]
  
  	.uinfo = {
@@ -7984,10 +7984,10 @@ Index: kernel-rockchip-6_1/net/xfrm/xfrm_algo.c
  			.icv_fullbits = 256,
  		}
  	},
-Index: kernel-rockchip-6_1/net/xfrm/xfrm_sysctl.c
+Index: kernel-rockchip/net/xfrm/xfrm_sysctl.c
 ===================================================================
---- kernel-rockchip-6_1.orig/net/xfrm/xfrm_sysctl.c
-+++ kernel-rockchip-6_1/net/xfrm/xfrm_sysctl.c
+--- kernel-rockchip.orig/net/xfrm/xfrm_sysctl.c
++++ kernel-rockchip/net/xfrm/xfrm_sysctl.c
 @@ -55,9 +55,13 @@ int __net_init xfrm_sysctl_init(struct n
  	table[2].data = &net->xfrm.sysctl_larval_drop;
  	table[3].data = &net->xfrm.sysctl_acq_expires;
@@ -8005,10 +8005,10 @@ Index: kernel-rockchip-6_1/net/xfrm/xfrm_sysctl.c
  
  	net->xfrm.sysctl_hdr = register_net_sysctl(net, "net/core", table);
  	if (!net->xfrm.sysctl_hdr)
-Index: kernel-rockchip-6_1/kernel/cgroup/cgroup-v1.c
+Index: kernel-rockchip/kernel/cgroup/cgroup-v1.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/cgroup/cgroup-v1.c
-+++ kernel-rockchip-6_1/kernel/cgroup/cgroup-v1.c
+--- kernel-rockchip.orig/kernel/cgroup/cgroup-v1.c
++++ kernel-rockchip/kernel/cgroup/cgroup-v1.c
 @@ -513,7 +513,8 @@ static ssize_t __cgroup1_procs_write(str
  	tcred = get_task_cred(task);
  	if (!uid_eq(cred->euid, GLOBAL_ROOT_UID) &&
@@ -8019,10 +8019,10 @@ Index: kernel-rockchip-6_1/kernel/cgroup/cgroup-v1.c
  		ret = -EACCES;
  	put_cred(tcred);
  	if (ret)
-Index: kernel-rockchip-6_1/mm/page_alloc.c
+Index: kernel-rockchip/mm/page_alloc.c
 ===================================================================
---- kernel-rockchip-6_1.orig/mm/page_alloc.c
-+++ kernel-rockchip-6_1/mm/page_alloc.c
+--- kernel-rockchip.orig/mm/page_alloc.c
++++ kernel-rockchip/mm/page_alloc.c
 @@ -76,6 +76,7 @@
  #include <linux/khugepaged.h>
  #include <linux/buffer_head.h>
@@ -8048,10 +8048,10 @@ Index: kernel-rockchip-6_1/mm/page_alloc.c
  	/*
  	 * Forbid the first pass from falling back to types that fragment
  	 * memory until all local zones are considered.
-Index: kernel-rockchip-6_1/fs/proc/internal.h
+Index: kernel-rockchip/fs/proc/internal.h
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/proc/internal.h
-+++ kernel-rockchip-6_1/fs/proc/internal.h
+--- kernel-rockchip.orig/fs/proc/internal.h
++++ kernel-rockchip/fs/proc/internal.h
 @@ -95,6 +95,9 @@ union proc_op {
  	const char *lsm;
  };
@@ -8086,10 +8086,10 @@ Index: kernel-rockchip-6_1/fs/proc/internal.h
  #ifdef CONFIG_NUMA
  	struct mempolicy *task_mempolicy;
  #endif
-Index: kernel-rockchip-6_1/include/linux/cpufreq_times.h
+Index: kernel-rockchip/include/linux/cpufreq_times.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/cpufreq_times.h
++++ kernel-rockchip/include/linux/cpufreq_times.h
 @@ -0,0 +1,42 @@
 +/* drivers/cpufreq/cpufreq_times.c
 + *
@@ -8133,10 +8133,10 @@ Index: kernel-rockchip-6_1/include/linux/cpufreq_times.h
 +	struct cpufreq_policy *policy, unsigned int new_freq) {}
 +#endif /* CONFIG_CPU_FREQ_TIMES */
 +#endif /* _LINUX_CPUFREQ_TIMES_H */
-Index: kernel-rockchip-6_1/fs/proc/latsense.c
+Index: kernel-rockchip/fs/proc/latsense.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/fs/proc/latsense.c
++++ kernel-rockchip/fs/proc/latsense.c
 @@ -0,0 +1,94 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
@@ -8232,10 +8232,10 @@ Index: kernel-rockchip-6_1/fs/proc/latsense.c
 +	.llseek		= seq_lseek,
 +	.release	= single_release,
 +};
-Index: kernel-rockchip-6_1/fs/proc/Makefile
+Index: kernel-rockchip/fs/proc/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/proc/Makefile
-+++ kernel-rockchip-6_1/fs/proc/Makefile
+--- kernel-rockchip.orig/fs/proc/Makefile
++++ kernel-rockchip/fs/proc/Makefile
 @@ -27,6 +27,7 @@ proc-y	+= softirqs.o
  proc-y	+= namespaces.o
  proc-y	+= self.o
@@ -8244,10 +8244,10 @@ Index: kernel-rockchip-6_1/fs/proc/Makefile
  proc-$(CONFIG_PROC_SYSCTL)	+= proc_sysctl.o
  proc-$(CONFIG_NET)		+= proc_net.o
  proc-$(CONFIG_PROC_KCORE)	+= kcore.o
-Index: kernel-rockchip-6_1/fs/proc/Kconfig
+Index: kernel-rockchip/fs/proc/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/proc/Kconfig
-+++ kernel-rockchip-6_1/fs/proc/Kconfig
+--- kernel-rockchip.orig/fs/proc/Kconfig
++++ kernel-rockchip/fs/proc/Kconfig
 @@ -108,3 +108,9 @@ config PROC_PID_ARCH_STATUS
  config PROC_CPU_RESCTRL
  	def_bool n
@@ -8258,10 +8258,10 @@ Index: kernel-rockchip-6_1/fs/proc/Kconfig
 +	depends on PROC_FS && UCLAMP_TASK
 +	help
 +	Enable /proc/pid/tasks/tid latency sensitive scheduler attribute
-Index: kernel-rockchip-6_1/include/linux/sched/latsense.h
+Index: kernel-rockchip/include/linux/sched/latsense.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/include/linux/sched/latsense.h
++++ kernel-rockchip/include/linux/sched/latsense.h
 @@ -0,0 +1,8 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +#ifndef _LINUX_SCHED_LATSENSE_H
@@ -8271,10 +8271,10 @@ Index: kernel-rockchip-6_1/include/linux/sched/latsense.h
 +extern int proc_sched_get_latency_sensitive(struct task_struct *p);
 +
 +#endif /* _LINUX_SCHED_LATSENSE_H */
-Index: kernel-rockchip-6_1/include/linux/sched.h
+Index: kernel-rockchip/include/linux/sched.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/sched.h
-+++ kernel-rockchip-6_1/include/linux/sched.h
+--- kernel-rockchip.orig/include/linux/sched.h
++++ kernel-rockchip/include/linux/sched.h
 @@ -815,6 +815,10 @@ struct task_struct {
  
  	struct sched_statistics         stats;
@@ -8306,10 +8306,10 @@ Index: kernel-rockchip-6_1/include/linux/sched.h
  extern int dl_bw_alloc(int cpu, u64 dl_bw);
  extern void dl_bw_free(int cpu, u64 dl_bw);
  #ifdef CONFIG_SMP
-Index: kernel-rockchip-6_1/kernel/cgroup/cpuset.c
+Index: kernel-rockchip/kernel/cgroup/cpuset.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/cgroup/cpuset.c
-+++ kernel-rockchip-6_1/kernel/cgroup/cpuset.c
+--- kernel-rockchip.orig/kernel/cgroup/cpuset.c
++++ kernel-rockchip/kernel/cgroup/cpuset.c
 @@ -2539,7 +2539,7 @@ static int cpuset_can_attach(struct cgro
  		goto out_unlock;
  
@@ -8328,10 +8328,10 @@ Index: kernel-rockchip-6_1/kernel/cgroup/cpuset.c
  	if (ret)
  		goto out_unlock;
  
-Index: kernel-rockchip-6_1/include/linux/rmap.h
+Index: kernel-rockchip/include/linux/rmap.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/rmap.h
-+++ kernel-rockchip-6_1/include/linux/rmap.h
+--- kernel-rockchip.orig/include/linux/rmap.h
++++ kernel-rockchip/include/linux/rmap.h
 @@ -14,6 +14,10 @@
  #include <linux/pagemap.h>
  #include <linux/memremap.h>
@@ -8343,10 +8343,10 @@ Index: kernel-rockchip-6_1/include/linux/rmap.h
  /*
   * The anon_vma heads a list of private "related" vmas, to scan if
   * an anonymous page pointing to this anon_vma needs to be unmapped:
-Index: kernel-rockchip-6_1/kernel/sched/latsense.c
+Index: kernel-rockchip/kernel/sched/latsense.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/kernel/sched/latsense.c
++++ kernel-rockchip/kernel/sched/latsense.c
 @@ -0,0 +1,17 @@
 +// SPDX-License-Identifier: GPL-2.0
 +#include "sched.h"
@@ -8365,10 +8365,10 @@ Index: kernel-rockchip-6_1/kernel/sched/latsense.c
 +{
 +	return p->proc_latency_sensitive;
 +}
-Index: kernel-rockchip-6_1/kernel/sched/build_utility.c
+Index: kernel-rockchip/kernel/sched/build_utility.c
 ===================================================================
---- kernel-rockchip-6_1.orig/kernel/sched/build_utility.c
-+++ kernel-rockchip-6_1/kernel/sched/build_utility.c
+--- kernel-rockchip.orig/kernel/sched/build_utility.c
++++ kernel-rockchip/kernel/sched/build_utility.c
 @@ -108,3 +108,7 @@
  #ifdef CONFIG_SCHED_AUTOGROUP
  # include "autogroup.c"
@@ -8377,10 +8377,10 @@ Index: kernel-rockchip-6_1/kernel/sched/build_utility.c
 +#ifdef CONFIG_PROC_LATSENSE
 +# include "latsense.c"
 +#endif
-Index: kernel-rockchip-6_1/fs/nfs/nfs4proc.c
+Index: kernel-rockchip/fs/nfs/nfs4proc.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/nfs/nfs4proc.c
-+++ kernel-rockchip-6_1/fs/nfs/nfs4proc.c
+--- kernel-rockchip.orig/fs/nfs/nfs4proc.c
++++ kernel-rockchip/fs/nfs/nfs4proc.c
 @@ -328,7 +328,7 @@ static void nfs4_setup_readdir(u64 cooki
  	memset(&readdir->verifier, 0, sizeof(readdir->verifier));
  	if (cookie == 2)

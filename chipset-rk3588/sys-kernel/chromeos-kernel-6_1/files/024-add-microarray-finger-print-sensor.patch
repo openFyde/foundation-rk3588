@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/input/sensors/Kconfig
+Index: kernel-rockchip/drivers/input/sensors/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/sensors/Kconfig
-+++ kernel-rockchip-6_1/drivers/input/sensors/Kconfig
+--- kernel-rockchip.orig/drivers/input/sensors/Kconfig
++++ kernel-rockchip/drivers/input/sensors/Kconfig
 @@ -8,7 +8,7 @@ comment "handle all sensors"
  menuconfig SENSOR_DEVICE
  	tristate "handle angle,accel,compass,gyroscope,lsensor psensor etc"
@@ -18,10 +18,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/Kconfig
 +source "drivers/input/sensors/fingerprint/Kconfig"
  
  endif
-Index: kernel-rockchip-6_1/drivers/input/sensors/Makefile
+Index: kernel-rockchip/drivers/input/sensors/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/sensors/Makefile
-+++ kernel-rockchip-6_1/drivers/input/sensors/Makefile
+--- kernel-rockchip.orig/drivers/input/sensors/Makefile
++++ kernel-rockchip/drivers/input/sensors/Makefile
 @@ -9,6 +9,7 @@ obj-$(CONFIG_PROXIMITY_DEVICE)			+= psen
  obj-$(CONFIG_TEMPERATURE_DEVICE)		+= temperature/
  obj-$(CONFIG_PRESSURE_DEVICE)			+= pressure/
@@ -30,10 +30,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/Makefile
  
  
  obj-$(CONFIG_SENSOR_DEVICE)			+= sensor_dev.o
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/Kconfig
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/Kconfig
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/Kconfig
++++ kernel-rockchip/drivers/input/sensors/fingerprint/Kconfig
 @@ -0,0 +1,10 @@
 +menu "Fingerprint support"
 +  depends on INPUT
@@ -45,19 +45,19 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/Kconfig
 +    Microarray fingerprint Microarray's 121/112/88/64/48 device.
 +
 +endmenu
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/Makefile
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/Makefile
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/Makefile
++++ kernel-rockchip/drivers/input/sensors/fingerprint/Makefile
 @@ -0,0 +1,4 @@
 +subdir-ccflags-y += -Wno-bitwise-instead-of-logical
 +
 +microarray-fp-objs := madev.o mtk-settings.o
 +obj-$(CONFIG_MICROARRAY_FINGERPRINT) += microarray-fp.o
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/ioctl_cmd.h
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/ioctl_cmd.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/ioctl_cmd.h
++++ kernel-rockchip/drivers/input/sensors/fingerprint/ioctl_cmd.h
 @@ -0,0 +1,65 @@
 +/* Copyright (C) MicroArray
 + * MicroArray Fprint Driver Code
@@ -124,10 +124,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/ioctl_cmd.h
 +#define GET_MA_RESET_STATE      _IOR(MA_IOC_MAGIC, 49, unsigned int)
 +#endif /* __IOCTL_CMD_H__ */
 +
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.c
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.c
++++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
 @@ -0,0 +1,880 @@
 +/* Copyright (C) MicroArray
 + * MicroArray Fprint Driver Code for REE enviroment
@@ -1009,10 +1009,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.c
 +MODULE_AUTHOR("Microarray");
 +MODULE_DESCRIPTION("Driver for microarray fingerprint sensor");
 +MODULE_LICENSE("GPL");
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
++++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.h
 @@ -0,0 +1,235 @@
 +/* Copyright (C) MicroArray
 + * MicroArray Fprint Driver Code * madev.h
@@ -1249,10 +1249,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/madev.h
 +
 +#endif /* __MADEV_H_ */
 +
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/mtk-settings.c
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/mtk-settings.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/mtk-settings.c
++++ kernel-rockchip/drivers/input/sensors/fingerprint/mtk-settings.c
 @@ -0,0 +1,490 @@
 +/* Copyright (C) MicroArray
 + * MicroArray Fprint Driver Code
@@ -1744,10 +1744,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/mtk-settings.c
 +	return val;
 +}
 +
-Index: kernel-rockchip-6_1/drivers/input/sensors/fingerprint/mtk-settings.h
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/mtk-settings.h
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/input/sensors/fingerprint/mtk-settings.h
++++ kernel-rockchip/drivers/input/sensors/fingerprint/mtk-settings.h
 @@ -0,0 +1,220 @@
 +/* Copyright (C) MicroArray
 + * MicroArray Fprint Driver Code

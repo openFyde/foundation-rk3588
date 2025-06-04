@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/hid/hid-multitouch.c
+Index: kernel-rockchip/drivers/hid/hid-multitouch.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/hid/hid-multitouch.c
-+++ kernel-rockchip-6_1/drivers/hid/hid-multitouch.c
+--- kernel-rockchip.orig/drivers/hid/hid-multitouch.c
++++ kernel-rockchip/drivers/hid/hid-multitouch.c
 @@ -2143,6 +2143,10 @@ static const struct hid_device_id mt_dev
  	{ .driver_data = MT_CLS_SMART_TECH,
  		MT_USB_DEVICE(0x0b8c, 0x0092)},

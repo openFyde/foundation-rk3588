@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/fs/erofs/xattr.c
+Index: kernel-rockchip/fs/erofs/xattr.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/erofs/xattr.c
-+++ kernel-rockchip-6_1/fs/erofs/xattr.c
+--- kernel-rockchip.orig/fs/erofs/xattr.c
++++ kernel-rockchip/fs/erofs/xattr.c
 @@ -419,7 +419,7 @@ int erofs_getxattr(struct inode *inode,
  
  static int erofs_xattr_generic_get(const struct xattr_handler *handler,

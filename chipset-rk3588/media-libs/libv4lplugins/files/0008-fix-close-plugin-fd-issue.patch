@@ -1,0 +1,204 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -48,6 +48,33 @@ static const char* ctx_type(struct rkmpp
+   return ctx->is_decoder ? dec : enc;
+ }
+ 
++int rkmpp_set_event(struct rkmpp_context *ctx, unsigned char event)
++{
++  int ret = ioctl(ctx->devfd, IOCTL_SET_DEV_EVENT, &event);
++  if (ret)
++    LOGE("failed to set dev event:%s, ret:%d\n", event == EPOLLPRI ? "resolution change": "on frame", ret);
++  return ret;
++}
++
++int rkmpp_set_event_on_frame(struct rkmpp_context *ctx)
++{
++  return rkmpp_set_event(ctx, EPOLLIN);
++}
++
++int rkmpp_set_event_change_resolution(struct rkmpp_context *ctx)
++{
++  return rkmpp_set_event(ctx, EPOLLPRI);
++}
++
++int rkmpp_set_event_reset(struct rkmpp_context *ctx)
++{
++  unsigned char arg;
++  int ret = ioctl(ctx->devfd, IOCTL_RESET_DEV, &arg);
++  if (ret)
++    LOGE("failed to reset kernel driver state\n");
++  return ret;
++}
++
+ static pthread_once_t g_rkmpp_global_init_once = PTHREAD_ONCE_INIT;
+ 
+ static void rkmpp_global_init(void)
+@@ -163,6 +190,7 @@ void rkmpp_reset_queue(struct rkmpp_cont
+ 			rkmpp_buffer_clr_last(rkmpp_buffer);
+ 	}
+ 
++  rkmpp_set_event_reset(ctx);
+ 	LEAVE();
+ }
+ 
+@@ -870,7 +898,7 @@ int rkmpp_update_poll_event(struct rkmpp
+ {
+ 	eventfd_t event;
+ 	bool has_event;
+-	int ret;
++	int ret = 0;
+ 
+ 	ENTER();
+ 
+@@ -878,17 +906,21 @@ int rkmpp_update_poll_event(struct rkmpp
+ 		has_event = rkmpp_dec_has_event(ctx->data);
+ 	else
+ 		has_event = rkmpp_enc_has_event(ctx->data);
++  if (has_event) {
++    rkmpp_set_event_change_resolution(ctx);
++  } else {
++  	has_event |= !TAILQ_EMPTY(&ctx->output.avail_buffers);
++  	has_event |= !TAILQ_EMPTY(&ctx->capture.avail_buffers);
+ 
+-	has_event |= !TAILQ_EMPTY(&ctx->output.avail_buffers);
+-	has_event |= !TAILQ_EMPTY(&ctx->capture.avail_buffers);
+-
+-	/* Report POLLIN event */
+-	if (has_event)
+-		ret = eventfd_write(ctx->eventfd, 1);
+-	else
+-		ret = eventfd_read(ctx->eventfd, &event);
+-
+-  LOGV(3, "%s: ret:%d\n", has_event ? "write" : "read", ret);
++  	/* Report POLLIN event */
++  	if (has_event) {
++  		ret = eventfd_write(ctx->eventfd, 1);
++      rkmpp_set_event_on_frame(ctx);
++  	} else {
++  		ret = eventfd_read(ctx->eventfd, &event);
++    }
++    LOGV(3, "%s: ret:%d\n", has_event ? "write" : "read", ret);
++  }
+   errno = 0;
+ 	LEAVE();
+ 
+@@ -897,11 +929,11 @@ int rkmpp_update_poll_event(struct rkmpp
+ 
+ static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
+ {
++#if 0
+   char options[50] = {0};
+   int ret;
+ 
+ 	ENTER();
+-#if 0
+ #define MAX_OPT_LEN 1024
+ #define OPT_DEC "dec"
+ #define OPT_ENC "enc"
+@@ -967,7 +999,6 @@ static int rkmpp_parse_options(struct rk
+ 			RETURN_ERR(ENODEV, -1);
+ 		}
+ 	}
+-#else
+   ret = read(fd, options, sizeof(options) -1);
+   LOGV(1, "read fd:%s\n", options);
+   if (!ret || !strncmp(options, "dec", 3)) {
+@@ -978,6 +1009,16 @@ static int rkmpp_parse_options(struct rk
+     LOGV(1, "unknown options\n");
+     RETURN_ERR(ENODEV, -1);
+   }
++#else
++  unsigned int type;
++  int ret;
++  ENTER();
++  ret = ioctl(fd, IOCTL_GET_DEV_TYPE, &type);
++  if (ret) {
++    LOGE("failed to get device type, ret:%d\n", ret);
++    return ret;
++  }
++  ctx->is_decoder = type == DEC;
+ #endif
+ 
+ 	if (fcntl(fd, F_GETFL) & O_NONBLOCK)
+@@ -1044,13 +1085,16 @@ static void *plugin_init(int fd)
+ 		LOGE("failed to add eventfd\n");
+ 		goto err_close_epollfd;
+ 	}
+-
++  ctx->epollfd = epollfd;
++#if 0
+ 	if (dup2(epollfd, fd) < 0) {
+ 		LOGE("failed to dup fd\n");
+ 		goto err_close_epollfd;
+ 	}
+ 	close(epollfd);
+-
++#else
++  ctx->devfd = fd;
++#endif
+ 	pthread_mutex_init(&ctx->ioctl_mutex, NULL);
+ 	pthread_cond_init(&ctx->output.queue_cond, NULL);
+ 	pthread_mutex_init(&ctx->output.queue_mutex, NULL);
+@@ -1064,7 +1108,7 @@ static void *plugin_init(int fd)
+ 	if (ret != MPP_OK) {
+ 		LOGE("failed to use mpp drm buf group\n");
+ 		errno = ENODEV;
+-		goto err_close_eventfd;
++		goto err_close_epollfd;
+ 	}
+ 
+ 	ret = mpp_buffer_group_get_internal(&ctx->capture.internal_group,
+@@ -1157,6 +1201,7 @@ static void plugin_close(void *dev_ops_p
+ 		free(ctx->codecs);
+ 
+ 	close(ctx->eventfd);
++  close(ctx->epollfd);
+ 
+ 	LEAVE();
+ 
+Index: libv4l-rkmpp/include/libv4l-rkmpp.h
+===================================================================
+--- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
++++ libv4l-rkmpp/include/libv4l-rkmpp.h
+@@ -27,6 +27,7 @@
+ #include <inttypes.h>
+ #include <sys/queue.h>
+ #include <sys/syscall.h>
++#include <sys/ioctl.h>
+ 
+ #include <rockchip/rk_mpi.h>
+ 
+@@ -53,6 +54,13 @@
+ #define V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10	2
+ #endif
+ 
++#define DUMMY_MAGIC 0x47
++#define IOCTL_GET_DEV_TYPE _IOR(DUMMY_MAGIC, 1, unsigned int)
++#define IOCTL_SET_DEV_EVENT _IOW(DUMMY_MAGIC, 2, unsigned char)
++#define IOCTL_RESET_DEV _IOW(DUMMY_MAGIC, 3, unsigned char)
++#define DEC 10
++#define ENC 11
++
+ #ifndef V4L2_CID_MPEG_VIDEO_AV1_PROFILE
+ #define V4L2_CID_MPEG_VIDEO_AV1_PROFILE		(V4L2_CID_CODEC_BASE + 655)
+ #define V4L2_MPEG_VIDEO_AV1_PROFILE_MAIN	0
+@@ -268,6 +276,8 @@ struct rkmpp_context {
+ 	bool is_decoder;
+ 	bool nonblock;
+ 	int eventfd;
++  int epollfd;
++  int devfd;
+ 
+ 	MppCtx mpp;
+ 	MppApi *mpi;
+@@ -485,4 +495,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 			   struct v4l2_buffer *buffer,
+ 			   struct rkmpp_buffer *rkmpp_buffer, bool input);
+ 
++int rkmpp_set_event_on_frame(struct rkmpp_context *ctx);
++int rkmpp_set_event_change_resolution(struct rkmpp_context *ctx);
++int rkmpp_set_event_reset(struct rkmpp_context *ctx);
+ #endif //LIBV4L_RKMPP_H

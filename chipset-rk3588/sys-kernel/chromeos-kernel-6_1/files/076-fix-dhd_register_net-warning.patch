@@ -1,0 +1,22 @@
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
+@@ -5579,6 +5579,9 @@ int dhd_register_net(struct net_device *
+ {
+ 	int err = 0;
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
++  struct bcm_cfg80211 *cfg = wl_get_cfg(net);
++  struct wiphy *wiphy = bcmcfg_to_wiphy(cfg);
++  wiphy_lock(wiphy);
+ 	if (need_rtnl_lock) {
+ 		rtnl_lock();
+ 		err = cfg80211_register_netdevice(net);
+@@ -5586,6 +5589,7 @@ int dhd_register_net(struct net_device *
+ 	} else {
+ 		err = cfg80211_register_netdevice(net);
+ 	}
++  wiphy_unlock(wiphy);
+ #else
+ 	if (need_rtnl_lock) {
+ 		err = register_netdev(net);

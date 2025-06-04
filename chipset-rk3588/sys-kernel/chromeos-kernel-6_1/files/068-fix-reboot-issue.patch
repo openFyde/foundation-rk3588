@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
+Index: kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/touchscreen/hxchipset/himax_platform.c
-+++ kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
+--- kernel-rockchip.orig/drivers/input/touchscreen/hxchipset/himax_platform.c
++++ kernel-rockchip/drivers/input/touchscreen/hxchipset/himax_platform.c
 @@ -133,7 +133,7 @@ int himax_ts_check_dt(struct device_node
  		if (!IS_ERR(panel)) {
  			I("%s find drm_panel successfully\n", __func__);
@@ -35,11 +35,11 @@ Index: kernel-rockchip-6_1/drivers/input/touchscreen/hxchipset/himax_platform.c
  	.driver		= {
  		.name = HIMAX_common_NAME,
  		.owner = THIS_MODULE,
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-@@ -308,8 +308,8 @@
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -306,8 +306,8 @@
  		enable-delay-ms = <120>;
  		prepare-delay-ms = <120>;
  		init-delay-ms = <120>;
@@ -50,10 +50,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		compressed-data;
  		dsi,flags = <(MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST | MIPI_DSI_MODE_LPM | MIPI_DSI_MODE_NO_EOT_PACKET)>;
  		dsi,format = <MIPI_DSI_FMT_RGB888>;
-Index: kernel-rockchip-6_1/drivers/input/sensors/hall/mh248-fyde.c
+Index: kernel-rockchip/drivers/input/sensors/hall/mh248-fyde.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/sensors/hall/mh248-fyde.c
-+++ kernel-rockchip-6_1/drivers/input/sensors/hall/mh248-fyde.c
+--- kernel-rockchip.orig/drivers/input/sensors/hall/mh248-fyde.c
++++ kernel-rockchip/drivers/input/sensors/hall/mh248-fyde.c
 @@ -105,11 +105,19 @@ static int hall_mh248_probe(struct platf
  	}
  
@@ -82,10 +82,10 @@ Index: kernel-rockchip-6_1/drivers/input/sensors/hall/mh248-fyde.c
  	.driver = {
  		.name = "mh248-fyde",
  		.owner = THIS_MODULE,
-Index: kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+Index: kernel-rockchip/drivers/usb/typec/tcpm/tcpci_husb311.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
-+++ kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+--- kernel-rockchip.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
++++ kernel-rockchip/drivers/usb/typec/tcpm/tcpci_husb311.c
 @@ -325,7 +325,10 @@ static void husb311_shutdown(struct i2c_
  
  	disable_irq(client->irq);

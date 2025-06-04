@@ -1,0 +1,24 @@
+Index: v4l-utils/lib/libv4l2/libv4l2.c
+===================================================================
+--- v4l-utils.orig/lib/libv4l2/libv4l2.c
++++ v4l-utils/lib/libv4l2/libv4l2.c
+@@ -875,11 +875,15 @@ int v4l2_close(int fd)
+ 
+ 	/* Since we've marked the fd as no longer used, and freed the resources,
+ 	   redo the close in case it was interrupted */
+-	do {
+-		result = SYS_CLOSE(fd);
+-	} while (result == -1 && errno == EINTR);
++  if (devices[index].flags & V4L2_DISABLE_CONVERSION) {
++    V4L2_LOG("skip close: %d, save it for chromium\n", fd);
++  } else {
++  	do {
++  		result = SYS_CLOSE(fd);
++  	} while (result == -1 && errno == EINTR);
+ 
+-	V4L2_LOG("close: %d\n", fd);
++  	V4L2_LOG("close: %d\n", fd);
++  }
+ 
+ 	return result;
+ }

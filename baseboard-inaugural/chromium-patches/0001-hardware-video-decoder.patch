@@ -509,7 +509,7 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
  
  // This has not been accepted upstream.
  #ifndef V4L2_PIX_FMT_AV1
-@@ -47,8 +50,34 @@
+@@ -47,10 +50,36 @@
    std::make_pair(codec##_##suffix, codec)
  
  namespace {
@@ -538,14 +538,31 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
 +          -1)
 +    return false;
 +  return true;
-+}
-+
-+void CloseDevice(int fd) {
-+  v4l2_close(fd);
  }
  
++void CloseDevice(int fd) {
++  v4l2_close(fd);
++}
++#if 0
  std::string GetDriverName(const media::IoctlAsCallback& ioctl_cb) {
-@@ -592,6 +621,10 @@ std::optional<SupportedVideoDecoderConfi
+   struct v4l2_capability caps;
+   memset(&caps, 0, sizeof(caps));
+@@ -62,6 +91,7 @@ std::string GetDriverName(const media::I
+ 
+   return std::string(reinterpret_cast<const char*>(caps.driver));
+ }
++#endif
+ }  // namespace
+ namespace media {
+ 
+@@ -586,12 +616,17 @@ std::optional<SupportedVideoDecoderConfi
+ #endif
+ 
+   for (const auto& path : candidate_paths) {
++ #if 0
+     base::ScopedFD device_fd(
+         HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC)));
+     if (!device_fd.is_valid()) {
        PLOG(WARNING) << "Could not open " << path;
        continue;
      }
@@ -556,15 +573,55 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
  
      std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
          base::BindRepeating(&HandledIoctl, device_fd.get()),
-@@ -619,6 +652,7 @@ std::optional<SupportedVideoDecoderConfi
+@@ -619,6 +654,47 @@ std::optional<SupportedVideoDecoderConfi
              /*require_encrypted=*/false));
        }
      }
 +    CloseDevice(device_fd.get());
++#else
++    int fd = HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC));
++    if (fd < 0) {
++      PLOG(WARNING) << "Could not open " << path;
++      continue;
++    }
++    if (!OpenDevice(fd)) {
++      LOG(ERROR) << "Failed to open libv4l2 device";
++      continue;
++    }
++
++    std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
++        base::BindRepeating(&HandledIoctl, fd),
++        V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
++
++    for (const uint32_t v4l2_codec : v4l2_codecs) {
++      const std::vector<VideoCodecProfile> media_codec_profiles =
++          EnumerateSupportedProfilesForV4L2Codec(
++              base::BindRepeating(&HandledIoctl, fd), v4l2_codec);
++
++      gfx::Size min_coded_size;
++      gfx::Size max_coded_size;
++      GetSupportedResolution(
++          base::BindRepeating(&HandledIoctl, fd), v4l2_codec,
++          &min_coded_size, &max_coded_size);
++
++      for (const auto& profile : media_codec_profiles) {
++        supported_media_configs.emplace_back(SupportedVideoDecoderConfig(
++            profile, profile, min_coded_size, max_coded_size,
++#if BUILDFLAG(USE_CHROMEOS_PROTECTED_MEDIA)
++            /*allow_encrypted=*/true,
++#else
++            /*allow_encrypted=*/false,
++#endif
++            /*require_encrypted=*/false));
++      }
++    }
++    CloseDevice(fd);
++		HANDLE_EINTR(close(fd));
++#endif
    }
  
  #if DCHECK_IS_ON()
-@@ -628,7 +662,6 @@ std::optional<SupportedVideoDecoderConfi
+@@ -628,17 +704,21 @@ std::optional<SupportedVideoDecoderConfi
                << config.coded_size_max.ToString() << ")";
    }
  #endif
@@ -572,7 +629,11 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
    return supported_media_configs;
  }
  
-@@ -639,6 +672,10 @@ bool IsV4L2DecoderStateful() {
+ bool IsV4L2DecoderStateful() {
++#if 0
+   constexpr char kVideoDeviceDriverPath[] = "/dev/video-dec0";
+   base::ScopedFD device_fd(HANDLE_EINTR(
+       open(kVideoDeviceDriverPath, O_RDWR | O_NONBLOCK | O_CLOEXEC)));
    if (!device_fd.is_valid()) {
      return false;
    }
@@ -583,7 +644,7 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
  
    std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
        base::BindRepeating(&HandledIoctl, device_fd.get()),
-@@ -653,6 +690,7 @@ bool IsV4L2DecoderStateful() {
+@@ -653,14 +733,19 @@ bool IsV4L2DecoderStateful() {
        V4L2_PIX_FMT_VP8,
        V4L2_PIX_FMT_VP9,
    };
@@ -591,6 +652,28 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
  
    return std::find_first_of(v4l2_codecs.begin(), v4l2_codecs.end(),
                              kSupportedStatefulInputCodecs.begin(),
+                             kSupportedStatefulInputCodecs.end()) !=
+          v4l2_codecs.end();
++#else
++  return true;
++#endif
+ }
+ 
+ bool IsVislDriver() {
++#if 0
+   constexpr char kVideoDeviceDriverPath[] = "/dev/video-dec0";
+   base::ScopedFD device_fd(HANDLE_EINTR(
+       open(kVideoDeviceDriverPath, O_RDWR | O_NONBLOCK | O_CLOEXEC)));
+@@ -672,6 +757,9 @@ bool IsVislDriver() {
+       GetDriverName(base::BindRepeating(&HandledIoctl, device_fd.get()));
+ 
+   return v4l2_driver_name.compare("visl") == 0;
++#else
++  return false;
++#endif
+ }
+ 
+ #ifndef NDEBUG
 Index: src/media/gpu/v4l2/v4l2_queue.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_queue.cc
@@ -680,16 +763,42 @@ Index: src/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
  }
  
  // This method blocks waiting for an event from either |device_fd| or
+@@ -270,7 +301,7 @@ void V4L2StatefulVideoDecoder::Initializ
+                                           const WaitingCB& /*waiting_cb*/) {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+   DCHECK(config.IsValidConfig());
+-  DVLOGF(1) << config.AsHumanReadableString();
++  VLOGF(1) << config.AsHumanReadableString();
+ 
+   if (config.is_encrypted() || !!cdm_context) {
+     std::move(init_cb).Run(DecoderStatus::Codes::kUnsupportedEncryptionMode);
 @@ -311,7 +342,7 @@ void V4L2StatefulVideoDecoder::Initializ
      constexpr char kVideoDeviceDriverPath[] = "/dev/video-dec0";
      device_fd_.reset(HANDLE_EINTR(
          open(kVideoDeviceDriverPath, O_RDWR | O_NONBLOCK | O_CLOEXEC)));
 -    if (!device_fd_.is_valid()) {
-+    if (!device_fd_.is_valid() && !OpenDevice(device_fd_.get())) {
++    if (!device_fd_.is_valid() || !OpenDevice(device_fd_.get())) {
        std::move(init_cb).Run(DecoderStatus::Codes::kFailedToCreateDecoder);
        return;
      }
-@@ -569,6 +600,8 @@ void V4L2StatefulVideoDecoder::Reset(bas
+@@ -422,7 +453,7 @@ void V4L2StatefulVideoDecoder::Initializ
+   struct v4l2_event_subscription sub = {.type = V4L2_EVENT_SOURCE_CHANGE};
+   if (HandledIoctl(device_fd_.get(), VIDIOC_SUBSCRIBE_EVENT, &sub) !=
+       kIoctlOk) {
+-    PLOG(ERROR) << "Failed to subscribe to V4L2_EVENT_SOURCE_CHANGE";
++    LOG(ERROR) << "Failed to subscribe to V4L2_EVENT_SOURCE_CHANGE";
+     std::move(init_cb).Run(DecoderStatus::Codes::kFailedToCreateDecoder);
+     return;
+   }
+@@ -434,6 +465,7 @@ void V4L2StatefulVideoDecoder::Initializ
+   }
+ 
+   std::move(init_cb).Run(DecoderStatus::Codes::kOk);
++  VLOGF(1) << "to the end";
+ }
+ 
+ void V4L2StatefulVideoDecoder::Decode(scoped_refptr<DecoderBuffer> buffer,
+@@ -569,6 +601,8 @@ void V4L2StatefulVideoDecoder::Reset(bas
  
    OUTPUT_queue_.reset();
    CAPTURE_queue_.reset();
@@ -698,7 +807,39 @@ Index: src/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
    device_fd_.reset();
  
    event_task_runner_.reset();
-@@ -1188,7 +1221,7 @@ int V4L2StatefulVideoDecoder::GetMaxNumD
+@@ -607,7 +641,7 @@ bool V4L2StatefulVideoDecoder::IsPlatfor
+ 
+ void V4L2StatefulVideoDecoder::ApplyResolutionChange() {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+-  DVLOGF(2);
++  VLOGF(2);
+   // It's possible that we have been Reset()ed in the interval between receiving
+   // the resolution change event in WaitOnceForEvents() (in a background thread)
+   // and arriving here from our |client_|. Check if that's the case.
+@@ -687,6 +721,7 @@ bool V4L2StatefulVideoDecoder::Initializ
+ 
+   const auto v4l2_format_or_error = CAPTURE_queue_->GetFormat();
+   if (!v4l2_format_or_error.first || v4l2_format_or_error.second != kIoctlOk) {
++    LOG(ERROR) << "faild to get capture queue v4l2 format";
+     return false;
+   }
+   const struct v4l2_format v4l2_format = *(v4l2_format_or_error.first);
+@@ -901,6 +936,7 @@ void V4L2StatefulVideoDecoder::TryAndDeq
+   DCHECK(CAPTURE_queue_) << "|CAPTURE_queue_| must be created at this point";
+ 
+   const v4l2_memory queue_type = CAPTURE_queue_->GetMemoryType();
++  VLOG(1) << "mem type:" << (int) queue_type;
+   DCHECK(queue_type == V4L2_MEMORY_MMAP || queue_type == V4L2_MEMORY_DMABUF);
+   const bool use_v4l2_allocated_buffers = !client_->GetVideoFramePool();
+   DCHECK((queue_type == V4L2_MEMORY_MMAP && use_v4l2_allocated_buffers) ||
+@@ -1182,13 +1218,14 @@ bool V4L2StatefulVideoDecoder::IsInitial
+ 
+ // static
+ int V4L2StatefulVideoDecoder::GetMaxNumDecoderInstances() {
++#if 0
+   if (!base::FeatureList::IsEnabled(media::kLimitConcurrentDecoderInstances)) {
+     return std::numeric_limits<int>::max();
+   }
    constexpr char kVideoDeviceDriverPath[] = "/dev/video-dec0";
    base::ScopedFD device_fd(HANDLE_EINTR(
        open(kVideoDeviceDriverPath, O_RDWR | O_NONBLOCK | O_CLOEXEC)));
@@ -707,11 +848,15 @@ Index: src/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
      return std::numeric_limits<int>::max();
    }
    struct v4l2_capability caps = {};
-@@ -1204,6 +1237,7 @@ int V4L2StatefulVideoDecoder::GetMaxNumD
+@@ -1204,7 +1241,11 @@ int V4L2StatefulVideoDecoder::GetMaxNumD
    // to 15 with e.g. Qualcomm SC7180.
    // [1] https://source.chromium.org/chromium/chromium/src/+/main:media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.h;l=449-454;drc=83195d4d1e1a4e54f148ddc80d0edcf5daa755ff
    // [2] https://source.chromium.org/chromium/chromium/src/+/main:media/gpu/v4l2/v4l2_video_decoder.h;l=183-189;drc=90fa47c897b589bc4857fb7ccafab46a4be2e2ae
 +	CloseDevice(device_fd.get());
    return is_mtk8173 ? 10 : 15;
++#else
++  return 8;
++#endif
  }
  
+ std::vector<std::pair<scoped_refptr<DecoderBuffer>, VideoDecoder::DecodeCB>>

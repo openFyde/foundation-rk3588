@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
 @@ -119,7 +119,7 @@
  
  &hdmi0 {
@@ -11,10 +11,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5.dts
  	status = "okay";
  };
  
-Index: kernel-rockchip-6_1/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+Index: kernel-rockchip/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
-+++ kernel-rockchip-6_1/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+--- kernel-rockchip.orig/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ kernel-rockchip/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
 @@ -3385,13 +3385,22 @@ void dw_hdmi_qp_cec_set_hpd(struct dw_hd
  {
  	enum drm_connector_status status = plug_in ?

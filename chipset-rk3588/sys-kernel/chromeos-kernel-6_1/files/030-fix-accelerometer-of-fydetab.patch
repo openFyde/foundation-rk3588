@@ -11,10 +11,10 @@ Signed-off-by: Su Yue <glass@fydeos.io>
  include/linux/iio/common/st_sensors.h | 1 +
  2 files changed, 4 insertions(+), 3 deletions(-)
 
-Index: kernel-rockchip-6_1/drivers/iio/accel/st_accel_core.c
+Index: kernel-rockchip/drivers/iio/accel/st_accel_core.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/iio/accel/st_accel_core.c
-+++ kernel-rockchip-6_1/drivers/iio/accel/st_accel_core.c
+--- kernel-rockchip.orig/drivers/iio/accel/st_accel_core.c
++++ kernel-rockchip/drivers/iio/accel/st_accel_core.c
 @@ -91,17 +91,17 @@ static const struct iio_chan_spec st_acc
  
  static const struct iio_chan_spec st_accel_16bit_channels[] = {
@@ -36,10 +36,10 @@ Index: kernel-rockchip-6_1/drivers/iio/accel/st_accel_core.c
  			ST_SENSORS_SCAN_Z, 1, IIO_MOD_Z, 's', IIO_LE, 16, 16,
  			ST_ACCEL_DEFAULT_OUT_Z_L_ADDR,
  			st_accel_mount_matrix_ext_info),
-Index: kernel-rockchip-6_1/include/linux/iio/common/st_sensors.h
+Index: kernel-rockchip/include/linux/iio/common/st_sensors.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/iio/common/st_sensors.h
-+++ kernel-rockchip-6_1/include/linux/iio/common/st_sensors.h
+--- kernel-rockchip.orig/include/linux/iio/common/st_sensors.h
++++ kernel-rockchip/include/linux/iio/common/st_sensors.h
 @@ -55,6 +55,7 @@
  	.type = device_type, \
  	.modified = mod, \

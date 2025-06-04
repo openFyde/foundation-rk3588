@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-bpi-r2-pro.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-bpi-r2-pro.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3568-bpi-r2-pro.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-bpi-r2-pro.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3568-bpi-r2-pro.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-bpi-r2-pro.dts
 @@ -181,17 +181,17 @@
  	};
  };
@@ -23,10 +23,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-bpi-r2-pro.dts
  	/* used for SATA */
  	status = "okay";
  };
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-evb1-v10.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-evb1-v10.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3568-evb1-v10.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-evb1-v10.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3568-evb1-v10.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-evb1-v10.dts
 @@ -160,11 +160,11 @@
  	};
  };
@@ -41,10 +41,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-evb1-v10.dts
  	status = "okay";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3a.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-rock-3a.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3568-rock-3a.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3a.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3568-rock-3a.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3568-rock-3a.dts
 @@ -177,15 +177,15 @@
  	};
  };
@@ -64,10 +64,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3568-rock-3a.dts
  	status = "okay";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/Makefile
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
 @@ -66,8 +66,6 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-t
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-12c-linux.dtb
@@ -77,10 +77,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/Makefile
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-blade3-v101-linux.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-blueberry-edge-v10-linux.dtb
  dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588-blueberry-edge-v12-linux.dtb
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
 @@ -125,7 +125,7 @@
  };
  
@@ -104,10 +104,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-blueberry.dtsi
  	status = "okay";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
 @@ -432,12 +432,12 @@
  	vpcie3v3-supply = <&vcc_3v3_pcie20>;
  	status = "okay";
@@ -147,10 +147,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-nanopc-t6.dts
  	clock-names = "hdmi0_phy_pll", "hdmi1_phy_pll";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
 @@ -623,7 +623,7 @@
  
  
@@ -160,10 +160,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
  	clock-names = "hdmi0_phy_pll", "hdmi1_phy_pll";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
 @@ -633,7 +633,7 @@
  };
  
@@ -187,10 +187,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-rock-5b.dts
  	status = "okay";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dts
 @@ -357,7 +357,7 @@
  };
  
@@ -209,10 +209,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-9tripod-linux.dt
  		dsi,format = <MIPI_DSI_FMT_RGB888>;
  		dsi,lanes  = <4>;
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common.dtsi
 @@ -694,6 +694,6 @@
  };
  
@@ -223,10 +223,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6-common
 -};
 \ No newline at end of file
 +};
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 @@ -606,6 +606,6 @@
  
  /* Fix tty terminal out of screen, and most dclk of resolutions was not supported in hdmiphy clock from parent clock by default */
@@ -235,10 +235,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
 +	clocks = <&hdptxphy_hdmi0>;
  	clock-names = "hdmi0_phy_pll";
  };
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
 @@ -382,11 +382,11 @@
  };
  
@@ -253,10 +253,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-radxa-cm5-io.dts
  	status = "okay";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
 @@ -538,11 +538,11 @@
  };
  
@@ -271,10 +271,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-rock-5a.dts
  	status = "okay";
  };
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dtsi
 @@ -238,7 +238,7 @@
  		unprepare-delay-ms = <60>;
  		disable-delay-ms = <60>;
@@ -293,10 +293,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-khadas-edge2.dts
  		dsi,format = <MIPI_DSI_FMT_RGB888>;
  		dsi,lanes  = <4>;
  		panel-init-sequence = [
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi101-M101014-BE45-A1.dts
 @@ -151,7 +151,7 @@
          mipi-data-delay-ms = <200>;
          size,width = <120>;
@@ -315,10 +315,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-dual-mipi
          dsi,format = <MIPI_DSI_FMT_RGB888>;
          dsi,lanes  = <4>;
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M101014-BE45-A1.dts
 @@ -159,7 +159,7 @@
          mipi-data-delay-ms = <200>;
          size,width = <120>;
@@ -337,10 +337,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/roc-rk3588s-pc-mipi101-M
          dsi,format = <MIPI_DSI_FMT_RGB888>;
          dsi,lanes  = <4>;
  
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
 @@ -42,10 +42,10 @@
  };
  
@@ -354,10 +354,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-demo.dtsi
          spi-max-frequency = <50000000>;
          //spi-cpha;   /* SPI mode: CPHA=1 */
          //spi-cpol; 	/* SPI mode: CPOL=1 */
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j.dtsi
 @@ -180,10 +180,10 @@
  	pinctrl-0 = <&spi1m2_cs0 &spi1m2_pins>;
  	num-cs = <1>;
@@ -371,10 +371,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-firefly-itx-3588j
          spi-max-frequency = <50000000>;
      };
  };
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
 @@ -79,12 +79,12 @@
  };
  
@@ -405,10 +405,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
  			reg = <0x000000 0 0 0 0>;
  			local-mac-address = [ 00 00 00 00 00 00 ];
  		};
-Index: kernel-rockchip-6_1/drivers/input/remotectl/rockchip_pwm_remotectl.c
+Index: kernel-rockchip/drivers/input/remotectl/rockchip_pwm_remotectl.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/input/remotectl/rockchip_pwm_remotectl.c
-+++ kernel-rockchip-6_1/drivers/input/remotectl/rockchip_pwm_remotectl.c
+--- kernel-rockchip.orig/drivers/input/remotectl/rockchip_pwm_remotectl.c
++++ kernel-rockchip/drivers/input/remotectl/rockchip_pwm_remotectl.c
 @@ -4,6 +4,7 @@
  #include <linux/io.h>
  #include <linux/irq.h>

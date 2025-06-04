@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/md/dm-verity-target.c
+Index: kernel-rockchip/drivers/md/dm-verity-target.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-verity-target.c
-+++ kernel-rockchip-6_1/drivers/md/dm-verity-target.c
+--- kernel-rockchip.orig/drivers/md/dm-verity-target.c
++++ kernel-rockchip/drivers/md/dm-verity-target.c
 @@ -16,8 +16,10 @@
  #include "dm-verity.h"
  #include "dm-verity-fec.h"
@@ -557,10 +557,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-verity-target.c
  	return r;
  }
  
-Index: kernel-rockchip-6_1/drivers/md/dm-verity.h
+Index: kernel-rockchip/drivers/md/dm-verity.h
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-verity.h
-+++ kernel-rockchip-6_1/drivers/md/dm-verity.h
+--- kernel-rockchip.orig/drivers/md/dm-verity.h
++++ kernel-rockchip/drivers/md/dm-verity.h
 @@ -11,10 +11,12 @@
  #ifndef DM_VERITY_H
  #define DM_VERITY_H
@@ -652,10 +652,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-verity.h
  static inline struct ahash_request *verity_io_hash_req(struct dm_verity *v,
  						     struct dm_verity_io *io)
  {
-Index: kernel-rockchip-6_1/drivers/md/dm-verity-chromeos.c
+Index: kernel-rockchip/drivers/md/dm-verity-chromeos.c
 ===================================================================
 --- /dev/null
-+++ kernel-rockchip-6_1/drivers/md/dm-verity-chromeos.c
++++ kernel-rockchip/drivers/md/dm-verity-chromeos.c
 @@ -0,0 +1,292 @@
 +/*
 + * Copyright (C) 2010 The Chromium OS Authors <chromium-os-dev@chromium.org>
@@ -949,10 +949,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-verity-chromeos.c
 +#undef MODULE_PARAM_PREFIX
 +#define MODULE_PARAM_PREFIX	""
 +module_param_string(kern_guid, kern_guid, sizeof(kern_guid), 0);
-Index: kernel-rockchip-6_1/drivers/md/Makefile
+Index: kernel-rockchip/drivers/md/Makefile
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/Makefile
-+++ kernel-rockchip-6_1/drivers/md/Makefile
+--- kernel-rockchip.orig/drivers/md/Makefile
++++ kernel-rockchip/drivers/md/Makefile
 @@ -84,6 +84,7 @@ obj-$(CONFIG_DM_INTEGRITY)	+= dm-integri
  obj-$(CONFIG_DM_ZONED)		+= dm-zoned.o
  obj-$(CONFIG_DM_WRITECACHE)	+= dm-writecache.o
@@ -961,10 +961,10 @@ Index: kernel-rockchip-6_1/drivers/md/Makefile
  
  ifeq ($(CONFIG_DM_INIT),y)
  dm-mod-objs			+= dm-init.o
-Index: kernel-rockchip-6_1/drivers/md/Kconfig
+Index: kernel-rockchip/drivers/md/Kconfig
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/Kconfig
-+++ kernel-rockchip-6_1/drivers/md/Kconfig
+--- kernel-rockchip.orig/drivers/md/Kconfig
++++ kernel-rockchip/drivers/md/Kconfig
 @@ -294,6 +294,16 @@ config DM_CRYPT
  
  	  If unsure, say N.
@@ -982,10 +982,10 @@ Index: kernel-rockchip-6_1/drivers/md/Kconfig
  config DM_SNAPSHOT
         tristate "Snapshot target"
         depends on BLK_DEV_DM
-Index: kernel-rockchip-6_1/drivers/md/dm-bufio.c
+Index: kernel-rockchip/drivers/md/dm-bufio.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-bufio.c
-+++ kernel-rockchip-6_1/drivers/md/dm-bufio.c
+--- kernel-rockchip.orig/drivers/md/dm-bufio.c
++++ kernel-rockchip/drivers/md/dm-bufio.c
 @@ -614,7 +614,7 @@ static void use_dmio(struct dm_buffer *b
  		io_req.mem.ptr.vma = (char *)b->data + offset;
  	}
@@ -1013,10 +1013,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-bufio.c
  }
  EXPORT_SYMBOL_GPL(dm_bufio_issue_discard);
  
-Index: kernel-rockchip-6_1/drivers/md/dm-cache-policy.h
+Index: kernel-rockchip/drivers/md/dm-cache-policy.h
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-cache-policy.h
-+++ kernel-rockchip-6_1/drivers/md/dm-cache-policy.h
+--- kernel-rockchip.orig/drivers/md/dm-cache-policy.h
++++ kernel-rockchip/drivers/md/dm-cache-policy.h
 @@ -75,7 +75,7 @@ struct dm_cache_policy {
  	 * background work.
  	 */
@@ -1026,10 +1026,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-cache-policy.h
  
  	/*
  	 * You must pass in the same work pointer that you were given, not
-Index: kernel-rockchip-6_1/drivers/md/dm-core.h
+Index: kernel-rockchip/drivers/md/dm-core.h
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-core.h
-+++ kernel-rockchip-6_1/drivers/md/dm-core.h
+--- kernel-rockchip.orig/drivers/md/dm-core.h
++++ kernel-rockchip/drivers/md/dm-core.h
 @@ -21,6 +21,8 @@
  #include "dm-ima.h"
  
@@ -1039,10 +1039,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-core.h
  
  struct dm_io;
  
-Index: kernel-rockchip-6_1/drivers/md/dm-crypt.c
+Index: kernel-rockchip/drivers/md/dm-crypt.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-crypt.c
-+++ kernel-rockchip-6_1/drivers/md/dm-crypt.c
+--- kernel-rockchip.orig/drivers/md/dm-crypt.c
++++ kernel-rockchip/drivers/md/dm-crypt.c
 @@ -52,15 +52,17 @@
  struct convert_context {
  	struct completion restart;
@@ -1326,10 +1326,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-crypt.c
  				ti->error = "Unknown integrity profile";
  				return -EINVAL;
  			}
-Index: kernel-rockchip-6_1/drivers/md/dm-init.c
+Index: kernel-rockchip/drivers/md/dm-init.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-init.c
-+++ kernel-rockchip-6_1/drivers/md/dm-init.c
+--- kernel-rockchip.orig/drivers/md/dm-init.c
++++ kernel-rockchip/drivers/md/dm-init.c
 @@ -319,5 +319,256 @@ late_initcall(dm_init_init);
  module_param(create, charp, 0);
  MODULE_PARM_DESC(create, "Create a mapped device in early boot");
@@ -1587,10 +1587,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-init.c
 +
  module_param_array(waitfor, charp, NULL, 0);
  MODULE_PARM_DESC(waitfor, "Devices to wait for before setting up tables");
-Index: kernel-rockchip-6_1/drivers/md/dm-integrity.c
+Index: kernel-rockchip/drivers/md/dm-integrity.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-integrity.c
-+++ kernel-rockchip-6_1/drivers/md/dm-integrity.c
+--- kernel-rockchip.orig/drivers/md/dm-integrity.c
++++ kernel-rockchip/drivers/md/dm-integrity.c
 @@ -279,6 +279,8 @@ struct dm_integrity_c {
  
  	atomic64_t number_of_mismatches;
@@ -1811,10 +1811,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-integrity.c
  	mempool_exit(&ic->journal_io_mempool);
  	if (ic->io)
  		dm_io_client_destroy(ic->io);
-Index: kernel-rockchip-6_1/drivers/md/dm-io.c
+Index: kernel-rockchip/drivers/md/dm-io.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-io.c
-+++ kernel-rockchip-6_1/drivers/md/dm-io.c
+--- kernel-rockchip.orig/drivers/md/dm-io.c
++++ kernel-rockchip/drivers/md/dm-io.c
 @@ -295,7 +295,7 @@ static void km_dp_init(struct dpages *dp
   *---------------------------------------------------------------*/
  static void do_region(const blk_opf_t opf, unsigned int region,
@@ -1911,10 +1911,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-io.c
  }
  EXPORT_SYMBOL(dm_io);
  
-Index: kernel-rockchip-6_1/drivers/md/dm-ioctl.c
+Index: kernel-rockchip/drivers/md/dm-ioctl.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-ioctl.c
-+++ kernel-rockchip-6_1/drivers/md/dm-ioctl.c
+--- kernel-rockchip.orig/drivers/md/dm-ioctl.c
++++ kernel-rockchip/drivers/md/dm-ioctl.c
 @@ -1877,7 +1877,8 @@ static int copy_params(struct dm_ioctl _
  			   minimum_data_size - sizeof(param_kernel->version)))
  		return -EFAULT;
@@ -1925,10 +1925,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-ioctl.c
  		DMERR("Invalid data size in the ioctl structure: %u",
  		      param_kernel->data_size);
  		return -EINVAL;
-Index: kernel-rockchip-6_1/drivers/md/dm-kcopyd.c
+Index: kernel-rockchip/drivers/md/dm-kcopyd.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-kcopyd.c
-+++ kernel-rockchip-6_1/drivers/md/dm-kcopyd.c
+--- kernel-rockchip.orig/drivers/md/dm-kcopyd.c
++++ kernel-rockchip/drivers/md/dm-kcopyd.c
 @@ -572,9 +572,9 @@ static int run_io_job(struct kcopyd_job
  	io_job_start(job->kc->throttle);
  
@@ -1941,10 +1941,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-kcopyd.c
  
  	return r;
  }
-Index: kernel-rockchip-6_1/drivers/md/dm-log.c
+Index: kernel-rockchip/drivers/md/dm-log.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-log.c
-+++ kernel-rockchip-6_1/drivers/md/dm-log.c
+--- kernel-rockchip.orig/drivers/md/dm-log.c
++++ kernel-rockchip/drivers/md/dm-log.c
 @@ -295,7 +295,7 @@ static int rw_header(struct log_c *lc, e
  {
  	lc->io_req.bi_opf = op;
@@ -1986,10 +1986,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-log.c
  }
  
  #define	DMEMIT_SYNC \
-Index: kernel-rockchip-6_1/drivers/md/dm-raid.c
+Index: kernel-rockchip/drivers/md/dm-raid.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-raid.c
-+++ kernel-rockchip-6_1/drivers/md/dm-raid.c
+--- kernel-rockchip.orig/drivers/md/dm-raid.c
++++ kernel-rockchip/drivers/md/dm-raid.c
 @@ -362,8 +362,8 @@ static struct {
  	const int mode;
  	const char *param;
@@ -2046,10 +2046,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-raid.c
  	}
  
  	if (test_and_clear_bit(RT_FLAG_RS_SUSPENDED, &rs->runtime_flags)) {
-Index: kernel-rockchip-6_1/drivers/md/dm-raid1.c
+Index: kernel-rockchip/drivers/md/dm-raid1.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-raid1.c
-+++ kernel-rockchip-6_1/drivers/md/dm-raid1.c
+--- kernel-rockchip.orig/drivers/md/dm-raid1.c
++++ kernel-rockchip/drivers/md/dm-raid1.c
 @@ -273,7 +273,7 @@ static int mirror_flush(struct dm_target
  	}
  
@@ -2086,10 +2086,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-raid1.c
  	}
  
  	ms->rh = dm_region_hash_create(ms, dispatch_bios, wakeup_mirrord,
-Index: kernel-rockchip-6_1/drivers/md/dm-snap-persistent.c
+Index: kernel-rockchip/drivers/md/dm-snap-persistent.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-snap-persistent.c
-+++ kernel-rockchip-6_1/drivers/md/dm-snap-persistent.c
+--- kernel-rockchip.orig/drivers/md/dm-snap-persistent.c
++++ kernel-rockchip/drivers/md/dm-snap-persistent.c
 @@ -220,7 +220,7 @@ static void do_metadata(struct work_stru
  {
  	struct mdata_req *req = container_of(work, struct mdata_req, work);
@@ -2108,10 +2108,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-snap-persistent.c
  
  	req.where = &where;
  	req.io_req = &io_req;
-Index: kernel-rockchip-6_1/drivers/md/dm-snap.c
+Index: kernel-rockchip/drivers/md/dm-snap.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-snap.c
-+++ kernel-rockchip-6_1/drivers/md/dm-snap.c
+--- kernel-rockchip.orig/drivers/md/dm-snap.c
++++ kernel-rockchip/drivers/md/dm-snap.c
 @@ -679,8 +679,10 @@ static void dm_exception_table_exit(stru
  	for (i = 0; i < size; i++) {
  		slot = et->table + i;
@@ -2124,10 +2124,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-snap.c
  	}
  
  	kvfree(et->table);
-Index: kernel-rockchip-6_1/drivers/md/dm-table.c
+Index: kernel-rockchip/drivers/md/dm-table.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-table.c
-+++ kernel-rockchip-6_1/drivers/md/dm-table.c
+--- kernel-rockchip.orig/drivers/md/dm-table.c
++++ kernel-rockchip/drivers/md/dm-table.c
 @@ -72,7 +72,7 @@ static sector_t high(struct dm_table *t,
  		n = get_child(n, CHILDREN_PER_NODE - 1);
  
@@ -2169,10 +2169,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-table.c
  
  	return false;
  }
-Index: kernel-rockchip-6_1/drivers/md/dm-thin.c
+Index: kernel-rockchip/drivers/md/dm-thin.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-thin.c
-+++ kernel-rockchip-6_1/drivers/md/dm-thin.c
+--- kernel-rockchip.orig/drivers/md/dm-thin.c
++++ kernel-rockchip/drivers/md/dm-thin.c
 @@ -1179,9 +1179,9 @@ static void process_prepared_discard_pas
  	discard_parent = bio_alloc(NULL, 1, 0, GFP_NOIO);
  	discard_parent->bi_end_io = passdown_endio;
@@ -2186,10 +2186,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-thin.c
  		struct discard_op op;
  
  		begin_discard(&op, tc, discard_parent);
-Index: kernel-rockchip-6_1/drivers/md/dm-writecache.c
+Index: kernel-rockchip/drivers/md/dm-writecache.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm-writecache.c
-+++ kernel-rockchip-6_1/drivers/md/dm-writecache.c
+--- kernel-rockchip.orig/drivers/md/dm-writecache.c
++++ kernel-rockchip/drivers/md/dm-writecache.c
 @@ -531,7 +531,7 @@ static void ssd_commit_flushed(struct dm
  		req.notify.context = &endio;
  
@@ -2226,10 +2226,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm-writecache.c
  }
  
  static void writecache_resume(struct dm_target *ti)
-Index: kernel-rockchip-6_1/drivers/md/dm.c
+Index: kernel-rockchip/drivers/md/dm.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/dm.c
-+++ kernel-rockchip-6_1/drivers/md/dm.c
+--- kernel-rockchip.orig/drivers/md/dm.c
++++ kernel-rockchip/drivers/md/dm.c
 @@ -2897,6 +2897,9 @@ static void __dm_internal_suspend(struct
  
  static void __dm_internal_resume(struct mapped_device *md)
@@ -2270,10 +2270,10 @@ Index: kernel-rockchip-6_1/drivers/md/dm.c
  done:
  	clear_bit(DMF_SUSPENDED_INTERNALLY, &md->flags);
  	smp_mb__after_atomic();
-Index: kernel-rockchip-6_1/drivers/md/md.c
+Index: kernel-rockchip/drivers/md/md.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/md.c
-+++ kernel-rockchip-6_1/drivers/md/md.c
+--- kernel-rockchip.orig/drivers/md/md.c
++++ kernel-rockchip/drivers/md/md.c
 @@ -564,8 +564,12 @@ static void submit_flushes(struct work_s
  			rcu_read_lock();
  		}
@@ -2491,10 +2491,10 @@ Index: kernel-rockchip-6_1/drivers/md/md.c
  		clear_bit(MD_CLOSING, &mddev->flags);
  	return err;
  }
-Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-btree.c
+Index: kernel-rockchip/drivers/md/persistent-data/dm-btree.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/persistent-data/dm-btree.c
-+++ kernel-rockchip-6_1/drivers/md/persistent-data/dm-btree.c
+--- kernel-rockchip.orig/drivers/md/persistent-data/dm-btree.c
++++ kernel-rockchip/drivers/md/persistent-data/dm-btree.c
 @@ -726,7 +726,7 @@ static int shadow_child(struct dm_btree_
   * nodes, so saves metadata space.
   */
@@ -2522,10 +2522,10 @@ Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-btree.c
  		(le64_to_cpu(node->keys[index]) != keys[level]));
  }
  
-Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.c
+Index: kernel-rockchip/drivers/md/persistent-data/dm-space-map-common.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/persistent-data/dm-space-map-common.c
-+++ kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.c
+--- kernel-rockchip.orig/drivers/md/persistent-data/dm-space-map-common.c
++++ kernel-rockchip/drivers/md/persistent-data/dm-space-map-common.c
 @@ -390,7 +390,7 @@ int sm_ll_find_free_block(struct ll_disk
  }
  
@@ -2535,10 +2535,10 @@ Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.c
  {
  	int r;
  	uint32_t count;
-Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.h
+Index: kernel-rockchip/drivers/md/persistent-data/dm-space-map-common.h
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/persistent-data/dm-space-map-common.h
-+++ kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.h
+--- kernel-rockchip.orig/drivers/md/persistent-data/dm-space-map-common.h
++++ kernel-rockchip/drivers/md/persistent-data/dm-space-map-common.h
 @@ -120,7 +120,7 @@ int sm_ll_lookup(struct ll_disk *ll, dm_
  int sm_ll_find_free_block(struct ll_disk *ll, dm_block_t begin,
  			  dm_block_t end, dm_block_t *result);
@@ -2548,10 +2548,10 @@ Index: kernel-rockchip-6_1/drivers/md/persistent-data/dm-space-map-common.h
  
  /*
   * The next three functions return (via nr_allocations) the net number of
-Index: kernel-rockchip-6_1/drivers/md/raid10.c
+Index: kernel-rockchip/drivers/md/raid10.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/raid10.c
-+++ kernel-rockchip-6_1/drivers/md/raid10.c
+--- kernel-rockchip.orig/drivers/md/raid10.c
++++ kernel-rockchip/drivers/md/raid10.c
 @@ -920,6 +920,7 @@ static void flush_pending_writes(struct
  
  			raid1_submit_write(bio);
@@ -2568,10 +2568,10 @@ Index: kernel-rockchip-6_1/drivers/md/raid10.c
  	}
  	kfree(plug);
  }
-Index: kernel-rockchip-6_1/drivers/md/raid5.c
+Index: kernel-rockchip/drivers/md/raid5.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/md/raid5.c
-+++ kernel-rockchip-6_1/drivers/md/raid5.c
+--- kernel-rockchip.orig/drivers/md/raid5.c
++++ kernel-rockchip/drivers/md/raid5.c
 @@ -2420,7 +2420,7 @@ static int grow_one_stripe(struct r5conf
  	atomic_inc(&conf->active_stripes);
  
@@ -2624,10 +2624,10 @@ Index: kernel-rockchip-6_1/drivers/md/raid5.c
  }
  
  static struct r5conf *setup_conf(struct mddev *mddev)
-Index: kernel-rockchip-6_1/include/linux/dm-io.h
+Index: kernel-rockchip/include/linux/dm-io.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/dm-io.h
-+++ kernel-rockchip-6_1/include/linux/dm-io.h
+--- kernel-rockchip.orig/include/linux/dm-io.h
++++ kernel-rockchip/include/linux/dm-io.h
 @@ -79,7 +79,8 @@ void dm_io_client_destroy(struct dm_io_c
   * error occurred doing io to the corresponding region.
   */

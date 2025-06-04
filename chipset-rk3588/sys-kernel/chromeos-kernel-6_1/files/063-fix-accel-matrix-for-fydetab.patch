@@ -1,8 +1,8 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-@@ -311,8 +311,7 @@
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -309,8 +309,7 @@
  		unprepare-delay-ms = <500>;
  		disable-delay-ms = <120>;
  		compressed-data;
@@ -12,7 +12,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  		dsi,format = <MIPI_DSI_FMT_RGB888>;
  		dsi,lanes  = <4>;
  
-@@ -459,6 +458,9 @@
+@@ -457,6 +456,9 @@
              interrupts = <RK_PD3 IRQ_TYPE_LEVEL_LOW>;
              pinctrl-names = "default";
              pinctrl-0 = <&gyr_int_l>;
@@ -30,10 +30,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +&wdt {
 +  status = "okay";
 +};
-Index: kernel-rockchip-6_1/include/linux/iio/iio.h
+Index: kernel-rockchip/include/linux/iio/iio.h
 ===================================================================
---- kernel-rockchip-6_1.orig/include/linux/iio/iio.h
-+++ kernel-rockchip-6_1/include/linux/iio/iio.h
+--- kernel-rockchip.orig/include/linux/iio/iio.h
++++ kernel-rockchip/include/linux/iio/iio.h
 @@ -143,7 +143,7 @@ typedef const struct iio_mount_matrix *
   */
  #define IIO_MOUNT_MATRIX(_shared, _get) \

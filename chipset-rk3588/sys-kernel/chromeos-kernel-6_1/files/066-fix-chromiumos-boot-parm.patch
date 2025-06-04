@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-linux.dtsi
 @@ -12,7 +12,7 @@
  	};
  

@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpm.c
+Index: kernel-rockchip/drivers/usb/typec/tcpm/tcpm.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/usb/typec/tcpm/tcpm.c
-+++ kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpm.c
+--- kernel-rockchip.orig/drivers/usb/typec/tcpm/tcpm.c
++++ kernel-rockchip/drivers/usb/typec/tcpm/tcpm.c
 @@ -6567,7 +6567,7 @@ static int devm_tcpm_psy_register(struct
  	snprintf(psy_name, psy_name_len, "%s%s", tcpm_psy_name_prefix,
  		 port_dev_name);

@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-evb1-lp4.dtsi
 @@ -299,6 +299,8 @@
  	reset-gpios = <&gpio2 RK_PB4 GPIO_ACTIVE_LOW>;
  	pinctrl-names = "default";

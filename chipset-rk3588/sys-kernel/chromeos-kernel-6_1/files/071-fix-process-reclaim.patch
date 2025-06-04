@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/fs/proc/task_mmu.c
+Index: kernel-rockchip/fs/proc/task_mmu.c
 ===================================================================
---- kernel-rockchip-6_1.orig/fs/proc/task_mmu.c
-+++ kernel-rockchip-6_1/fs/proc/task_mmu.c
+--- kernel-rockchip.orig/fs/proc/task_mmu.c
++++ kernel-rockchip/fs/proc/task_mmu.c
 @@ -26,6 +26,7 @@
  #include <asm/tlb.h>
  #include <asm/tlbflush.h>

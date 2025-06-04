@@ -1,7 +1,7 @@
-Index: kernel-rockchip-6_1/drivers/power/supply/sbs-battery.c
+Index: kernel-rockchip/drivers/power/supply/sbs-battery.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/power/supply/sbs-battery.c
-+++ kernel-rockchip-6_1/drivers/power/supply/sbs-battery.c
+--- kernel-rockchip.orig/drivers/power/supply/sbs-battery.c
++++ kernel-rockchip/drivers/power/supply/sbs-battery.c
 @@ -4,7 +4,6 @@
   *
   * Copyright (c) 2010, NVIDIA Corporation.
@@ -137,11 +137,11 @@ Index: kernel-rockchip-6_1/drivers/power/supply/sbs-battery.c
  	.alert		= sbs_alert,
  	.id_table	= sbs_id,
  	.driver = {
-Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
---- kernel-rockchip-6_1.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-+++ kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
-@@ -491,12 +491,9 @@
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -489,12 +489,9 @@
      battery: sbs-battery@b {
  			status = "okay";
        compatible = "sbs,sbs-battery";
@@ -154,7 +154,7 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
      };
  };
  
-@@ -513,6 +510,7 @@
+@@ -511,6 +508,7 @@
  		pinctrl-names = "default";
  		pinctrl-0 = <&usbc0_int>;
  		vbus-supply = <&vbus5v0_typec>;
@@ -185,10 +185,10 @@ Index: kernel-rockchip-6_1/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
  	};
  
  	touch {
-Index: kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+Index: kernel-rockchip/drivers/usb/typec/tcpm/tcpci_husb311.c
 ===================================================================
---- kernel-rockchip-6_1.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
-+++ kernel-rockchip-6_1/drivers/usb/typec/tcpm/tcpci_husb311.c
+--- kernel-rockchip.orig/drivers/usb/typec/tcpm/tcpci_husb311.c
++++ kernel-rockchip/drivers/usb/typec/tcpm/tcpci_husb311.c
 @@ -274,11 +274,6 @@ static int husb311_probe(struct i2c_clie
  			return ret;
  	}

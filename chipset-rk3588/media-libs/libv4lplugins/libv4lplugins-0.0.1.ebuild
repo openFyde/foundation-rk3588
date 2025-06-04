@@ -4,7 +4,7 @@
 EAPI="7"
 
 EGIT_REPO_URI="https://github.com/JeffyCN/libv4l-rkmpp.git"
-EGIT_COMMIT="5e73fca4906fd240ea4592936cd74158a016ef82"
+EGIT_COMMIT="c5bc0aef0bc571872eb67508dcd75e05247eb83a"
 
 inherit autotools git-r3 eutils flag-o-matic meson
 
@@ -33,7 +33,8 @@ src_prepare() {
   eapply -p1 ${FILESDIR}/0003-Hack-codec-while-parse-options.patch
   eapply -p1 ${FILESDIR}/0004-fix-pixelformat-for-chromium.patch
   eapply -p1 ${FILESDIR}/0005-fix-encoder-for-chromium.patch
-#  eapply -p1 ${FILESDIR}/0006-fix-mmap-issue.patch
+  eapply -p1 ${FILESDIR}/0007-add-debug-info.patch
+  eapply -p1 ${FILESDIR}/0008-fix-close-plugin-fd-issue.patch
   default
 }
 
