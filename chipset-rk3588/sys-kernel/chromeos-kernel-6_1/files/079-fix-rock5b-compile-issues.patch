@@ -1,0 +1,240 @@
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-jadard-jd9365da-h3.c
+@@ -616,7 +616,7 @@ static int jadard_dsi_probe(struct mipi_
+ 
+ 	desc = of_device_get_match_data(dev);
+ 	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
+-			  MIPI_DSI_MODE_EOT_PACKET;
++			  MIPI_DSI_MODE_NO_EOT_PACKET;
+ 	dsi->format = desc->format;
+ 	dsi->lanes = desc->lanes;
+ 
+@@ -658,14 +658,12 @@ static int jadard_dsi_probe(struct mipi_
+ 	return ret;
+ }
+ 
+-static int jadard_dsi_remove(struct mipi_dsi_device *dsi)
++static void jadard_dsi_remove(struct mipi_dsi_device *dsi)
+ {
+ 	struct jadard *jadard = mipi_dsi_get_drvdata(dsi);
+ 
+ 	mipi_dsi_detach(dsi);
+ 	drm_panel_remove(&jadard->panel);
+-
+-	return 0;
+ }
+ 
+ static const struct of_device_id jadard_of_match[] = {
+Index: kernel-rockchip/drivers/input/touchscreen/focaltech_touch/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/input/touchscreen/focaltech_touch/Makefile
++++ kernel-rockchip/drivers/input/touchscreen/focaltech_touch/Makefile
+@@ -17,3 +17,4 @@ focaltech-ts-y += focaltech_point_report
+ focaltech-ts-y += focaltech_upgrade_ft8201.o
+ focaltech-ts-y += focaltech_test/
+ 
++CFLAGS_focaltech_core.o := -Wno-array-bounds
+Index: kernel-rockchip/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
+===================================================================
+--- kernel-rockchip.orig/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
++++ kernel-rockchip/drivers/input/touchscreen/focaltech_touch/focaltech_core.c
+@@ -154,9 +154,9 @@ static int fts_get_chip_types(
+     /*if (i >= ctype_entries) {
+         return -ENODATA;
+     }*/
+-	if(ctype_entries >= 2)
++	if(ctype_entries >= 2) {
+     	ts_data->ic_info.ids = ctype[1];
+-
++  }
+     return 0;
+ }
+ 
+@@ -652,7 +652,7 @@ static int fts_input_report_b(struct fts
+         swap(events[i].x,events[i].y);
+ #endif /* CFG_CTS_SWAP_XY */
+ 
+-		
++
+             input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, events[i].area);
+ #if 0
+             input_report_abs(data->input_dev, ABS_MT_POSITION_X, 2176 - events[i].x);
+@@ -884,10 +884,10 @@ static irqreturn_t fts_ts_interrupt(int
+ {
+     int ret = 0;
+     struct fts_ts_data *ts_data = (struct fts_ts_data *)data;
+-	
+-	
++
++
+ 	//FTS_ERROR("fts_ts_interrupt.......yyk...........\n");
+-	
++
+     if (!ts_data) {
+         FTS_ERROR("[INTR]: Invalid fts_ts_data");
+         return IRQ_HANDLED;
+@@ -934,7 +934,7 @@ static int fts_irq_registration(struct f
+     ret = request_threaded_irq(ts_data->irq, NULL, fts_ts_interrupt,
+                                pdata->irq_gpio_flags | IRQF_ONESHOT,
+                                ts_data->client->name, ts_data);
+-							   
++
+ 	/*ret = devm_request_irq(&ts_data->client->dev, ts_data->irq, fts_ts_interrupt,
+ 				IRQF_TRIGGER_FALLING|IRQ_TYPE_EDGE_RISING,ts_data->client->name, ts_data);*/
+     return ret;
+@@ -1124,9 +1124,9 @@ static int fts_get_dt_coords(struct devi
+ 	pdata->y_min = FTS_Y_MIN_DISPLAY_DEFAULT;
+ 	pdata->x_max = FTS_X_MAX_DISPLAY_DEFAULT;
+ 	pdata->y_max = FTS_Y_MAX_DISPLAY_DEFAULT;
+-	
+-	
+-	
++
++
++
+     /*prop = of_find_property(np, name, NULL);
+     if (!prop)
+         return -EINVAL;
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/ethernet/realtek/r8125/r8125.h
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125.h
+@@ -628,7 +628,7 @@ typedef int *napi_budget;
+ typedef struct napi_struct *napi_ptr;
+ typedef int napi_budget;
+ 
+-#define RTL_NAPI_CONFIG(ndev, priv, function, weight)   netif_napi_add(ndev, &priv->napi, function, weight)
++#define RTL_NAPI_CONFIG(ndev, priv, function, weight)   netif_napi_add_weight(ndev, &priv->napi, function, weight)
+ #define RTL_NAPI_QUOTA(budget, ndev)            min(budget, budget)
+ #define RTL_GET_PRIV(stuct_ptr, priv_struct)        container_of(stuct_ptr, priv_struct, stuct_ptr)
+ #define RTL_GET_NETDEV(priv_ptr)            struct net_device *dev = priv_ptr->dev;
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_n.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/ethernet/realtek/r8125/r8125_n.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_n.c
+@@ -11952,11 +11952,11 @@ rtl8125_init_board(struct pci_dev *pdev,
+ 
+         if ((sizeof(dma_addr_t) > 4) &&
+             use_dac &&
+-            !pci_set_dma_mask(pdev, DMA_BIT_MASK(64)) &&
+-            !pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(64))) {
++            !dma_set_mask(&pdev->dev, DMA_BIT_MASK(64)) &&
++            !dma_set_coherent_mask(&pdev->dev, DMA_BIT_MASK(64))) {
+                 dev->features |= NETIF_F_HIGHDMA;
+         } else {
+-                rc = pci_set_dma_mask(pdev, DMA_BIT_MASK(32));
++                rc = dma_set_mask(&pdev->dev, DMA_BIT_MASK(32));
+                 if (rc < 0) {
+ #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,0)
+                         if (netif_msg_probe(tp))
+@@ -12713,7 +12713,7 @@ rtl8125_init_one(struct pci_dev *pdev,
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
+                 dev->hw_features |= NETIF_F_IPV6_CSUM | NETIF_F_TSO6;
+                 dev->features |=  NETIF_F_IPV6_CSUM;
+-                netif_set_gso_max_size(dev, LSO_64K);
++                netif_set_tso_max_size(dev, LSO_64K);
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
+                 dev->gso_max_segs = NIC_MAX_PHYS_BUF_COUNT_LSO2;
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(4,7,0)
+Index: kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_rss.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/ethernet/realtek/r8125/r8125_rss.c
++++ kernel-rockchip/drivers/net/ethernet/realtek/r8125/r8125_rss.c
+@@ -57,21 +57,21 @@ static int rtl8125_get_rss_hash_opts(str
+         switch (cmd->flow_type) {
+         case TCP_V4_FLOW:
+                 cmd->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
+-        /* fallthrough */
++        fallthrough;
+         case UDP_V4_FLOW:
+                 if (tp->rss_flags & RTL_8125_RSS_FLAG_HASH_UDP_IPV4)
+                         cmd->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
+-        /* fallthrough */
++        fallthrough;
+         case IPV4_FLOW:
+                 cmd->data |= RXH_IP_SRC | RXH_IP_DST;
+                 break;
+         case TCP_V6_FLOW:
+                 cmd->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
+-        /* fallthrough */
++        fallthrough;
+         case UDP_V6_FLOW:
+                 if (tp->rss_flags & RTL_8125_RSS_FLAG_HASH_UDP_IPV6)
+                         cmd->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
+-        /* fallthrough */
++        fallthrough;
+         case IPV6_FLOW:
+                 cmd->data |= RXH_IP_SRC | RXH_IP_DST;
+                 break;
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-innolux-afj101-ba2131.c
+@@ -461,14 +461,13 @@ static int afj101_ba2131_dsi_probe(struc
+ 	return 0;
+ }
+ 
+-static int afj101_ba2131_dsi_remove(struct mipi_dsi_device *dsi)
++static void afj101_ba2131_dsi_remove(struct mipi_dsi_device *dsi)
+ {
+ 	struct afj101_ba2131 *ctx = mipi_dsi_get_drvdata(dsi);
+ 
+ 	mipi_dsi_detach(dsi);
+ 	drm_panel_remove(&ctx->panel);
+ 
+-	return 0;
+ }
+ 
+ static const struct of_device_id afj101_ba2131_of_match[] = {
+Index: kernel-rockchip/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
++++ kernel-rockchip/drivers/gpu/drm/panel/panel-radxa-display-8hd.c
+@@ -368,7 +368,7 @@ static int radxa_display_8hd_probe(struc
+ 
+ 	desc = of_device_get_match_data(dev);
+ 	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
+-			  MIPI_DSI_MODE_EOT_PACKET;
++			  MIPI_DSI_MODE_NO_EOT_PACKET;
+ 	dsi->format = desc->format;
+ 	dsi->lanes = desc->lanes;
+ 
+@@ -410,14 +410,13 @@ static int radxa_display_8hd_probe(struc
+ 	return ret;
+ }
+ 
+-static int radxa_display_8hd_remove(struct mipi_dsi_device *dsi)
++static void radxa_display_8hd_remove(struct mipi_dsi_device *dsi)
+ {
+ 	struct jadard_jd9365da *jadard_jd9365da = mipi_dsi_get_drvdata(dsi);
+ 
+ 	mipi_dsi_detach(dsi);
+ 	drm_panel_remove(&jadard_jd9365da->panel);
+ 
+-	return 0;
+ }
+ 
+ static const struct of_device_id radxa_display_8hd_of_match[] = {
+Index: kernel-rockchip/drivers/input/touchscreen/raspits_ft5426.c
+===================================================================
+--- kernel-rockchip.orig/drivers/input/touchscreen/raspits_ft5426.c
++++ kernel-rockchip/drivers/input/touchscreen/raspits_ft5426.c
+@@ -276,7 +276,7 @@ input_allocate_failed:
+ 	return ret;
+ }
+ 
+-static int raspits_ft5426_remove(struct i2c_client *client)
++static void raspits_ft5426_remove(struct i2c_client *client)
+ {
+ 	struct raspits_ft5426_data *ts_data = i2c_get_clientdata(client);
+ 
+@@ -286,7 +286,6 @@ static int raspits_ft5426_remove(struct
+ 		input_free_device(ts_data->input_dev);
+ 	}
+ 	kfree(ts_data);
+-	return 0;
+ }
+ 
+ static const struct i2c_device_id raspits_ft5426_id[] = {
