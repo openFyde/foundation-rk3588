@@ -1,0 +1,52 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-plus.dtsi
+@@ -28,7 +28,7 @@
+ 	es8388_sound: es8388-sound {
+ 		status = "okay";
+ 		compatible = "rockchip,multicodecs-card";
+-		rockchip,card-name = "rockchip,es8388";
++		rockchip,card-name = "rockchip-es8388";
+ 		hp-det-gpio = <&gpio1 RK_PD3 GPIO_ACTIVE_HIGH>;
+ 		io-channels = <&saradc 3>;
+ 		io-channel-names = "adc-detect";
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-toybrick-x0.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-toybrick-x0.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-toybrick-x0.dtsi
+@@ -42,7 +42,7 @@
+ 	es8388_sound: es8388-sound {
+ 		status = "okay";
+ 		compatible = "rockchip,multicodecs-card";
+-		rockchip,card-name = "rockchip,es8388";
++		rockchip,card-name = "rockchip-es8388";
+ 		hp-det-gpio = <&gpio1 RK_PD5 GPIO_ACTIVE_LOW>;
+ 		io-channels = <&saradc 3>;
+ 		io-channel-names = "adc-detect";
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-single.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-single.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-single.dtsi
+@@ -122,7 +122,7 @@
+ 	es8388_sound: es8388-sound {
+ 		status = "okay";
+ 		compatible = "rockchip,multicodecs-card";
+-		rockchip,card-name = "rockchip,es8388-codec";
++		rockchip,card-name = "rockchip-es8388";
+ 		hp-det-gpio = <&gpio1 RK_PD0 GPIO_ACTIVE_LOW>;
+ 		io-channels = <&saradc 3>;
+ 		io-channel-names = "adc-detect";
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet.dtsi
+@@ -162,7 +162,7 @@
+ 	es8388_sound: es8388-sound {
+ 		status = "okay";
+ 		compatible = "rockchip,multicodecs-card";
+-		rockchip,card-name = "rockchip,es8388-codec";
++		rockchip,card-name = "rockchip-es8388";
+ 		hp-det-gpio = <&gpio1 RK_PD0 GPIO_ACTIVE_LOW>;
+ 		io-channels = <&saradc 3>;
+ 		io-channel-names = "adc-detect";
