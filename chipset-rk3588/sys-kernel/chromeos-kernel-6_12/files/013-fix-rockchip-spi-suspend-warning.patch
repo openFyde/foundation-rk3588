@@ -1,0 +1,25 @@
+Index: kernel-6_12/drivers/spi/spi-rockchip.c
+===================================================================
+--- kernel-6_12.orig/drivers/spi/spi-rockchip.c
++++ kernel-6_12/drivers/spi/spi-rockchip.c
+@@ -5,6 +5,7 @@
+  */
+ 
+ #include <linux/clk.h>
++#include <linux/clk-provider.h>
+ #include <linux/dmaengine.h>
+ #include <linux/interrupt.h>
+ #include <linux/module.h>
+@@ -996,8 +997,10 @@ static int rockchip_spi_runtime_suspend(
+ 	struct spi_controller *ctlr = dev_get_drvdata(dev);
+ 	struct rockchip_spi *rs = spi_controller_get_devdata(ctlr);
+ 
+-	clk_disable_unprepare(rs->spiclk);
+-	clk_disable_unprepare(rs->apb_pclk);
++  if (__clk_is_enabled(rs->spiclk))
++	  clk_disable_unprepare(rs->spiclk);
++  if (__clk_is_enabled(rs->apb_pclk))
++	  clk_disable_unprepare(rs->apb_pclk);
+ 
+ 	return 0;
+ }

@@ -1,0 +1,65 @@
+Index: kernel-6_12/drivers/input/misc/rk805-pwrkey.c
+===================================================================
+--- kernel-6_12.orig/drivers/input/misc/rk805-pwrkey.c
++++ kernel-6_12/drivers/input/misc/rk805-pwrkey.c
+@@ -14,11 +14,13 @@
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
++int suspended = 0;
+ 
+ static irqreturn_t pwrkey_fall_irq(int irq, void *_pwr)
+ {
+ 	struct input_dev *pwr = _pwr;
+-
++  if (suspended)
++    pm_wakeup_dev_event(pwr->dev.parent, 4000, true);
+ 	input_report_key(pwr, KEY_POWER, 1);
+ 	input_sync(pwr);
+ 
+@@ -28,7 +30,8 @@ static irqreturn_t pwrkey_fall_irq(int i
+ static irqreturn_t pwrkey_rise_irq(int irq, void *_pwr)
+ {
+ 	struct input_dev *pwr = _pwr;
+-
++  if (suspended)
++    return IRQ_HANDLED;
+ 	input_report_key(pwr, KEY_POWER, 0);
+ 	input_sync(pwr);
+ 
+@@ -85,15 +88,35 @@ static int rk805_pwrkey_probe(struct pla
+ 	}
+ 
+ 	platform_set_drvdata(pdev, pwr);
++  enable_irq_wake(fall_irq);
+ 	device_init_wakeup(&pdev->dev, true);
+ 
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_PM_SLEEP
++static int rk805_pwrkey_suspend(struct device *dev)
++{
++  suspended = 1;
++  return 0;
++}
++
++static int rk805_pwrkey_resume(struct device *dev)
++{
++  suspended = 0;
++  return 0;
++}
++static SIMPLE_DEV_PM_OPS(rk805_pwrkey_pm,
++        rk805_pwrkey_suspend, rk805_pwrkey_resume);
++#endif
++
+ static struct platform_driver rk805_pwrkey_driver = {
+ 	.probe	= rk805_pwrkey_probe,
+ 	.driver	= {
+ 		.name = "rk805-pwrkey",
++#ifdef CONFIG_PM_SLEEP
++    .pm = &rk805_pwrkey_pm,
++#endif
+ 	},
+ };
+ module_platform_driver(rk805_pwrkey_driver);

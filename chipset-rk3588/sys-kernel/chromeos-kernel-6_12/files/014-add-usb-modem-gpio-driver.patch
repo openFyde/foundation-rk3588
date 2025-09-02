@@ -1,0 +1,156 @@
+Index: kernel-6_12/drivers/misc/Kconfig
+===================================================================
+--- kernel-6_12.orig/drivers/misc/Kconfig
++++ kernel-6_12/drivers/misc/Kconfig
+@@ -5,6 +5,17 @@
+ 
+ menu "Misc devices"
+ 
++config JW_IO_CONTROL
++	tristate "JW USB modem GPIO control driver"
++	depends on OF_GPIO
++	help
++	  Say Y here if you want support for JW USB modem GPIO control.
++	  This driver controls GPIO pins for USB modem power management,
++	  reset, and wireless disable functionality.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called jw_io_core.
++
+ config SENSORS_LIS3LV02D
+ 	tristate
+ 	depends on INPUT
+Index: kernel-6_12/drivers/misc/Makefile
+===================================================================
+--- kernel-6_12.orig/drivers/misc/Makefile
++++ kernel-6_12/drivers/misc/Makefile
+@@ -5,6 +5,7 @@
+ 
+ obj-$(CONFIG_IBM_ASM)		+= ibmasm/
+ obj-$(CONFIG_IBMVMC)		+= ibmvmc.o
++obj-$(CONFIG_JW_IO_CONTROL)	+= jw_io_core.o
+ obj-$(CONFIG_AD525X_DPOT)	+= ad525x_dpot.o
+ obj-$(CONFIG_AD525X_DPOT_I2C)	+= ad525x_dpot-i2c.o
+ obj-$(CONFIG_AD525X_DPOT_SPI)	+= ad525x_dpot-spi.o
+Index: kernel-6_12/drivers/misc/jw_io_core.c
+===================================================================
+--- /dev/null
++++ kernel-6_12/drivers/misc/jw_io_core.c
+@@ -0,0 +1,117 @@
++/*
++ * Copyright (C) 2014 Rockchip Corporation.
++ *
++ * This software is licensed under the terms of the GNU General Public
++ * License version 2, as published by the Free Software Foundation, and
++ * may be copied, distributed, and modified under those terms.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ */
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/init.h>
++#include <linux/delay.h>
++#include <linux/pm.h>
++#include <linux/platform_device.h>
++#include <linux/errno.h>
++#include <linux/err.h>
++#include <linux/of_gpio.h>
++#include <linux/gpio.h>
++#include <linux/gpio/consumer.h>
++#include <linux/of.h>
++
++
++static unsigned int mobile_power_f = 0;
++static unsigned int mobile_power = 0;
++static unsigned int mobile_reset = 0;
++static unsigned int mobile_w_disable = 0;
++
++static int jw_io_control_probe(struct platform_device *pdev)
++{
++	struct device_node *node = pdev->dev.of_node;
++
++	mobile_power_f = of_get_named_gpio(node, "mobile_power_f", 0);
++	if (!gpio_is_valid(mobile_power_f)) {
++		dev_err(&pdev->dev, "mobile_power_f gpio not found\n");
++		return -ENODEV;
++	}
++	devm_gpio_request(&pdev->dev, mobile_power_f, "mobile_power_f");
++	gpio_direction_output(mobile_power_f, 1);
++	msleep(100);
++
++	mobile_reset = of_get_named_gpio(node, "mobile_reset", 0);
++	if (!gpio_is_valid(mobile_reset)) {
++		dev_err(&pdev->dev, "mobile_reset gpio not found\n");
++		return -ENODEV;
++	}
++	devm_gpio_request(&pdev->dev, mobile_reset, "mobile_reset");
++	gpio_direction_output(mobile_reset, 0);
++	msleep(100);
++
++	mobile_power = of_get_named_gpio(node, "mobile_power", 0);
++	if (!gpio_is_valid(mobile_power)) {
++		dev_err(&pdev->dev, "mobile_power gpio not found\n");
++		return -ENODEV;
++	}
++	devm_gpio_request(&pdev->dev, mobile_power, "mobile_power");
++	gpio_direction_output(mobile_power, 1);
++	msleep(100);
++
++	mobile_w_disable = of_get_named_gpio(node, "mobile_w_disable", 0);
++	if (!gpio_is_valid(mobile_w_disable)) {
++		dev_err(&pdev->dev, "mobile_w_disable gpio not found\n");
++		return -ENODEV;
++	}
++	devm_gpio_request(&pdev->dev, mobile_w_disable, "mobile_w_disable");
++	gpio_direction_output(mobile_w_disable, 1);
++	msleep(100);
++	
++	gpio_direction_output(mobile_reset, 1);
++	msleep(100);
++
++	printk("jw_io_control_probe ok\n");
++
++	return 0;
++}
++
++static void jw_io_shutdown(struct platform_device *dev)
++{
++}
++
++static int jw_io_resume(struct platform_device *dev)
++{
++	return 0;
++}
++
++static int jw_io_suspend(struct platform_device *dev, pm_message_t state)
++{
++	return 0;
++}
++
++static const struct of_device_id jw_io_control_of_match[] = {
++        { .compatible = "jw_io_control", },
++        {},
++};
++MODULE_DEVICE_TABLE(of, jw_io_control_of_match);
++
++static struct platform_driver jw_io_control_driver = {
++	.probe		= jw_io_control_probe,
++	.shutdown	= jw_io_shutdown,
++	.resume		= jw_io_resume,
++	.suspend	= jw_io_suspend,
++	.driver	= {
++		.name	= "jw_io_control",
++		.owner	= THIS_MODULE,
++		.of_match_table = of_match_ptr(jw_io_control_of_match),
++	},
++};
++
++module_platform_driver(jw_io_control_driver);
++MODULE_ALIAS("platform:jw_io_control");
++MODULE_AUTHOR("Bin Yang <yangbin@rock-chips.com>");
++MODULE_DESCRIPTION("USB modem GPIO Driver");
++MODULE_LICENSE("GPL");

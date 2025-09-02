@@ -1,0 +1,13 @@
+Index: kernel-6_12/drivers/usb/typec/tcpm/tcpm.c
+===================================================================
+--- kernel-6_12.orig/drivers/usb/typec/tcpm/tcpm.c
++++ kernel-6_12/drivers/usb/typec/tcpm/tcpm.c
+@@ -7508,7 +7508,7 @@ static int devm_tcpm_psy_register(struct
+ 	snprintf(psy_name, psy_name_len, "%s%s", tcpm_psy_name_prefix,
+ 		 port_dev_name);
+ 	port->psy_desc.name = psy_name;
+-	port->psy_desc.type = POWER_SUPPLY_TYPE_USB;
++	port->psy_desc.type = POWER_SUPPLY_TYPE_USB_TYPE_C;
+ 	port->psy_desc.usb_types = BIT(POWER_SUPPLY_USB_TYPE_C)  |
+ 				   BIT(POWER_SUPPLY_USB_TYPE_PD) |
+ 				   BIT(POWER_SUPPLY_USB_TYPE_PD_PPS);

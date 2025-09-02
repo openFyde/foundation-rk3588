@@ -1,0 +1,13 @@
+Index: kernel-6_12/security/chromiumos/lsm.c
+===================================================================
+--- kernel-6_12.orig/security/chromiumos/lsm.c
++++ kernel-6_12/security/chromiumos/lsm.c
+@@ -85,6 +85,8 @@ static void report(const char *origin, c
+ 	kfree(cmdline);
+ 	kfree(alloced);
+ }
++#else
++static void report(const char *origin, const struct path *path, char *operation) { }
+ #endif
+ 
+ static int chromiumos_security_sb_mount(const char *dev_name,

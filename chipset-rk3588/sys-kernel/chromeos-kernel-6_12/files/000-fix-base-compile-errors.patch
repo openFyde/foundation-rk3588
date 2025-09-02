@@ -1,0 +1,166 @@
+Index: kernel-6_12/drivers/base/component.c
+===================================================================
+--- kernel-6_12.orig/drivers/base/component.c
++++ kernel-6_12/drivers/base/component.c
+@@ -184,18 +184,55 @@ static int find_components(struct aggreg
+ 		struct component_match_array *mc = &match->compare[i];
+ 		struct component *c;
+ 
+-		dev_dbg(adev->parent, "Looking for component %zu\n", i);
++		dev_warn(adev->parent, "Looking for component %zu\n", i);
+ 
+ 		if (match->compare[i].component)
+ 			continue;
+ 
+ 		c = find_component(adev, mc);
+ 		if (!c) {
++			const char *missing_info = "unknown";
++
++			/* Extract meaningful information based on comparison function */
++			if (mc->compare == component_compare_of && mc->data) {
++				struct device_node *node = (struct device_node *)mc->data;
++				missing_info = node->full_name ? node->full_name : node->name;
++				dev_warn(adev->parent,
++					"Component %zu missing: OF node '%s' (compatible: %s)\n",
++					i, missing_info,
++				(const char*)	of_get_property(node, "compatible", NULL) ?: "none");
++			} else if (mc->compare == component_compare_dev && mc->data) {
++				struct device *target_dev = (struct device *)mc->data;
++				dev_warn(adev->parent,
++					"Component %zu missing: device '%s' (driver: %s)\n",
++					i, dev_name(target_dev),
++					target_dev->driver ? target_dev->driver->name : "no-driver");
++			} else if (mc->compare == component_compare_dev_name && mc->data) {
++				const char *dev_name_str = (const char *)mc->data;
++				dev_warn(adev->parent,
++					"Component %zu missing: device name '%s'\n",
++					i, dev_name_str);
++			} else {
++				/* Generic fallback for custom comparison functions */
++				dev_warn(adev->parent,
++					"Component %zu missing: custom compare func %pS with data %p\n",
++					i, mc->compare, mc->data);
++			}
++
++			/* List all available components for debugging */
++			dev_warn(adev->parent, "Available components:\n");
++			list_for_each_entry(c, &component_list, node) {
++				dev_warn(adev->parent, "  - %s (driver: %s, bound: %s)\n",
++					dev_name(c->dev),
++					c->dev->driver ? c->dev->driver->name : "no-driver",
++					c->adev ? "yes" : "no");
++			}
++
+ 			ret = -ENXIO;
+ 			break;
+ 		}
+ 
+-		dev_dbg(adev->parent, "found component %s, duplicate %u\n",
++		dev_warn(adev->parent, "found component %s, duplicate %u\n",
+ 			dev_name(c->dev), !!c->adev);
+ 
+ 		/* Attach this component to the adev */
+@@ -229,15 +266,15 @@ static int try_to_bring_up_aggregate_dev
+ {
+ 	int ret;
+ 
+-	dev_dbg(adev->parent, "trying to bring up adev\n");
++	dev_warn(adev->parent, "trying to bring up adev\n");
+ 
+ 	if (find_components(adev)) {
+-		dev_dbg(adev->parent, "master has incomplete components\n");
++		dev_warn(adev->parent, "master has incomplete components\n");
+ 		return 0;
+ 	}
+ 
+ 	if (component && component->adev != adev) {
+-		dev_dbg(adev->parent, "master is not for this component (%s)\n",
++		dev_warn(adev->parent, "master is not for this component (%s)\n",
+ 			dev_name(component->dev));
+ 		return 0;
+ 	}
+@@ -635,7 +672,7 @@ static int component_bind(struct compone
+ 		return -ENOMEM;
+ 	}
+ 
+-	dev_dbg(adev->parent, "binding %s (ops %ps)\n",
++	dev_warn(adev->parent, "binding %s (ops %ps)\n",
+ 		dev_name(component->dev), component->ops);
+ 
+ 	ret = component->ops->bind(component->dev, adev->parent, data);
+@@ -722,7 +759,7 @@ static int __component_add(struct device
+ 	component->dev = dev;
+ 	component->subcomponent = subcomponent;
+ 
+-	dev_dbg(dev, "adding component (ops %ps)\n", ops);
++	dev_warn(dev, "adding component (ops %ps)\n", ops);
+ 
+ 	mutex_lock(&component_mutex);
+ 	list_add_tail(&component->node, &component_list);
+Index: kernel-6_12/drivers/base/dd.c
+===================================================================
+--- kernel-6_12.orig/drivers/base/dd.c
++++ kernel-6_12/drivers/base/dd.c
+@@ -15,7 +15,6 @@
+  * Copyright (c) 2007-2009 Greg Kroah-Hartman <gregkh@suse.de>
+  * Copyright (c) 2007-2009 Novell Inc.
+  */
+-
+ #include <linux/debugfs.h>
+ #include <linux/device.h>
+ #include <linux/delay.h>
+@@ -753,7 +752,7 @@ static int really_probe_debug(struct dev
+  *
+  * Should somehow figure out how to use a semaphore, not an atomic variable...
+  */
+-bool __init driver_probe_done(void)
++bool driver_probe_done(void)
+ {
+ 	int local_probe_count = atomic_read(&probe_count);
+ 
+Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
+===================================================================
+--- kernel-6_12.orig/drivers/iommu/rockchip-iommu.c
++++ kernel-6_12/drivers/iommu/rockchip-iommu.c
+@@ -1246,6 +1246,15 @@ static int rk_iommu_probe(struct platfor
+ 	 * So clocks as optional for the time being.
+ 	 */
+ 	err = devm_clk_bulk_get(iommu->dev, iommu->num_clocks, iommu->clocks);
++  if (err) {
++    devm_kfree(iommu->dev, iommu->clocks);
++    err = devm_clk_bulk_get_all(dev, &iommu->clocks);
++    if (err > 0) {
++      iommu->num_clocks = err;
++      err = 0;
++    }
++  }
++
+ 	if (err == -ENOENT)
+ 		iommu->num_clocks = 0;
+ 	else if (err)
+Index: kernel-6_12/drivers/rtc/rtc-hym8563.c
+===================================================================
+--- kernel-6_12.orig/drivers/rtc/rtc-hym8563.c
++++ kernel-6_12/drivers/rtc/rtc-hym8563.c
+@@ -100,7 +100,7 @@ static int hym8563_rtc_read_time(struct
+ 	if (buf[0] & HYM8563_SEC_VL) {
+ 		dev_warn(&client->dev,
+ 			 "no valid clock/calendar values available\n");
+-		return -EINVAL;
++//		return -EINVAL;
+ 	}
+ 
+ 	tm->tm_sec = bcd2bin(buf[0] & HYM8563_SEC_MASK);
+Index: kernel-6_12/include/linux/device/driver.h
+===================================================================
+--- kernel-6_12.orig/include/linux/device/driver.h
++++ kernel-6_12/include/linux/device/driver.h
+@@ -126,7 +126,7 @@ int __must_check driver_register(struct
+ void driver_unregister(struct device_driver *drv);
+ 
+ struct device_driver *driver_find(const char *name, const struct bus_type *bus);
+-bool __init driver_probe_done(void);
++bool driver_probe_done(void);
+ void wait_for_device_probe(void);
+ void __init wait_for_init_devices_probe(void);
+ 

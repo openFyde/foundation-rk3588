@@ -1,0 +1,13 @@
+Index: kernel-6_12/include/linux/iio/iio.h
+===================================================================
+--- kernel-6_12.orig/include/linux/iio/iio.h
++++ kernel-6_12/include/linux/iio/iio.h
+@@ -144,7 +144,7 @@ typedef const struct iio_mount_matrix *
+  */
+ #define IIO_MOUNT_MATRIX(_shared, _get) \
+ { \
+-	.name = "mount_matrix", \
++	.name = "in_accel_mount_matrix", \
+ 	.shared = (_shared), \
+ 	.read = iio_show_mount_matrix, \
+ 	.private = (uintptr_t)(_get), \

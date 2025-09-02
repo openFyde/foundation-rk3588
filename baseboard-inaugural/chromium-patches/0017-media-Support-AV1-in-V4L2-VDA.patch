@@ -2,7 +2,7 @@ Index: src/media/gpu/v4l2/v4l2_vda_helpers.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_vda_helpers.cc
 +++ src/media/gpu/v4l2/v4l2_vda_helpers.cc
-@@ -162,6 +162,9 @@ InputBufferFragmentSplitter::CreateFromP
+@@ -160,6 +160,9 @@ InputBufferFragmentSplitter::CreateFromP
      case VideoCodec::kVP9:
        // VP8/VP9 don't need any frame splitting, use the default implementation.
        return std::make_unique<v4l2_vda_helpers::InputBufferFragmentSplitter>();
@@ -16,7 +16,7 @@ Index: src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
 +++ src/media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.cc
-@@ -89,6 +89,7 @@ static const std::vector<uint32_t> kSupp
+@@ -95,6 +95,7 @@ static const std::vector<uint32_t> kSupp
      V4L2_PIX_FMT_VP8,
      V4L2_PIX_FMT_VP9,
      V4L2_PIX_FMT_HEVC,
@@ -28,11 +28,11 @@ Index: src/media/gpu/v4l2/legacy/v4l2_video_decoder_backend_stateful.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/legacy/v4l2_video_decoder_backend_stateful.cc
 +++ src/media/gpu/v4l2/legacy/v4l2_video_decoder_backend_stateful.cc
-@@ -761,6 +761,7 @@ bool V4L2StatefulVideoDecoderBackend::Is
- #endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
-       V4L2_PIX_FMT_VP8,
-       V4L2_PIX_FMT_VP9,
-+      V4L2_PIX_FMT_AV1,
+@@ -762,6 +762,7 @@ bool V4L2StatefulVideoDecoderBackend::Is
+         V4L2_PIX_FMT_H264,
+         V4L2_PIX_FMT_VP8,
+         V4L2_PIX_FMT_VP9,
++        V4L2_PIX_FMT_AV1,
      };
      auto device = base::MakeRefCounted<V4L2Device>();
      VideoDecodeAccelerator::SupportedProfiles profiles =

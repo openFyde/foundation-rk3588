@@ -14,9 +14,9 @@ Index: src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
 ===================================================================
 --- src.orig/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
 +++ src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
-@@ -37,6 +37,12 @@ static constexpr size_t kMaxSolidColorBu
- 
- static constexpr gfx::Size kSolidColorBufferSize{4, 4};
+@@ -35,6 +35,12 @@ namespace {
+ // and remove the rest.
+ static constexpr size_t kMaxSolidColorBuffers = 12;
  
 +void WaitForEGLFence(EGLDisplay display, EGLSyncKHR fence) {
 +  eglClientWaitSyncKHR(display, fence, EGL_SYNC_FLUSH_COMMANDS_BIT_KHR,
@@ -27,7 +27,7 @@ Index: src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
  void WaitForGpuFences(std::vector<std::unique_ptr<gfx::GpuFence>> fences) {
    for (auto& fence : fences)
      fence->Wait();
-@@ -215,8 +221,9 @@ void GbmSurfacelessWayland::Present(Swap
+@@ -209,8 +215,9 @@ void GbmSurfacelessWayland::Present(Swap
      return;
    }
  
@@ -38,7 +38,7 @@ Index: src/ui/ozone/platform/wayland/gpu/gbm_surfaceless_wayland.cc
    for (auto& config : frame->configs) {
      if (!config.access_fence_handle.is_null()) {
        fences.push_back(std::make_unique<gfx::GpuFence>(
-@@ -225,7 +232,17 @@ void GbmSurfacelessWayland::Present(Swap
+@@ -219,7 +226,17 @@ void GbmSurfacelessWayland::Present(Swap
      }
    }
  
