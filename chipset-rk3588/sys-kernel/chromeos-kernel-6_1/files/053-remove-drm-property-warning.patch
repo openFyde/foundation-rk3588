@@ -2,7 +2,43 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
 ===================================================================
 --- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
 +++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
-@@ -2000,7 +2000,12 @@ struct dma_buf *rockchip_drm_gem_prime_e
+@@ -1801,29 +1801,28 @@ static void rockchip_drm_crtc_cancel_pen
+ 
+ static int rockchip_drm_open(struct drm_device *dev, struct drm_file *file)
+ {
++  struct rockchip_drm_private *priv = dev->dev_private;
+ 	struct drm_crtc *crtc;
+ 
+ 	drm_for_each_crtc(crtc, dev)
+ 		crtc->primary->fb = NULL;
+ 
++  priv->open_counter++;
+ 	return 0;
+ }
+ 
+ static void rockchip_drm_postclose(struct drm_device *dev,
+ 				   struct drm_file *file_priv)
+ {
++  struct rockchip_drm_private *priv = dev->dev_private;
+ 	struct drm_crtc *crtc;
+ 
+ 	list_for_each_entry(crtc, &dev->mode_config.crtc_list, head)
+ 		rockchip_drm_crtc_cancel_pending_vblank(crtc, file_priv);
+-}
+-
+-static void rockchip_drm_lastclose(struct drm_device *dev)
+-{
+-	struct rockchip_drm_private *priv = dev->dev_private;
++  priv->open_counter--;
++  if (!priv->open_counter && !priv->logo)
++    drm_fb_helper_restore_fbdev_mode_unlocked(priv->fbdev_helper);
+ 
+-	if (!priv->logo)
+-		drm_fb_helper_restore_fbdev_mode_unlocked(priv->fbdev_helper);
+ }
+ 
+ static struct drm_pending_vblank_event *
+@@ -2000,10 +1999,14 @@ struct dma_buf *rockchip_drm_gem_prime_e
  
  DEFINE_DRM_GEM_FOPS(rockchip_drm_driver_fops);
  
@@ -14,7 +50,10 @@ Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
 +  .load = rockchip_drm_load,
  	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC | DRIVER_RENDER,
  	.postclose		= rockchip_drm_postclose,
- 	.lastclose		= rockchip_drm_lastclose,
+-	.lastclose		= rockchip_drm_lastclose,
+ 	.open			= rockchip_drm_open,
+ 	.dumb_create		= rockchip_gem_dumb_create,
+ 	.prime_handle_to_fd	= drm_gem_prime_handle_to_fd,
 Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 ===================================================================
 --- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
@@ -96,3 +135,15 @@ Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
  	if(ret == 0){//not chip
          goto err3;
      } else {
+Index: kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
++++ kernel-rockchip/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+@@ -574,6 +574,7 @@ struct rockchip_drm_private {
+ 	struct loader_cubic_lut cubic_lut[ROCKCHIP_MAX_CRTC];
+ 
+ 	struct device *sysfs_devs[ROCKCHIP_MAX_CRTC];
++  int open_counter;
+ };
+ 
+ struct rockchip_encoder {

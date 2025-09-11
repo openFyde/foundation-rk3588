@@ -20,7 +20,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
-@@ -0,0 +1,172 @@
+@@ -0,0 +1,198 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +// Copyright 2022 The FydeOS Authors.
 +// Author: Yang Tsao<yang@fydeos.io>
@@ -35,6 +35,8 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +#include "dummy_v4l2_devices.h"
 +#define DUMMY_DEC_NAME "video-dec0"
 +#define DUMMY_ENC_NAME "video-enc0"
++#define DUMMY_JPG_DEC_NAME "jpeg-dec0"
++#define DUMMY_JPG_ENC_NAME "jpeg-enc0"
 +#define DUMMY_MAGIC 0x47
 +#define IOCTL_GET_DEV_TYPE _IOR(DUMMY_MAGIC, 1, unsigned int)
 +#define IOCTL_SET_DEV_EVENT _IOW(DUMMY_MAGIC, 2, unsigned char)
@@ -50,7 +52,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +  unsigned int type;
 +};
 +
-+char * get_type(struct dummy_private_data *data) {
++char* get_type(struct dummy_private_data *data) {
 +  return data->type == DEC ? "dec":"enc";
 +}
 +
@@ -89,7 +91,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +  if (!dummy_data)
 +    return -ENOMEM;
 +  dummy_data->dev = dev;
-+  dummy_data->type = strncmp(dev->name, DUMMY_DEC_NAME, 7) ? ENC : DEC;
++  dummy_data->type = strstr(dev->name, "dec") ? DEC : ENC;
 +  init_waitqueue_head(&dummy_data->event_wait);
 +  file->private_data = dummy_data;
 +  dummy_dbg(dummy_data, "opened.\n");
@@ -174,16 +176,38 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +  .fops = &fops,
 +};
 +
++static struct miscdevice v4l2_jpeg_dec_dev = {
++  .minor = MISC_DYNAMIC_MINOR,
++  .name = DUMMY_JPG_DEC_NAME,
++  .fops = &fops,
++};
++
++static struct miscdevice v4l2_jpeg_enc_dev = {
++  .minor = MISC_DYNAMIC_MINOR,
++  .name = DUMMY_JPG_ENC_NAME,
++  .fops = &fops,
++};
++
 +int init_dummy_v4l2_devices(void) {
 +  int ret = 0;
 +  ret = misc_register(&v4l2_dec_dev);
 +  if (ret) {
-+    pr_err("failed to register dummy v4l2 dec device, ret:%d", ret);
++    pr_err("failed to register %s, ret:%d", v4l2_dec_dev.name, ret);
 +    return ret;
 +  }
 +  ret = misc_register(&v4l2_enc_dev);
 +  if (ret) {
-+    pr_err("failed to register dummy v4l2 enc device, ret:%d", ret);
++    pr_err("failed to register %s device, ret:%d", v4l2_enc_dev.name, ret);
++    return ret;
++  }
++  ret = misc_register(&v4l2_jpeg_enc_dev);
++  if (ret) {
++    pr_err("failed to register %s device, ret:%d", v4l2_jpeg_enc_dev.name, ret);
++    return ret;
++  }
++  ret = misc_register(&v4l2_jpeg_dec_dev);
++  if (ret) {
++    pr_err("failed to register %s device, ret:%d", v4l2_jpeg_dec_dev.name, ret);
 +    return ret;
 +  }
 +  return 0;
@@ -192,6 +216,8 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +void cleanup_dummy_v4l2_devices(void) {
 +  misc_deregister(&v4l2_dec_dev);
 +  misc_deregister(&v4l2_enc_dev);
++	misc_deregister(&v4l2_jpeg_enc_dev);
++	misc_deregister(&v4l2_jpeg_dec_dev);
 +}
 Index: kernel-rockchip/drivers/video/rockchip/mpp/Makefile
 ===================================================================

@@ -20,7 +20,7 @@ CROS_WORKON_MANUAL_UPREV=1
 # CROS_WORKON_PROJECT="kernel"
 # CROS_WORKON_EGIT_BRANCH="linux-5.10"
 # CROS_WORKON_COMMIT="b7ecbce3de7591a07156bad71448b31c06e06a44"
-AFDO_PROFILE_VERSION="R126-15886.29-1718616801"
+AFDO_PROFILE_VERSION="R129-16002.17-1725843995"
 
 # This must be inherited *after* EGIT/CROS_WORKON variables defined
 inherit cros-workon cros-kernel
@@ -29,6 +29,13 @@ HOMEPAGE="https://www.chromium.org/chromium-os/chromiumos-design-docs/chromium-o
 DESCRIPTION="Chromium OS Linux kernel 6.1 for rockchip"
 KEYWORDS="*"
 
+builtin_fw_rk3588_desc="Mali Firmware for RK3588"
+builtin_fw_rk3588_files=(
+  mali_csffw.bin
+  )
+
+FIRMWARE_BINARIES+=( builtin_fw_rk3588 )
+IUSE+=" builtin_fw_rk3588"
 # Change the following (commented out) number to the next prime number
 # when you change "cros-kernel2.eclass" to work around http://crbug.com/220902
 #

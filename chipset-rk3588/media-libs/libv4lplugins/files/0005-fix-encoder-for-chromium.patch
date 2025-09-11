@@ -29,15 +29,17 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
  			.step_height = RKMPP_MB_DIM,
  		},
  	},
-@@ -95,7 +102,7 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
- 			.max_width = 1920,
- 			.step_width = RKMPP_MB_DIM,
- 			.min_height = 96,
--			.max_height = 1088,
-+			.max_height = 1080,
- 			.step_height = RKMPP_MB_DIM,
+@@ -100,8 +107,8 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
  		},
  	},
+     {
+-		.name = "MJPEG",
+-		.fourcc = V4L2_PIX_FMT_MJPEG,
++		.name = "JPEG",
++		.fourcc = V4L2_PIX_FMT_JPEG,
+ 		.num_planes = 1,
+ 		.type = MPP_VIDEO_CodingMJPEG,
+ 		.format = MPP_FMT_BUTT,
 @@ -113,7 +120,22 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
  			.max_height = 1088,
  			.step_height = RKMPP_MB_DIM,

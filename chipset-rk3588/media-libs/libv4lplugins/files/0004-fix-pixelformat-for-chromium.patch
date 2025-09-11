@@ -2,6 +2,19 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
 ===================================================================
 --- libv4l-rkmpp.orig/src/libv4l-rkmpp-dec.c
 +++ libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+@@ -35,10 +35,10 @@ static struct rkmpp_fmt rkmpp_dec_fmts[]
+ 		.format = MPP_FMT_BUTT,
+ 		.frmsize = {
+ 			.min_width = 48,
+-			.max_width = 7680,
++			.max_width = 3840,
+ 			.step_width = RKMPP_MB_DIM,
+ 			.min_height = 48,
+-			.max_height = 4320,
++			.max_height = 2160,
+ 			.step_height = RKMPP_MB_DIM,
+ 		},
+ 	},
 @@ -102,6 +102,21 @@ static struct rkmpp_fmt rkmpp_dec_fmts[]
  			.step_height = RKMPP_SB_DIM,
  		},

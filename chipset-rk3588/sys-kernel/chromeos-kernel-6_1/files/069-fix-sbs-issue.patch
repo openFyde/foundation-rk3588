@@ -141,6 +141,15 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 ===================================================================
 --- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
 +++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -172,7 +172,7 @@
+ 
+ 	pdmics: dummy-codec {
+ 		status = "okay";
+-		compatible = "rockchip,dummy-codec";
++		compatible = "linux,snd-soc-dummy";
+ 		#sound-dai-cells = <0>;
+ 	};
+ 
 @@ -489,12 +489,9 @@
      battery: sbs-battery@b {
  			status = "okay";

@@ -173,7 +173,7 @@ Index: mpp/mpp/mpi.cpp
 +    } break;
 +    }
 +
-+out:
++//out:
 +    return ret;
 +}
 +

@@ -1,20 +1,8 @@
-Index: mpp/osal/mpp_allocator.cpp
+Index: mpp/osal/mpp_allocator.c
 ===================================================================
---- mpp.orig/osal/mpp_allocator.cpp
-+++ mpp/osal/mpp_allocator.cpp
-@@ -137,6 +137,11 @@ MPP_RET mpp_allocator_get(MppAllocator *
- {
-     MppBufferType buffer_type = (MppBufferType)(type & MPP_BUFFER_TYPE_MASK);
-     MppAllocatorImpl *p = NULL;
-+        mpp_err_f("buffer_type:%d, valid_drm:%d, valid_ion:%d, valid_dma_heap:%d\n",
-+          buffer_type,
-+          mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DRM),
-+          mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION),
-+          mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_DMA_HEAP));
- 
-     do {
-         if (NULL == allocator || NULL == api || buffer_type >= MPP_BUFFER_TYPE_BUTT) {
-@@ -159,17 +164,17 @@ MPP_RET mpp_allocator_get(MppAllocator *
+--- mpp.orig/osal/mpp_allocator.c
++++ mpp/osal/mpp_allocator.c
+@@ -148,17 +148,17 @@ MPP_RET mpp_allocator_get(MppAllocator *
              p->os_api = allocator_std;
          } break;
          case MPP_BUFFER_TYPE_ION : {
@@ -36,11 +24,3 @@ Index: mpp/osal/mpp_allocator.cpp
                          (mpp_rt_allcator_is_valid(MPP_BUFFER_TYPE_ION)) ? allocator_ion :
                          allocator_std;
          } break;
-@@ -202,7 +207,6 @@ MPP_RET mpp_allocator_get(MppAllocator *
- 
-         *allocator = p;
-         *api = &mpp_allocator_api;
--
-         return MPP_OK;
-     } while (0);
- 

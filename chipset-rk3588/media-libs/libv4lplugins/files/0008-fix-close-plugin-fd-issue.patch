@@ -2,7 +2,15 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
 ===================================================================
 --- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
 +++ libv4l-rkmpp/src/libv4l-rkmpp.c
-@@ -48,6 +48,33 @@ static const char* ctx_type(struct rkmpp
+@@ -11,7 +11,6 @@
+  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  *  GNU General Public License for more details.
+  */
+-
+ #include <fcntl.h>
+ #include <sys/epoll.h>
+ #include <sys/eventfd.h>
+@@ -48,6 +47,33 @@ static const char* ctx_type(struct rkmpp
    return ctx->is_decoder ? dec : enc;
  }
  
@@ -36,7 +44,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  static pthread_once_t g_rkmpp_global_init_once = PTHREAD_ONCE_INIT;
  
  static void rkmpp_global_init(void)
-@@ -163,6 +190,7 @@ void rkmpp_reset_queue(struct rkmpp_cont
+@@ -163,6 +189,7 @@ void rkmpp_reset_queue(struct rkmpp_cont
  			rkmpp_buffer_clr_last(rkmpp_buffer);
  	}
  
@@ -44,7 +52,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	LEAVE();
  }
  
-@@ -870,7 +898,7 @@ int rkmpp_update_poll_event(struct rkmpp
+@@ -870,7 +897,7 @@ int rkmpp_update_poll_event(struct rkmpp
  {
  	eventfd_t event;
  	bool has_event;
@@ -53,7 +61,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  
  	ENTER();
  
-@@ -878,17 +906,21 @@ int rkmpp_update_poll_event(struct rkmpp
+@@ -878,17 +905,21 @@ int rkmpp_update_poll_event(struct rkmpp
  		has_event = rkmpp_dec_has_event(ctx->data);
  	else
  		has_event = rkmpp_enc_has_event(ctx->data);
@@ -85,7 +93,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
    errno = 0;
  	LEAVE();
  
-@@ -897,11 +929,11 @@ int rkmpp_update_poll_event(struct rkmpp
+@@ -897,11 +928,11 @@ int rkmpp_update_poll_event(struct rkmpp
  
  static int rkmpp_parse_options(struct rkmpp_context *ctx, int fd)
  {
@@ -98,7 +106,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  #define MAX_OPT_LEN 1024
  #define OPT_DEC "dec"
  #define OPT_ENC "enc"
-@@ -967,7 +999,6 @@ static int rkmpp_parse_options(struct rk
+@@ -967,7 +998,6 @@ static int rkmpp_parse_options(struct rk
  			RETURN_ERR(ENODEV, -1);
  		}
  	}
@@ -106,7 +114,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
    ret = read(fd, options, sizeof(options) -1);
    LOGV(1, "read fd:%s\n", options);
    if (!ret || !strncmp(options, "dec", 3)) {
-@@ -978,6 +1009,16 @@ static int rkmpp_parse_options(struct rk
+@@ -978,6 +1008,16 @@ static int rkmpp_parse_options(struct rk
      LOGV(1, "unknown options\n");
      RETURN_ERR(ENODEV, -1);
    }
@@ -123,7 +131,7 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  #endif
  
  	if (fcntl(fd, F_GETFL) & O_NONBLOCK)
-@@ -1044,13 +1085,16 @@ static void *plugin_init(int fd)
+@@ -1044,13 +1084,16 @@ static void *plugin_init(int fd)
  		LOGE("failed to add eventfd\n");
  		goto err_close_epollfd;
  	}
@@ -137,12 +145,12 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	close(epollfd);
 -
 +#else
-+  ctx->devfd = fd;
++  ctx->devfd = dup(fd);
 +#endif
  	pthread_mutex_init(&ctx->ioctl_mutex, NULL);
  	pthread_cond_init(&ctx->output.queue_cond, NULL);
  	pthread_mutex_init(&ctx->output.queue_mutex, NULL);
-@@ -1064,7 +1108,7 @@ static void *plugin_init(int fd)
+@@ -1064,7 +1107,7 @@ static void *plugin_init(int fd)
  	if (ret != MPP_OK) {
  		LOGE("failed to use mpp drm buf group\n");
  		errno = ENODEV;
@@ -151,11 +159,20 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  	}
  
  	ret = mpp_buffer_group_get_internal(&ctx->capture.internal_group,
-@@ -1157,6 +1201,7 @@ static void plugin_close(void *dev_ops_p
+@@ -1109,6 +1152,7 @@ err_close_epollfd:
+ 	close(epollfd);
+ err_close_eventfd:
+ 	close(ctx->eventfd);
++  close(ctx->devfd);
+ err_free_ctx:
+ 	free(ctx);
+ 	RETURN_ERR(errno, NULL);
+@@ -1157,6 +1201,8 @@ static void plugin_close(void *dev_ops_p
  		free(ctx->codecs);
  
  	close(ctx->eventfd);
 +  close(ctx->epollfd);
++  close(ctx->devfd);
  
  	LEAVE();
  
