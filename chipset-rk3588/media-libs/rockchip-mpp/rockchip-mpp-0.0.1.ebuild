@@ -43,6 +43,6 @@ src_install() {
 PATCHES=(
   "${FILESDIR}/0001-mpi_api-add-new-api-mpp_convert_mjpeg_to_nv12.patch"
   "${FILESDIR}/0003-use-drm-allocator-as-default.patch"
-  "${FILESDIR}/0004-add-debug-info.patch"
 )
 #  "${FILESDIR}/0002-disable-output-for-debug.patch"
+#  "${FILESDIR}/0004-add-debug-info.patch"

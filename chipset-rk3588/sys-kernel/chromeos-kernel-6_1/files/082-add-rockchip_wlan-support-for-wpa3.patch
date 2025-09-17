@@ -1,0 +1,511 @@
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
+@@ -4938,6 +4938,8 @@ wl_set_wpa_version(struct net_device *de
+ 	else if (sme->crypto.wpa_versions & NL80211_WPA_VERSION_2)
+ 		val = WPA2_AUTH_PSK|
+ 			WPA2_AUTH_UNSPECIFIED;
++  else if (sme->crypto.wpa_versions & NL80211_WPA_VERSION_3)
++    val = WPA3_AUTH_SAE_PSK;
+ 	else
+ 		val = WPA_AUTH_DISABLED;
+ 
+@@ -5041,6 +5043,11 @@ wl_set_auth_type(struct net_device *dev,
+ 		}
+ 
+ 		WL_DBG(("sae auth type\n"));
++#ifdef WPA3_DEBUG
++		WL_ERR(("WPA3-SAE: Authentication initiated for BSSID %pM\n", sme->bssid));
++		WL_ERR(("WPA3-SAE: PMKID available: %s, Auth value: 0x%x\n",
++			wl_is_pmkid_available(dev, sme->bssid) ? "Yes" : "No", val));
++#endif /* WPA3_DEBUG */
+ 		break;
+ #endif /* WL_SAE || WL_CLIENT_SAE */
+ #ifdef BCMCCX
+@@ -5410,11 +5417,25 @@ wl_cfg80211_set_mfp(struct bcm_cfg80211
+ 		DOT11_MNG_RSN_ID)) != NULL) &&
+ 		(wl_cfg80211_get_rsn_capa(wpa2_ie, &rsn_cap) == 0) && rsn_cap) {
+ 		WL_DBG(("rsn_cap 0x%x%x\n", rsn_cap[0], rsn_cap[1]));
++#ifdef WPA3_DEBUG
++		WL_ERR(("WPA3-DEBUG: RSN cap analysis - rsn_cap[0]=0x%02x\n", rsn_cap[0]));
++		WL_ERR(("WPA3-DEBUG: RSN_CAP_MFPR=0x%02x RSN_CAP_MFPC=0x%02x\n", RSN_CAP_MFPR, RSN_CAP_MFPC));
++		WL_ERR(("WPA3-DEBUG: MFPR check: (0x%02x & 0x%02x) = 0x%02x\n",
++			rsn_cap[0], RSN_CAP_MFPR, (rsn_cap[0] & RSN_CAP_MFPR)));
++		WL_ERR(("WPA3-DEBUG: MFPC check: (0x%02x & 0x%02x) = 0x%02x\n",
++			rsn_cap[0], RSN_CAP_MFPC, (rsn_cap[0] & RSN_CAP_MFPC)));
++#endif /* WPA3_DEBUG */
+ 		/* Check for MFP cap in the RSN capability field */
+ 		if (rsn_cap[0] & RSN_CAP_MFPR) {
+ 			mfp = WL_MFP_REQUIRED;
++#ifdef WPA3_DEBUG
++			WL_ERR(("WPA3-DEBUG: Setting MFP to REQUIRED (0x%x)\n", mfp));
++#endif /* WPA3_DEBUG */
+ 		} else if (rsn_cap[0] & RSN_CAP_MFPC) {
+ 			mfp = WL_MFP_CAPABLE;
++#ifdef WPA3_DEBUG
++			WL_ERR(("WPA3-DEBUG: Setting MFP to CAPABLE (0x%x)\n", mfp));
++#endif /* WPA3_DEBUG */
+ 		}
+ 		/*
+ 		 * eptr --> end/last byte addr of wpa2_ie
+@@ -5442,9 +5463,27 @@ wl_cfg80211_set_mfp(struct bcm_cfg80211
+ 		}
+ 	}
+ 
++	/* WPA3-SAE REQUIRES MFP - Override if SAE authentication is being used */
++	if (sec && (sec->wpa_auth & WPA3_AUTH_SAE_PSK) && (mfp == WL_MFP_NONE)) {
++		WL_INFORM_MEM(("WPA3-SAE detected but MFP=NONE! Forcing MFP=REQUIRED for WPA3\n"));
++		mfp = WL_MFP_REQUIRED;
++	}
++
+ 	WL_DBG(("mfp:%d wpa2_ie ptr:%p mfp fw_support:%d\n",
+ 		mfp, wpa2_ie, fw_support));
+ 
++#ifdef WPA3_DEBUG
++	WL_ERR(("WPA3-DEBUG: MFP final decision - mfp=%d fw_support=%d current_mfp=%d\n",
++		mfp, fw_support, current_mfp));
++	WL_ERR(("WPA3-DEBUG: sme->mfp=%d\n",
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0))
++		sme->mfp
++#else
++		0  /* mfp field not available in older kernels */
++#endif
++	));
++#endif /* WPA3_DEBUG */
++
+ 	if (fw_support == false) {
+ 		if (mfp == WL_MFP_REQUIRED) {
+ 			/* if mfp > 0, mfp capability set in wpa ie, but
+@@ -5773,6 +5812,9 @@ wl_set_multi_akm(struct net_device *dev,
+ 
+ 		/* Set auto_wpa_enabled to avoid wpa ie plumb */
+ 		assoc_info->auto_wpa_enabled = TRUE;
++#ifdef WPA3_DEBUG
++		WL_ERR(("WPA3-DEBUG: Multi-AKM transition mode detected (SAE+PSK) - auto_wpa enabled\n"));
++#endif /* WPA3_DEBUG */
+ 		/* Update seamless_psk for AKMs needing psk plumb */
+ 		assoc_info->seamless_psk = TRUE;
+ 
+@@ -5918,9 +5960,17 @@ wl_set_key_mgmt(struct net_device *dev,
+ 				case WLAN_AKM_SUITE_8021X_SUITE_B_192:
+ #ifdef WL_OWE
+ 				case WLAN_AKM_SUITE_OWE:
++#ifdef WPA3_DEBUG
++					WL_ERR(("WPA3-OWE: Processing OWE (Enhanced Open) connection\n"));
++					fallthrough;
++#endif /* WPA3_DEBUG */
+ #endif /* WL_OWE */
+ #if defined(WL_SAE) || defined(WL_CLIENT_SAE)
+ 				case WLAN_AKM_SUITE_SAE:
++#ifdef WPA3_DEBUG
++					WL_ERR(("WPA3-SAE: Processing SAE AKM suite for connection\n"));
++					fallthrough;
++#endif /* WPA3_DEBUG */
+ #endif /* WL_SAE || WL_CLIENT_SAE */
+ #ifdef WL_SAE_FT
+ 				case WLAN_AKM_SUITE_FT_OVER_SAE:
+@@ -5928,6 +5978,10 @@ wl_set_key_mgmt(struct net_device *dev,
+ 				case WLAN_AKM_SUITE_DPP:
+ 				case WLAN_AKM_SUITE_FT_8021X_SHA384:
+ 					val = wl_rsn_akm_wpa_auth_lookup(sme->crypto.akm_suites[0]);
++#ifdef WPA3_DEBUG
++					WL_ERR(("WPA3: AKM Suite 0x%08x -> wpa_auth 0x%08x\n",
++						sme->crypto.akm_suites[0], val));
++#endif /* WPA3_DEBUG */
+ 					break;
+ 				case WLAN_AKM_SUITE_FT_FILS_SHA256:
+ 					val = WPA2_AUTH_FILS_SHA256 | WPA2_AUTH_FT;
+@@ -5941,7 +5995,39 @@ wl_set_key_mgmt(struct net_device *dev,
+ 					return -EINVAL;
+ 				}
+ 			}
+-
++      else if (val & WPA3_AUTH_SAE_PSK) {
++        switch (sme->crypto.akm_suites[0]) {
++#ifdef WL_OWE
++        case WLAN_AKM_SUITE_OWE:
++#ifdef WPA3_DEBUG
++          WL_ERR(("WPA3-OWE: Processing OWE (Enhanced Open) connection\n"));
++          fallthrough;
++#endif /* WPA3_DEBUG */
++#endif /* WL_OWE */
++#if defined(WL_SAE) || defined(WL_CLIENT_SAE)
++        case WLAN_AKM_SUITE_SAE:
++#ifdef WPA3_DEBUG
++          WL_ERR(("WPA3-SAE: Processing SAE AKM suite for connection\n"));
++          fallthrough;
++#endif /* WPA3_DEBUG */
++#endif /* WL_SAE || WL_CLIENT_SAE */
++#ifdef WL_SAE_FT
++        case WLAN_AKM_SUITE_FT_OVER_SAE:
++#endif /* WL_SAE_FT */
++        case WLAN_AKM_SUITE_DPP:
++        case WLAN_AKM_SUITE_FT_8021X_SHA384:
++          val = wl_rsn_akm_wpa_auth_lookup(sme->crypto.akm_suites[0]);
++#ifdef WPA3_DEBUG
++          WL_ERR(("WPA3: AKM Suite 0x%08x -> wpa_auth 0x%08x\n",
++            sme->crypto.akm_suites[0], val));
++#endif /* WPA3_DEBUG */
++          break;
++        default:
++          WL_ERR(("invalid akm suite (0x%x)\n",
++            sme->crypto.akm_suites[0]));
++          return  -EINVAL;
++        }
++      }
+ #ifdef BCMWAPI_WPI
+ 			else if (val & (WAPI_AUTH_PSK | WAPI_AUTH_UNSPECIFIED)) {
+ 				switch (sme->crypto.akm_suites[0]) {
+@@ -5986,8 +6072,15 @@ wl_set_key_mgmt(struct net_device *dev,
+ 	sec = wl_read_prof(cfg, dev, WL_PROF_SEC);
+ 	if (assoc_info->auto_wpa_enabled == TRUE) {
+ 		/* Set to value 0 indicating multi-akm configuration */
+-		sec->wpa_auth = 0;
+-		sec->fw_wpa_auth = 0;
++		/* For WPA3-SAE, preserve the auth information to prevent association failure */
++		if (val & WPA3_AUTH_SAE_PSK) {
++			WL_INFORM_MEM(("Preserving WPA3-SAE auth (0x%x) despite multi-AKM\n", val));
++			sec->wpa_auth = val;  /* Keep WPA3-SAE info for proper operation */
++			sec->fw_wpa_auth = val;
++		} else {
++			sec->wpa_auth = 0;
++			sec->fw_wpa_auth = 0;
++		}
+ 	} else {
+ 		sec->wpa_auth = sme->crypto.akm_suites[0];
+ 		sec->fw_wpa_auth = val;
+@@ -6019,7 +6112,7 @@ wl_set_set_sharedkey(struct net_device *
+ 		WL_DBG(("wpa_versions 0x%x cipher_pairwise 0x%x\n",
+ 			sec->wpa_versions, sec->cipher_pairwise));
+ 		if (!(sec->wpa_versions & (NL80211_WPA_VERSION_1 |
+-			NL80211_WPA_VERSION_2)) &&
++			NL80211_WPA_VERSION_2 | NL80211_WPA_VERSION_3)) &&
+ 
+ #ifdef BCMWAPI_WPI
+ 			!is_wapi(sec->cipher_pairwise) &&
+@@ -9867,16 +9960,15 @@ wl_update_pmklist(struct net_device *dev
+ 			" interfaces than primary interface\n"));
+ 		return err;
+ 	}
+-
++#ifdef WPA3_DEBUG
+ 	WL_DBG(("No of elements %d\n", npmkids));
+ 	for (i = 0; i < npmkids; i++) {
+ 		WL_DBG(("PMKID[%d]: %pM =\n", i,
+ 			&pmk_list->pmkids.pmkid[i].bssid));
+-		for (j = 0; j < WPA2_PMKID_LEN; j++) {
+-			WL_DBG(("%02x\n", pmk_list->pmkids.pmkid[i].pmkid[j]));
+-		}
++    print_hex_dump(KERN_DEBUG, "update_pmklist: ", DUMP_PREFIX_OFFSET, 16, 1,
++      pmk_list->pmkids.pmkid[i].pmkid, WPA2_PMKID_LEN, false);
+ 	}
+-
++#endif
+ 	WL_INFORM_MEM(("wlc_ver_major %x(%x) minor %x\n", cfg->wlc_ver.wlc_ver_major,
+ 		MIN_PMKID_LIST_V3_FW_MAJOR, cfg->wlc_ver.wlc_ver_minor));
+ 
+@@ -10113,18 +10205,6 @@ wl_cfg80211_set_pmksa(struct wiphy *wiph
+ 		err = -EINVAL;
+ 	}
+ 
+-#if (WL_DBG_LEVEL > 0)
+-	if (pmksa->bssid != NULL) {
+-		WL_DBG(("set_pmksa,IW_PMKSA_ADD - PMKID: %pM =\n",
+-			&cfg->pmk_list->pmkids.pmkid[npmkids - 1].bssid));
+-	}
+-	for (i = 0; i < WPA2_PMKID_LEN; i++) {
+-		WL_DBG(("%02x\n",
+-			cfg->pmk_list->pmkids.pmkid[npmkids - 1].
+-			pmkid[i]));
+-	}
+-#endif /* (WL_DBG_LEVEL > 0) */
+-
+ 	err = wl_update_pmklist(dev, cfg->pmk_list, err);
+ 
+ 	return err;
+@@ -13549,6 +13629,12 @@ wl_bss_handle_sae_auth_v2(struct bcm_cfg
+ 	uint32 type;
+ 	pmkid_v3_t *t_pmkid = NULL;
+ 
++#ifdef WPA3_DEBUG
++  size_t act_size = ksize(data);
++  WL_ERR(("%s data:%p, size:%lu\n", __func__, data, act_size));
++  print_hex_dump(KERN_DEBUG, "sae_auth_v2: ", DUMP_PREFIX_ADDRESS, 16, 1,
++    data, act_size, true);
++#endif
+ 	auth_data = (wl_auth_event_t *)data;
+ 	if (!auth_data) {
+ 		WL_ERR(("Invalid param"));
+@@ -13561,7 +13647,8 @@ wl_bss_handle_sae_auth_v2(struct bcm_cfg
+ 	sae_key.pmk = bcm_get_data_from_xtlv_buf(auth_data->xtlvs, tlv_buf_len,
+ 		WL_AUTH_PMK_TLV_ID, &(sae_key.pmk_len), BCM_XTLV_OPTION_ALIGN32);
+ 	if (!sae_key.pmk || !sae_key.pmk_len) {
+-		WL_ERR(("Mandatory PMK info not present"));
++		WL_ERR(("Mandatory PMK info not present version:%u, length:%u, tlv_buf_len:%u, pmk:%p, pmk_len:%u\n",
++      auth_data->version, auth_data->length, tlv_buf_len, sae_key.pmk, sae_key.pmk_len));
+ 		err = BCME_NOTFOUND;
+ 		goto done;
+ 	}
+@@ -13654,6 +13741,82 @@ done:
+ 	return err;
+ }
+ 
++static s32
++wl_bss_handle_sae_auth_v3(struct bcm_cfg80211 *cfg, struct net_device *ndev,
++	const wl_event_msg_t *event, void *data)
++{
++	int err = BCME_OK;
++	wl_auth_event_t *auth_data;
++	wl_sae_key_info_t sae_key;
++	uint8 *pmk_data;
++	uint16 pmk_len;
++	size_t act_size = ksize(data);
++#ifdef WPA3_DEBUG
++	WL_ERR(("%s data:%p, size:%lu\n", __func__, data, act_size));
++	print_hex_dump(KERN_DEBUG, "sae_auth_v3: ", DUMP_PREFIX_ADDRESS, 16, 1,
++		data, act_size, false);
++#endif
++	auth_data = (wl_auth_event_t *)data;
++	if (!auth_data) {
++		WL_ERR(("Invalid param"));
++		return BCME_ERROR;
++	}
++
++	WL_ERR(("SAE v3: version=0x%04x, length=0x%04x, act_size=%lu\n",
++		auth_data->version, auth_data->length, act_size));
++
++	/* Initialize SAE key structure */
++	memset(&sae_key, 0, sizeof(sae_key));
++
++	/* Copy peer MAC address from event */
++	(void)memcpy_s(sae_key.peer_mac, ETHER_ADDR_LEN, event->addr.octet, ETHER_ADDR_LEN);
++
++	/* For v3, the length field appears to be unreliable, so use actual data size
++	 * Skip the 4-byte header (version + length) and extract PMK from xtlvs area
++	 */
++	if (act_size > WL_AUTH_EVENT_FIXED_LEN_V2) {
++		pmk_data = auth_data->xtlvs;
++		pmk_len = act_size - WL_AUTH_EVENT_FIXED_LEN_V2;
++
++		/* Skip any padding/reserved bytes and look for actual PMK data
++		 * Based on hex dump, PMK starts after initial bytes
++		 */
++		if (pmk_len > 8) {
++			/* Skip first 4 bytes (00 00 13 00) which appear to be TLV header/length */
++			pmk_data += 4;
++			pmk_len -= 4;
++
++			/* Limit PMK to reasonable size (32 bytes for WPA2, 48 for WPA3) */
++			if (pmk_len > 64) {
++				pmk_len = 48; /* Use standard PMK length */
++			}
++
++			sae_key.pmk = pmk_data;
++			sae_key.pmk_len = pmk_len;
++#ifdef WPA3_DEBUG
++			WL_ERR(("SAE v3: extracted PMK len=%u\n", sae_key.pmk_len));
++			print_hex_dump(KERN_INFO, "sae_v3_pmk: ", DUMP_PREFIX_OFFSET, 16, 1,
++				sae_key.pmk, sae_key.pmk_len, false);
++#endif
++			/* Process the SAE key */
++			err = wl_cfg80211_event_sae_key(cfg, ndev, &sae_key);
++			if (err) {
++				WL_ERR(("Failed to process SAE v3 key: %d\n", err));
++			} else {
++				WL_ERR(("Successfully processed SAE v3 key\n"));
++			}
++		} else {
++			WL_ERR(("SAE v3: insufficient data for PMK (len=%u)\n", pmk_len));
++			err = BCME_BUFTOOSHORT;
++		}
++	} else {
++		WL_ERR(("SAE v3: invalid data size %lu\n", act_size));
++		err = BCME_BUFTOOSHORT;
++	}
++
++	return err;
++}
++
+ s32
+ wl_bss_handle_sae_auth(struct bcm_cfg80211 *cfg, struct net_device *ndev,
+ 	const wl_event_msg_t *event, void *data)
+@@ -13668,6 +13831,8 @@ wl_bss_handle_sae_auth(struct bcm_cfg802
+ 			err = wl_bss_handle_sae_auth_v1(cfg, ndev, event, data);
+ 		} else if (auth_data->version == WL_AUTH_EVENT_DATA_V2) {
+ 			err = wl_bss_handle_sae_auth_v2(cfg, ndev, event, data);
++    } else if (auth_data->version == WL_AUTH_EVENT_DATA_V3) {
++      err = wl_bss_handle_sae_auth_v3(cfg, ndev, event, data);
+ 		} else {
+ 			WL_ERR(("unknown auth event data version %x\n",
+ 				auth_data->version));
+@@ -26745,9 +26910,24 @@ static void
+ wl_cfg80211_handle_set_ssid_complete(struct bcm_cfg80211 *cfg, wl_assoc_status_t *as,
+ 		const wl_event_msg_t *event, wl_assoc_state_t assoc_state)
+ {
++#ifdef WPA3_DEBUG
++	WL_ERR(("WPA3-DEBUG: SET_SSID_COMPLETE status=0x%x reason=0x%x event_type=0x%x\n",
++		as->status, as->reason, as->event_type));
++	WL_ERR(("WPA3-DEBUG: assoc_state=0x%x flags=0x%x\n", assoc_state, as->flags));
++#endif /* WPA3_DEBUG */
++
+ 	if (as->status != WLC_E_STATUS_SUCCESS) {
+ 		struct wl_security *sec = wl_read_prof(cfg, as->ndev, WL_PROF_SEC);
+ 
++#ifdef WPA3_DEBUG
++		WL_ERR(("WPA3-DEBUG: SET_SSID FAILED - investigating WPA3-SAE association failure\n"));
++		if (sec) {
++			WL_ERR(("WPA3-DEBUG: sec->wpa_auth=0x%x sec->auth_type=0x%x sec->fw_auth=0x%x\n",
++				sec->wpa_auth, sec->auth_type, sec->fw_auth));
++			WL_ERR(("WPA3-DEBUG: sec->auth_assoc_res_status=0x%x\n", sec->auth_assoc_res_status));
++		}
++#endif /* WPA3_DEBUG */
++
+ 		if (sec && sec->auth_assoc_res_status) {
+ 			WL_INFORM_MEM(("Assoc fail status %d\n",
+ 				sec->auth_assoc_res_status));
+@@ -27189,6 +27369,8 @@ wl_is_pmkid_available(struct net_device
+ 	int i;
+ 
+ 	/* check the bssid is null or not */
++  WL_DBG(("%s bssid:%p, cfg->pmk_list->pmkids.count:%d\n", __func__,
++    bssid, cfg->pmk_list->pmkids.count));
+ 	if (!bssid) return FALSE;
+ 
+ 	for (i = 0; i < cfg->pmk_list->pmkids.count; i++) {
+@@ -27237,7 +27419,7 @@ out:
+ 	MFREE(cfg->osh, buf, WLC_IOCTL_MAXLEN);
+ }
+ 
+-#define WL_AUTH_START_EVT_V0 0
++#define WL_AUTH_START_EVT_V0
+ static s32
+ wl_notify_start_auth(struct bcm_cfg80211 *cfg,
+ 	bcm_struct_cfgdev *cfgdev, const wl_event_msg_t *e, void *data)
+Index: kernel-rockchip/Documentation/devicetree/bindings/net/wireless/brcm,bcm4329-fmac.yaml
+===================================================================
+--- kernel-rockchip.orig/Documentation/devicetree/bindings/net/wireless/brcm,bcm4329-fmac.yaml
++++ kernel-rockchip/Documentation/devicetree/bindings/net/wireless/brcm,bcm4329-fmac.yaml
+@@ -48,6 +48,7 @@ properties:
+           - pci14e4,4488  # BCM4377
+           - pci14e4,4425  # BCM4378
+           - pci14e4,4433  # BCM4387
++          - pci14e4,449d  # BCM43752
+ 
+   reg:
+     description: SDIO function number for the device (for most cases
+@@ -116,6 +117,14 @@ properties:
+       NVRAM. This would normally be filled in by the bootloader from platform
+       configuration data.
+ 
++  clocks:
++    items:
++      - description: External Low Power Clock input (32.768KHz)
++
++  clock-names:
++    items:
++      - const: lpo
++
+ required:
+   - compatible
+   - reg
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/wlioctl.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/wlioctl.h
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/wlioctl.h
+@@ -2068,6 +2068,7 @@ typedef enum {
+ 
+ #define WL_AUTH_EVENT_DATA_V1		0x1
+ #define WL_AUTH_EVENT_DATA_V2		0x2
++#define WL_AUTH_EVENT_DATA_V3   0x3
+ 
+ /* tlv ids for auth event */
+ #define WL_AUTH_PMK_TLV_ID		1u
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_iw.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_iw.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_iw.c
+@@ -3197,7 +3197,7 @@ wl_iw_set_wpaauth(
+ 	}
+ 	return 0;
+ }
+-#define VAL_PSK(_val) (((_val) & WPA_AUTH_PSK) || ((_val) & WPA2_AUTH_PSK))
++#define VAL_PSK(_val) (((_val) & WPA_AUTH_PSK) || ((_val) & WPA2_AUTH_PSK) || ( (_val) & WPA3_AUTH_SAE_PSK))
+ 
+ static int
+ wl_iw_get_wpaauth(
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
+@@ -55,7 +55,7 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -W
+ 	-Wno-uninitialized -Wno-unused-but-set-variable -Wno-address	      \
+ 	-Dlinux -DLINUX -DBCMDRIVER -DBCMUTILS_ERR_CODES                      \
+ 	-DBCMDONGLEHOST -DBCMDMA32 -DBCMFILEIMAGE                             \
+-	-DDHDTHREAD -DDHD_DEBUG -DSHOW_EVENTS -DGET_OTP_MAC_ENABLE            \
++	-DDHDTHREAD -DSHOW_EVENTS -DGET_OTP_MAC_ENABLE            \
+ 	-DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT -DSUPPORT_PM2_ONLY             \
+ 	-DPKTPRIO_OVERRIDE                                                    \
+ 	-DKEEP_ALIVE -DPKT_FILTER_SUPPORT -DDHDTCPACK_SUPPRESS                \
+@@ -65,8 +65,8 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -W
+ 	-DUSE_NEW_RSPEC_DEFS                                                  \
+ 	-DWL_EXT_IAPSTA -DWL_ESCAN -DCCODE_LIST -DSUSPEND_EVENT               \
+ 	-DKEY_INSTALL_CHECK                                                   \
+-	-DENABLE_INSMOD_NO_FW_LOAD
+-
++	-DENABLE_INSMOD_NO_FW_LOAD -DBCMDBG_ERR
++# add -DDHD_DEBUG for more infomation
+ DHDOFILES = aiutils.o siutils.o sbutils.o                                 \
+ 	bcmutils.o bcmwifi_channels.o bcmxtlv.o bcm_app_utils.o bcmstdlib_s.o \
+ 	dhd_linux.o dhd_linux_platdev.o dhd_linux_sched.o dhd_pno.o           \
+@@ -111,12 +111,13 @@ ifneq ($(CONFIG_CFG80211),)
+ 	DHDCFLAGS += -DSPECIFIC_MAC_GEN_SCHEME
+ 	DHDCFLAGS += -DWL_IFACE_MGMT
+ 	DHDCFLAGS += -DSUPPORT_RSSI_SUM_REPORT
+-	DHDCFLAGS += -DWLFBT -DWL_GCMP_SUPPORT -DWL_OWE -DWL_SAE_FT
++	DHDCFLAGS += -DWLFBT -DWL_GCMP_SUPPORT -DWL_OWE -DWL_SAE_FT -DWL_DPP -DWL_SUITE_B -DWL_BEACON_PROTECTION
+ 	DHDCFLAGS += -DROAM_CHANNEL_CACHE -DDHD_LOSSLESS_ROAMING
+ #	DHDCFLAGS += -DWL_CFGVENDOR_SEND_HANG_EVENT
+ 	DHDCFLAGS += -DGTK_OFFLOAD_SUPPORT
+ #	DHDCFLAGS += -DWL_STATIC_IF #-DDHD_MAX_STATIC_IFS=2
+-	DHDCFLAGS += -DWL_CLIENT_SAE
++	DHDCFLAGS += -DWL_CLIENT_SAE -DWL_WPA3_TRANSITION_DISABLE -DWL_ENHANCED_PMF
++#-DWPA3_DEBUG
+ 	DHDCFLAGS += -DCONNECT_INFO_WAR -DWL_ROAM_WAR
+ 	DHDCFLAGS += -DVNDR_IE_WAR
+ 	DHDCFLAGS += -DRESTART_AP_WAR -DRXF0OVFL_REINIT_WAR
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
+@@ -5579,6 +5579,9 @@ int dhd_register_net(struct net_device *
+ {
+ 	int err = 0;
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
++  struct bcm_cfg80211 *cfg = wl_get_cfg(net);
++  struct wiphy *wiphy = bcmcfg_to_wiphy(cfg);
++  wiphy_lock(wiphy);
+ 	if (need_rtnl_lock) {
+ 		rtnl_lock();
+ 		err = cfg80211_register_netdevice(net);
+@@ -5586,6 +5589,7 @@ int dhd_register_net(struct net_device *
+ 	} else {
+ 		err = cfg80211_register_netdevice(net);
+ 	}
++  wiphy_unlock(wiphy);
+ #else
+ 	if (need_rtnl_lock) {
+ 		err = register_netdev(net);
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_static_buf.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_static_buf.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_static_buf.c
+@@ -10,7 +10,7 @@
+ #define STATIC_ERROR_LEVEL	BIT(0)
+ #define STATIC_TRACE_LEVEL	BIT(1)
+ #define STATIC_MSG_LEVEL	BIT(0)
+-uint static_msg_level = STATIC_ERROR_LEVEL | STATIC_MSG_LEVEL;
++uint static_msg_level = STATIC_ERROR_LEVEL;
+ 
+ #define DHD_STATIC_MSG(x, args...) \
+ do { \

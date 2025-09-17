@@ -555,7 +555,15 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
  }  // namespace
  namespace media {
  
-@@ -585,12 +615,17 @@ std::optional<SupportedVideoDecoderConfi
+@@ -332,6 +362,7 @@ static const std::map<v4l2_enum_type, v4
+         {V4L2_PIX_FMT_H264_SLICE, V4L2_CID_MPEG_VIDEO_H264_PROFILE},
+ #if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+         {V4L2_PIX_FMT_HEVC_SLICE, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE},
++        {V4L2_PIX_FMT_HEVC, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE},
+ #endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+         {V4L2_PIX_FMT_VP8, V4L2_CID_MPEG_VIDEO_VP8_PROFILE},
+         {V4L2_PIX_FMT_VP8_FRAME, V4L2_CID_MPEG_VIDEO_VP8_PROFILE},
+@@ -585,12 +616,17 @@ std::optional<SupportedVideoDecoderConfi
  #endif
  
    for (const auto& path : candidate_paths) {
@@ -573,7 +581,7 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
  
      std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
          base::BindRepeating(&HandledIoctl, device_fd.get()),
-@@ -618,6 +653,47 @@ std::optional<SupportedVideoDecoderConfi
+@@ -618,6 +654,47 @@ std::optional<SupportedVideoDecoderConfi
              /*require_encrypted=*/false));
        }
      }
@@ -621,7 +629,7 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
    }
  
  #if DCHECK_IS_ON()
-@@ -627,17 +703,21 @@ std::optional<SupportedVideoDecoderConfi
+@@ -627,17 +704,21 @@ std::optional<SupportedVideoDecoderConfi
                << config.coded_size_max.ToString() << ")";
    }
  #endif
@@ -644,7 +652,7 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
  
    std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
        base::BindRepeating(&HandledIoctl, device_fd.get()),
-@@ -649,14 +729,19 @@ bool IsV4L2DecoderStateful() {
+@@ -649,14 +730,19 @@ bool IsV4L2DecoderStateful() {
        V4L2_PIX_FMT_VP8,
        V4L2_PIX_FMT_VP9,
    };
@@ -664,7 +672,7 @@ Index: src/media/gpu/v4l2/v4l2_utils.cc
    constexpr char kVideoDeviceDriverPath[] = "/dev/video-dec0";
    base::ScopedFD device_fd(HANDLE_EINTR(
        open(kVideoDeviceDriverPath, O_RDWR | O_NONBLOCK | O_CLOEXEC)));
-@@ -668,6 +753,9 @@ bool IsVislDriver() {
+@@ -668,6 +754,9 @@ bool IsVislDriver() {
        GetDriverName(base::BindRepeating(&HandledIoctl, device_fd.get()));
  
    return v4l2_driver_name.compare("visl") == 0;
@@ -824,15 +832,21 @@ Index: src/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
      return false;
    }
    const struct v4l2_format v4l2_format = *(v4l2_format_or_error.first);
-@@ -909,6 +944,7 @@ void V4L2StatefulVideoDecoder::TryAndDeq
+@@ -907,8 +942,13 @@ void V4L2StatefulVideoDecoder::RearmCAPT
+ void V4L2StatefulVideoDecoder::TryAndDequeueCAPTUREQueueBuffers() {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
    DCHECK(CAPTURE_queue_) << "|CAPTURE_queue_| must be created at this point";
++  if (!CAPTURE_queue_) {
++    LOG(ERROR) << "|CAPTURE_queue_| must be created at this point";
++    return;
++  }
  
    const v4l2_memory queue_type = CAPTURE_queue_->GetMemoryType();
 +  VLOG(1) << "mem type:" << (int) queue_type;
    DCHECK(queue_type == V4L2_MEMORY_MMAP || queue_type == V4L2_MEMORY_DMABUF);
    const bool use_v4l2_allocated_buffers = !client_->GetVideoFramePool();
    DCHECK((queue_type == V4L2_MEMORY_MMAP && use_v4l2_allocated_buffers) ||
-@@ -1192,13 +1228,14 @@ bool V4L2StatefulVideoDecoder::IsInitial
+@@ -1192,13 +1232,14 @@ bool V4L2StatefulVideoDecoder::IsInitial
  
  // static
  int V4L2StatefulVideoDecoder::GetMaxNumDecoderInstances() {
@@ -848,7 +862,7 @@ Index: src/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
      return std::numeric_limits<int>::max();
    }
    struct v4l2_capability caps = {};
-@@ -1214,7 +1251,11 @@ int V4L2StatefulVideoDecoder::GetMaxNumD
+@@ -1214,7 +1255,11 @@ int V4L2StatefulVideoDecoder::GetMaxNumD
    // to 15 with e.g. Qualcomm SC7180.
    // [1] https://source.chromium.org/chromium/chromium/src/+/main:media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.h;l=449-454;drc=83195d4d1e1a4e54f148ddc80d0edcf5daa755ff
    // [2] https://source.chromium.org/chromium/chromium/src/+/main:media/gpu/v4l2/v4l2_video_decoder.h;l=183-189;drc=90fa47c897b589bc4857fb7ccafab46a4be2e2ae
