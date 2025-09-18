@@ -20,7 +20,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
-@@ -0,0 +1,198 @@
+@@ -0,0 +1,202 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +// Copyright 2022 The FydeOS Authors.
 +// Author: Yang Tsao<yang@fydeos.io>
@@ -175,7 +175,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +  .name = DUMMY_ENC_NAME,
 +  .fops = &fops,
 +};
-+
++#ifdef JPEG_DUMMY
 +static struct miscdevice v4l2_jpeg_dec_dev = {
 +  .minor = MISC_DYNAMIC_MINOR,
 +  .name = DUMMY_JPG_DEC_NAME,
@@ -187,7 +187,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +  .name = DUMMY_JPG_ENC_NAME,
 +  .fops = &fops,
 +};
-+
++#endif
 +int init_dummy_v4l2_devices(void) {
 +  int ret = 0;
 +  ret = misc_register(&v4l2_dec_dev);
@@ -200,6 +200,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +    pr_err("failed to register %s device, ret:%d", v4l2_enc_dev.name, ret);
 +    return ret;
 +  }
++#ifdef JPEG_DUMMY
 +  ret = misc_register(&v4l2_jpeg_enc_dev);
 +  if (ret) {
 +    pr_err("failed to register %s device, ret:%d", v4l2_jpeg_enc_dev.name, ret);
@@ -210,14 +211,17 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +    pr_err("failed to register %s device, ret:%d", v4l2_jpeg_dec_dev.name, ret);
 +    return ret;
 +  }
++#endif
 +  return 0;
 +}
 +
 +void cleanup_dummy_v4l2_devices(void) {
 +  misc_deregister(&v4l2_dec_dev);
 +  misc_deregister(&v4l2_enc_dev);
++#ifdef JPEG_DUMMY
 +	misc_deregister(&v4l2_jpeg_enc_dev);
 +	misc_deregister(&v4l2_jpeg_dec_dev);
++#endif
 +}
 Index: kernel-rockchip/drivers/video/rockchip/mpp/Makefile
 ===================================================================
