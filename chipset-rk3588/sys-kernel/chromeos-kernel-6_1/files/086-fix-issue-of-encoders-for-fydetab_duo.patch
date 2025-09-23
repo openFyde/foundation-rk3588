@@ -1,0 +1,150 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -864,6 +864,8 @@
+ };
+ 
+ &rkvenc0 {
++  venc-supply = <&vdd_vdenc_s0>;
++  mem-supply = <&vdd_vdenc_mem_s0>;
+ 	status = "okay";
+ };
+ 
+@@ -871,6 +873,16 @@
+ 	status = "okay";
+ };
+ 
++&rkvenc1 {
++  venc-supply = <&vdd_vdenc_s0>;
++  mem-supply = <&vdd_vdenc_mem_s0>;
++  status = "okay";
++};
++
++&rkvenc1_mmu {
++  status = "okay";
++};
++
+ &vepu {
+   status = "okay";
+ };
+Index: kernel-rockchip/drivers/dma-buf/rk_heaps/rk-dma-cma.c
+===================================================================
+--- kernel-rockchip.orig/drivers/dma-buf/rk_heaps/rk-dma-cma.c
++++ kernel-rockchip/drivers/dma-buf/rk_heaps/rk-dma-cma.c
+@@ -5,19 +5,30 @@
+  * Copyright (C) 2022 Rockchip Electronics Co. Ltd.
+  * Author: Simon Xue <xxm@rock-chips.com>
+  */
+-
++#include <linux/init.h>
++#include <linux/kernel.h>
+ #include <linux/cma.h>
+ #include <linux/dma-map-ops.h>
++#include <linux/moduleparam.h>
+ 
+ #include "rk-dma-heap.h"
+ 
+ #define RK_DMA_HEAP_CMA_DEFAULT_SIZE SZ_32M
+ 
+-static unsigned long rk_dma_heap_size __initdata;
+-static unsigned long rk_dma_heap_base __initdata;
++static unsigned long rk_dma_heap_size = 0;
++static unsigned long rk_dma_heap_base = 0;
+ 
+ static struct cma *rk_dma_heap_cma;
+ 
++#ifdef MODULE
++/* Module parameters when built as module */
++module_param(rk_dma_heap_size, ulong, 0644);
++MODULE_PARM_DESC(rk_dma_heap_size, "RK DMA heap size");
++
++module_param(rk_dma_heap_base, ulong, 0644);
++MODULE_PARM_DESC(rk_dma_heap_base, "RK DMA heap base address");
++#else
++/* Early parameter when built-in */
+ static int __init early_dma_heap_cma(char *p)
+ {
+ 	if (!p) {
+@@ -34,6 +45,7 @@ static int __init early_dma_heap_cma(cha
+ 	return 0;
+ }
+ early_param("rk_dma_heap_cma", early_dma_heap_cma);
++#endif
+ 
+ #ifndef CONFIG_DMA_CMA
+ void __weak
+Index: kernel-rockchip/drivers/dma-buf/heaps/sram_heap.c
+===================================================================
+--- kernel-rockchip.orig/drivers/dma-buf/heaps/sram_heap.c
++++ kernel-rockchip/drivers/dma-buf/heaps/sram_heap.c
+@@ -159,11 +159,12 @@ static int dma_heap_mmap(struct dma_buf
+ 	return ret;
+ }
+ 
+-static void *dma_heap_vmap(struct dma_buf *dmabuf)
++static int dma_heap_vmap(struct dma_buf *dmabuf, struct iosys_map *map)
+ {
+ 	struct sram_dma_heap_buffer *buffer = dmabuf->priv;
+ 
+-	return buffer->vaddr;
++	iosys_map_set_vaddr(map, buffer->vaddr);
++	return 0;
+ }
+ 
+ static const struct dma_buf_ops sram_dma_heap_buf_ops = {
+Index: kernel-rockchip/drivers/dma-buf/rk_heaps/Makefile
+===================================================================
+--- kernel-rockchip.orig/drivers/dma-buf/rk_heaps/Makefile
++++ kernel-rockchip/drivers/dma-buf/rk_heaps/Makefile
+@@ -1,6 +1,6 @@
+ # SPDX-License-Identifier: GPL-2.0
+ 
+-rk-cma-heap-objs := rk-dma-cma.o rk-cma-heap.o
++rk-dma-cma-heap-objs := rk-dma-cma.o rk-cma-heap.o
+ 
+ obj-$(CONFIG_DMABUF_HEAPS_ROCKCHIP) += rk-dma-heap.o
+-obj-$(CONFIG_DMABUF_HEAPS_ROCKCHIP_CMA_HEAP) += rk-cma-heap.o
++obj-$(CONFIG_DMABUF_HEAPS_ROCKCHIP_CMA_HEAP) += rk-dma-cma-heap.o
+Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
+===================================================================
+--- kernel-rockchip.orig/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
++++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
+@@ -148,12 +148,12 @@ static struct miscdevice v4l2_dec_dev =
+   .fops = &fops,
+ };
+ 
++#ifdef JPEG_DUMMY
+ static struct miscdevice v4l2_enc_dev = {
+   .minor = MISC_DYNAMIC_MINOR,
+   .name = DUMMY_ENC_NAME,
+   .fops = &fops,
+ };
+-#ifdef JPEG_DUMMY
+ static struct miscdevice v4l2_jpeg_dec_dev = {
+   .minor = MISC_DYNAMIC_MINOR,
+   .name = DUMMY_JPG_DEC_NAME,
+@@ -173,12 +173,12 @@ int init_dummy_v4l2_devices(void) {
+     pr_err("failed to register %s, ret:%d", v4l2_dec_dev.name, ret);
+     return ret;
+   }
++#ifdef JPEG_DUMMY
+   ret = misc_register(&v4l2_enc_dev);
+   if (ret) {
+     pr_err("failed to register %s device, ret:%d", v4l2_enc_dev.name, ret);
+     return ret;
+   }
+-#ifdef JPEG_DUMMY
+   ret = misc_register(&v4l2_jpeg_enc_dev);
+   if (ret) {
+     pr_err("failed to register %s device, ret:%d", v4l2_jpeg_enc_dev.name, ret);
+@@ -195,8 +195,8 @@ int init_dummy_v4l2_devices(void) {
+ 
+ void cleanup_dummy_v4l2_devices(void) {
+   misc_deregister(&v4l2_dec_dev);
+-  misc_deregister(&v4l2_enc_dev);
+ #ifdef JPEG_DUMMY
++  misc_deregister(&v4l2_enc_dev);
+ 	misc_deregister(&v4l2_jpeg_enc_dev);
+ 	misc_deregister(&v4l2_jpeg_dec_dev);
+ #endif

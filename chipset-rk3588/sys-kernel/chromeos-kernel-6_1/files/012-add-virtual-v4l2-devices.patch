@@ -20,7 +20,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,203 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +// Copyright 2022 The FydeOS Authors.
 +// Author: Yang Tsao<yang@fydeos.io>
@@ -83,6 +83,7 @@ Index: kernel-rockchip/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +
 +static void reset_v4l2_status(struct dummy_private_data *data) {
 +  dummy_dbg(data, "%s\n", __func__);
++  atomic_set(&data->event, 0);
 +}
 +
 +static int dummy_v4l2_open(struct inode *inode, struct file *file) {

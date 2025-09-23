@@ -20,8 +20,8 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
  		},
  	},
 +  {
-+    .name = "JPEG",
-+    .fourcc = V4L2_PIX_FMT_JPEG,
++    .name = "MJPEG",
++    .fourcc = V4L2_PIX_FMT_MJPEG,
 +    .num_planes = 1,
 +    .type = MPP_VIDEO_CodingMJPEG,
 +    .format = MPP_FMT_BUTT,
@@ -67,6 +67,17 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
  	ret = rkmpp_g_fmt(dec->ctx, f);
  
  	LEAVE();
+@@ -509,8 +538,10 @@ static int rkmpp_dec_dqevent(struct rkmp
+ 	LOGV(1, "dequeue resolution change event\n");
+ 
+ 	/* The chromium's stateful decoder needs a last buffer for flushing */
++#if 0
+ 	if (ctx->mpp_streaming)
+ 		rkmpp_try_send_eos(dec);
++#endif
+ 
+ 	LEAVE();
+ 	return 0;
 Index: libv4l-rkmpp/src/libv4l-rkmpp.c
 ===================================================================
 --- libv4l-rkmpp.orig/src/libv4l-rkmpp.c

@@ -38,7 +38,20 @@ Index: kernel-rockchip/include/drm/drm_drv.h
 ===================================================================
 --- kernel-rockchip.orig/include/drm/drm_drv.h
 +++ kernel-rockchip/include/drm/drm_drv.h
-@@ -483,6 +483,8 @@ void *__devm_drm_dev_alloc(struct device
+@@ -94,6 +94,12 @@ enum drm_driver_feature {
+ 	 * synchronization of command submission.
+ 	 */
+ 	DRIVER_SYNCOBJ_TIMELINE         = BIT(6),
++	/**
++	 * @DRIVER_GEM_GPUVA:
++	 *
++	 * Driver supports user defined GPU VA bindings for GEM objects.
++	 */
++	DRIVER_GEM_GPUVA		= BIT(8),
+ 
+ 	/* IMPORTANT: Below are all the legacy flags, add new ones above. */
+ 
+@@ -483,6 +489,8 @@ void *__devm_drm_dev_alloc(struct device
  			   const struct drm_driver *driver,
  			   size_t size, size_t offset);
  

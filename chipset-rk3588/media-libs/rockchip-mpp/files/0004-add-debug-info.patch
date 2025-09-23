@@ -49,3 +49,26 @@ Index: mpp/osal/mpp_runtime.c
  
      if (srv)
          return;
+Index: mpp/osal/driver/vcodec_service.c
+===================================================================
+--- mpp.orig/osal/driver/vcodec_service.c
++++ mpp/osal/driver/vcodec_service.c
+@@ -539,11 +539,16 @@ MPP_RET vcodec_service_init(void *ctx, M
+         if (!ret) {
+             vcodec_ioctl_version = 0;
+         } else {
++            mpp_err("failed to ioctl VPU_IOC_SET_CLIENT_TYPE:%lu, name:%s, type:%u, ret:%d MPP_OK:%d\n", VPU_IOC_SET_CLIENT_TYPE, name, client_type, ret, MPP_OK);
+             ret = (RK_S32)ioctl(p->fd, VPU_IOC_SET_CLIENT_TYPE_U32, (RK_U32)client_type);
+-            if (!ret)
++            if (!ret) {
+                 vcodec_ioctl_version = 1;
++            } else {
++              mpp_err("failed to ioctl VPU_IOC_SET_CLIENT_TYPE_U32:%lu, name:%s, type:%u, ret:%d MPP_OK:%d\n", VPU_IOC_SET_CLIENT_TYPE_U32, name, client_type, ret, MPP_OK);
++            }
+         }
+-        mpp_assert(ret == MPP_OK);
++      //  mpp_assert(ret == MPP_OK);
++        ret = 0;
+     } else {
+         RK_U32 cmd = (vcodec_ioctl_version == 0) ?
+                      (VPU_IOC_SET_CLIENT_TYPE) :

@@ -1,0 +1,166 @@
+Index: libv4l-rkmpp/include/libv4l-rkmpp.h
+===================================================================
+--- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
++++ libv4l-rkmpp/include/libv4l-rkmpp.h
+@@ -490,10 +490,10 @@ void rkmpp_finish_flushing(struct rkmpp_
+ 
+ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
+ 			 struct rkmpp_buffer *rkmpp_buffer,
+-			 struct v4l2_buffer *buffer, bool output);
++			 struct v4l2_buffer *buffer);
+ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
+ 			   struct v4l2_buffer *buffer,
+-			   struct rkmpp_buffer *rkmpp_buffer, bool input);
++			   struct rkmpp_buffer *rkmpp_buffer);
+ 
+ int rkmpp_set_event_on_frame(struct rkmpp_context *ctx);
+ int rkmpp_set_event_change_resolution(struct rkmpp_context *ctx);
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -623,7 +623,7 @@ int rkmpp_querybuf(struct rkmpp_context
+ 
+ 	rkmpp_buffer = &queue->buffers[buffer->index];
+ 
+-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
++	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer\n");
+ 		RETURN_ERR(EINVAL, -1);
+@@ -692,7 +692,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
+ 
+ 	rkmpp_buffer = &queue->buffers[buffer->index];
+ 
+-	ret = rkmpp_from_v4l2_buffer(ctx, buffer, rkmpp_buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
++	ret = rkmpp_from_v4l2_buffer(ctx, buffer, rkmpp_buffer);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer\n");
+ 		RETURN_ERR(EINVAL, -1);
+@@ -736,7 +736,7 @@ static int rkmpp_try_dqbuf(struct rkmpp_
+ 	rkmpp_buffer = TAILQ_FIRST(&queue->avail_buffers);
+ 	pthread_mutex_unlock(&queue->queue_mutex);
+ 
+-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, buffer->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
++	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer, ret:%d\n", ret);
+ 		RETURN_ERR(EINVAL, -1);
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -18,6 +18,23 @@
+ 
+ #include "libv4l-rkmpp.h"
+ 
++static bool need_copy(bool is_decoder, uint32_t v4l2_buffer_type, bool send_in)
++{
++  if (is_decoder) {
++    if (send_in) {
++      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
++    } else {
++      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++    }
++  } else {
++    if (send_in) {
++      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++    } else {
++      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
++    }
++  }
++}
++
+ static int rkmpp_copy_buffer(struct rkmpp_context *ctx,
+ 			     struct rkmpp_buffer *rkmpp_buffer,
+ 			     struct v4l2_buffer *buffer, int copy_to)
+@@ -49,8 +66,9 @@ static int rkmpp_copy_buffer(struct rkmp
+ 
+ 	/* Prepare access */
+ 	for (i = 0; i < buffer->length; i++) {
++    sizes[i] = rkmpp_buffer->planes[i].plane_size;
+ 		offsets[i] = rkmpp_buffer->planes[i].data_offset;
+-		sizes[i] = rkmpp_buffer->planes[i].bytesused - offsets[i];
++//		sizes[i] = rkmpp_buffer->planes[i].bytesused - offsets[i];
+ 
+ 		if (!sizes[i]) {
+       LOGV(3, "index:%d,planes[%u].size :%u, offset:%u, buffer->length:%u, bytesused:%u\n", rkmpp_buffer->index, i, sizes[i], offsets[i], buffer->length, rkmpp_buffer->planes[i].bytesused);
+@@ -124,10 +142,10 @@ out:
+ 
+ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
+ 			 struct rkmpp_buffer *rkmpp_buffer,
+-			 struct v4l2_buffer *buffer,
+-       bool output)
++			 struct v4l2_buffer *buffer)
+ {
+ 	unsigned int i;
++  bool do_copy = need_copy(ctx->is_decoder, buffer->type, false);
+ 
+ 	ENTER();
+ 
+@@ -154,7 +172,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 			buffer->m.planes[i].m.fd =
+ 				rkmpp_buffer->planes[i].fd;
+ 	}
+-  if (output)
++  if (do_copy)
+     LOGV(3, "deque output buffer, length:%d, fd(0):%d \n", buffer->length, rkmpp_buffer->planes[0].fd);
+ 
+ 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
+@@ -164,7 +182,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+       rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
+ 		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
+ 
+-		if (output && (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0))
++		if (do_copy && (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0))
+ 			return -1;
+ 	}
+ 
+@@ -198,10 +216,10 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 
+ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
+ 			   struct v4l2_buffer *buffer,
+-			   struct rkmpp_buffer *rkmpp_buffer,
+-         bool input)
++			   struct rkmpp_buffer *rkmpp_buffer)
+ {
+ 	unsigned int i;
++  bool do_copy = need_copy(ctx->is_decoder, buffer->type, true);
+ 
+ 	ENTER();
+ 
+@@ -229,7 +247,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 				buffer->m.planes[i].m.fd;
+ 	}
+ 
+-	if (rkmpp_buffer->bytesused && input) {
++	if (rkmpp_buffer->bytesused && do_copy) {
+ 		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 0) < 0)
+ 			return -1;
+ 	}
+@@ -246,7 +264,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 	if (rkmpp_buffer_last(rkmpp_buffer))
+ 		rkmpp_buffer_clr_last(rkmpp_buffer);
+ 
+-  if (!input)
++  if (!do_copy)
+     LOGV(2, "enque output buffer, length:%d, fd(0):%d, status:0x%x\n", buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
+ 	LEAVE();
+ 	return 0;
+Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-enc.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+@@ -84,10 +84,10 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
+ 		.format = MPP_FMT_BUTT,
+ 		.frmsize = {
+ 			.min_width = 96,
+-			.max_width = 3840,
++			.max_width = 1920,
+ 			.step_width = RKMPP_MB_DIM,
+ 			.min_height = 96,
+-			.max_height = 2160,
++			.max_height = 1088,
+ 			.step_height = RKMPP_MB_DIM,
+ 		},
+ 	},

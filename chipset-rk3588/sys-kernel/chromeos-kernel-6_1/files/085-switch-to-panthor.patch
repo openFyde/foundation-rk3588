@@ -1,0 +1,24 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/Makefile
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/Makefile
+@@ -85,3 +85,4 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-o
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-orangepi-5b.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-radxa-cm5-io.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-rock-5a.dtb
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-fydetab_duo.dtb
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+===================================================================
+--- /dev/null
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+@@ -0,0 +1,10 @@
++#include "rk3588s-tablet-12c-linux.dts"
++
++&gpu {
++  status = "disabled";
++};
++
++&gpu_panthor {
++  status = "okay";
++  mali-supply = <&vdd_gpu_s0>;
++};

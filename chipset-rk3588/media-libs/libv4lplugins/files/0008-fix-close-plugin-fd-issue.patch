@@ -131,6 +131,15 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp.c
  #endif
  
  	if (fcntl(fd, F_GETFL) & O_NONBLOCK)
+@@ -1021,7 +1061,7 @@ static void *plugin_init(int fd)
+ 	} else {
+     if (ctx->codecs)
+       free(ctx->codecs);
+-    ctx->codecs = strdup("H.264:VP8:H.265");
++    ctx->codecs = strdup("H.264:VP8:H.265:JPEG");
+   }
+ 
+ 	/* Create eventfd to fake poll events */
 @@ -1044,13 +1084,16 @@ static void *plugin_init(int fd)
  		LOGE("failed to add eventfd\n");
  		goto err_close_epollfd;

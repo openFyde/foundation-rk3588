@@ -1,0 +1,17 @@
+Index: kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
+===================================================================
+--- kernel-rockchip.orig/drivers/input/sensors/fingerprint/madev.c
++++ kernel-rockchip/drivers/input/sensors/fingerprint/madev.c
+@@ -697,8 +697,10 @@ int init_connect(void){
+ #else
+     	ret = mas_sync(stxb, srxb, 4);
+ #endif
+-        if(ret!=0) MALOGW("do init_connect failed!");
+-		printk("guq srxb[3] = %d srxb[2] = %d\n", srxb[3], srxb[2]);
++        if(ret!=0) {
++                MALOGW("do init_connect failed!");
++                printk("guq srxb[3] = %d srxb[2] = %d\n", srxb[3], srxb[2]);
++        }
+         if(srxb[3] == 0x41 || srxb[3] == 0x45) return 1;
+     }
+     MALOGD("end");

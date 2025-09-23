@@ -1,0 +1,1553 @@
+Add context-aware logging macros for decoder/encoder filtering
+
+This patch introduces new logging macros LOGV_CTX and LOGE_CTX that:
+1. Add [DEC] or [ENC] prefix to distinguish decoder from encoder logs
+2. Allow selective logging via RKMPP_LOG_TARGET macro:
+   - RKMPP_LOG_TARGET_ALL (0): Log both decoder and encoder (default)
+   - RKMPP_LOG_TARGET_DEC (1): Log decoder only
+   - RKMPP_LOG_TARGET_ENC (2): Log encoder only
+3. Maintain full compatibility with existing rkmpp_log_level variable
+4. Keep original LOGV/LOGE macros for backward compatibility
+
+Usage: Set RKMPP_LOG_TARGET=1 during compilation to see only decoder logs,
+or RKMPP_LOG_TARGET=2 for encoder-only logs.
+
+Index: libv4l-rkmpp/include/libv4l-rkmpp.h
+===================================================================
+--- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
++++ libv4l-rkmpp/include/libv4l-rkmpp.h
+@@ -79,6 +79,29 @@ __attribute__((format(printf, 5, 6))) vo
+   log_prefix("RKMPP", __func__, __LINE__, errno, fmt, ##__VA_ARGS__); \
+ 	} while (0)
+ 
++/* Context-aware logging control macros */
++#define RKMPP_LOG_TARGET_ALL     0  /* Log both decoder and encoder */
++#define RKMPP_LOG_TARGET_DEC     1  /* Log decoder only */
++#define RKMPP_LOG_TARGET_ENC     2  /* Log encoder only */
++#ifndef RKMPP_LOG_TARGET
++#define RKMPP_LOG_TARGET RKMPP_LOG_TARGET_ALL  /* Default: log all */
++#endif
++
++/* Context-aware logging macros */
++#define LOGV_CTX(ctx, level, fmt, ...) \
++	do { \
++		bool should_log = (RKMPP_LOG_TARGET == RKMPP_LOG_TARGET_ALL) || \
++		                  (RKMPP_LOG_TARGET == RKMPP_LOG_TARGET_DEC && (ctx)->is_decoder) || \
++		                  (RKMPP_LOG_TARGET == RKMPP_LOG_TARGET_ENC && !(ctx)->is_decoder); \
++		if (rkmpp_log_level >= level && should_log) { \
++			log_prefix("RKMPP", __func__, __LINE__, errno, \
++			           "[%s] " fmt, (ctx)->is_decoder ? "DEC" : "ENC", ##__VA_ARGS__); \
++		} \
++	} while (0)
++
++#define LOGE_CTX(ctx, fmt, ...) LOGV_CTX(ctx, 0, "ERR: " fmt, ##__VA_ARGS__)
++
++/* Original logging macros (unchanged for compatibility) */
+ #define LOGV(level, fmt, ...) \
+ 	do { if (rkmpp_log_level >= level) LOG(fmt, ##__VA_ARGS__); } while (0)
+ 
+Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-dec.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+@@ -137,7 +137,7 @@ static void rkmpp_put_packets(struct rkm
+ 
+ 		rkmpp_buffer = TAILQ_FIRST(&ctx->output.pending_buffers);
+ 		if (rkmpp_buffer == &ctx->eos_buffer) {
+-			LOGV(1, "processing flush request\n");
++			LOGV_CTX(ctx, 1, "processing flush request\n");
+ 
+ 			ctx->pausing = true;
+ 
+@@ -164,13 +164,13 @@ static void rkmpp_put_packets(struct rkm
+ 		if (rkmpp_buffer == &ctx->eos_buffer)
+ 			break;
+ 
+-		LOGV(2, "put packet: %d(%" PRIu64 ") len=%d\n",
++		LOGV_CTX(ctx, 2, "put packet: %d(%" PRIu64 ") len=%d\n",
+ 		     rkmpp_buffer->index, rkmpp_buffer->timestamp,
+ 		     rkmpp_buffer->bytesused);
+ 
+ 		rkmpp_buffer->bytesused = 0;
+ 
+-		LOGV(2, "return packet: %d\n",
++		LOGV_CTX(ctx, 2, "return packet: %d\n",
+ 		     rkmpp_buffer->index);
+ 
+ 		TAILQ_INSERT_TAIL(&ctx->output.avail_buffers,
+@@ -197,19 +197,19 @@ static void rkmpp_try_send_eos(struct rk
+ 	/* Require an unused buffer for EOS */
+ 	ret = mpp_buffer_get(ctx->capture.external_group, &buffer, 1);
+ 	if (ret != MPP_OK) {
+-		LOGV(2, "unable to lock buffer for EOS\n");
++		LOGV_CTX(ctx, 2, "unable to lock buffer for EOS\n");
+ 		goto err;
+ 	}
+ 
+ 	index = mpp_buffer_get_index(buffer);
+ 	if (index < 0 || index >= (int)ctx->capture.num_buffers) {
+-		LOGE("invalid buffer index for EOS\n");
++		LOGE_CTX(ctx, "invalid buffer index for EOS\n");
+ 		goto err;
+ 	}
+ 
+ 	rkmpp_buffer = &ctx->capture.buffers[index];
+ 	if (buffer != rkmpp_buffer->rkmpp_buf) {
+-		LOGE("invalid buffer for EOS\n");
++		LOGE_CTX(ctx, "invalid buffer for EOS\n");
+ 		goto err;
+ 	}
+ 
+@@ -217,7 +217,7 @@ static void rkmpp_try_send_eos(struct rk
+ 
+ 	rkmpp_finish_flushing(ctx, rkmpp_buffer);
+ 
+-	LOGV(1, "return EOS frame: %d\n", rkmpp_buffer->index);
++	LOGV_CTX(ctx, 1, "return EOS frame: %d\n", rkmpp_buffer->index);
+ 
+ 	dec->pending_eos = false;
+ 	return;
+@@ -244,7 +244,7 @@ static void rkmpp_put_frames(struct rkmp
+ 			     rkmpp_buffer, entry);
+ 		rkmpp_buffer_clr_pending(rkmpp_buffer);
+ 
+-		LOGV(2, "put frame: %d fd: %d\n", rkmpp_buffer->index,
++		LOGV_CTX(ctx, 2, "put frame: %d fd: %d\n", rkmpp_buffer->index,
+ 		     rkmpp_buffer->fd);
+ 
+ 		mpp_buffer_put(rkmpp_buffer->rkmpp_buf);
+@@ -294,7 +294,7 @@ static void rkmpp_apply_info_change(stru
+ 
+ 	if (!memcmp((void *)&video_info,
+ 		    (void *)&dec->video_info, sizeof(video_info))) {
+-		LOGV(1, "ignore unchanged frame info\n");
++		LOGV_CTX(ctx, 1, "ignore unchanged frame info\n");
+ 
+ 		ctx->mpi->control(ctx->mpp,
+ 				  MPP_DEC_SET_INFO_CHANGE_READY,
+@@ -306,7 +306,7 @@ static void rkmpp_apply_info_change(stru
+ 	dec->video_info.dirty = true;
+ 	dec->video_info.event = dec->event_subscribed;
+ 
+-	LOGV(1, "frame info changed: %dx%d(%dx%d:%d), mpp format(%d)\n",
++	LOGV_CTX(ctx, 1, "frame info changed: %dx%d(%dx%d:%d), mpp format(%d)\n",
+ 	     dec->video_info.width, dec->video_info.height,
+ 	     dec->video_info.hor_stride,
+ 	     dec->video_info.ver_stride,
+@@ -355,7 +355,7 @@ static void *decoder_thread_fn(void *dat
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "ctx(%p): starting decoder thread\n", (void *)ctx);
++	LOGV_CTX(ctx, 1, "ctx(%p): starting decoder thread\n", (void *)ctx);
+ 
+ 	while (1) {
+ 		pthread_mutex_lock(&ctx->worker_mutex);
+@@ -371,7 +371,7 @@ static void *decoder_thread_fn(void *dat
+ 
+ 		if (ret != MPP_OK || !frame) {
+ 			if (ret != MPP_ERR_TIMEOUT)
+-				LOGE("failed to get frame\n");
++				LOGE_CTX(ctx, "failed to get frame\n");
+ 
+ 			pthread_mutex_unlock(&ctx->worker_mutex);
+ 			goto next;
+@@ -395,7 +395,7 @@ static void *decoder_thread_fn(void *dat
+ 
+ 		/* Handle flushing */
+ 		if (mpp_frame_get_eos(frame)) {
+-			LOGV(1, "seen EOS frame\n");
++			LOGV_CTX(ctx, 1, "seen EOS frame\n");
+ 
+ 			rkmpp_try_send_eos(dec);
+ 			goto next_locked;
+@@ -407,7 +407,7 @@ static void *decoder_thread_fn(void *dat
+ 		/* Handle normal frame */
+ 		buffer = mpp_frame_get_buffer(frame);
+ 		if (!buffer) {
+-			LOGE("frame(%lld) doesn't have buf\n",
++			LOGE_CTX(ctx, "frame(%lld) doesn't have buf\n",
+ 			     mpp_frame_get_pts(frame));
+ 
+ 			goto next_locked;
+@@ -423,7 +423,7 @@ static void *decoder_thread_fn(void *dat
+ 
+ 		if (mpp_frame_get_errinfo(frame) ||
+ 		    mpp_frame_get_discard(frame)) {
+-			LOGE("frame err or discard\n");
++			LOGE_CTX(ctx, "frame err or discard\n");
+ 			rkmpp_buffer->bytesused = 0;
+ 			rkmpp_buffer_set_error(rkmpp_buffer);
+ 		} else {
+@@ -432,7 +432,7 @@ static void *decoder_thread_fn(void *dat
+ 				dec->video_info.ver_stride * 3 / 2;
+ 		}
+ 
+-		LOGV(2, "return frame: %d(%" PRIu64 ")\n",
++		LOGV_CTX(ctx, 2, "return frame: %d(%" PRIu64 ")\n",
+ 		     index, rkmpp_buffer->timestamp);
+ 
+ 		/* Report new frame to count fps */
+@@ -486,12 +486,12 @@ static int rkmpp_dec_g_fmt(struct rkmpp_
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "f->type = %d\n", f->type);
++	LOGV_CTX(ctx, 1, "f->type = %d\n", f->type);
+ 
+ 	/* The chromium expected EINVAL when resolution not available */
+ 	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE &&
+ 	    !dec->video_info.valid) {
+-		LOGV(1, "cannot provide resolution yet\n");
++		LOGV_CTX(ctx, 1, "cannot provide resolution yet\n");
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 	ret = rkmpp_g_fmt(dec->ctx, f);
+@@ -509,7 +509,7 @@ static int rkmpp_dec_subscribe_event(str
+ 	ENTER();
+ 
+ 	if (sub->type != V4L2_EVENT_SOURCE_CHANGE) {
+-		LOGE("unsupported event type: %x\n", sub->type);
++		LOGE_CTX(ctx, "unsupported event type: %x\n", sub->type);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -527,7 +527,7 @@ static int rkmpp_dec_dqevent(struct rkmp
+ 	ENTER();
+ 
+ 	if (!dec->event_subscribed || !dec->video_info.event) {
+-		LOGV(4, "no available event\n");
++		LOGV_CTX(ctx, 4, "no available event\n");
+ 		errno = ENOENT;
+ 		return -1;
+ 	}
+@@ -535,7 +535,7 @@ static int rkmpp_dec_dqevent(struct rkmp
+ 	event->type = V4L2_EVENT_SOURCE_CHANGE;
+ 	event->u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION;
+ 	dec->video_info.event = false;
+-	LOGV(1, "dequeue resolution change event\n");
++	LOGV_CTX(ctx, 1, "dequeue resolution change event\n");
+ 
+ 	/* The chromium's stateful decoder needs a last buffer for flushing */
+ #if 0
+@@ -566,12 +566,12 @@ static int rkmpp_dec_streamon(struct rkm
+ 		goto out;
+ 	queue->streaming = true;
+ 
+-	LOGV(1, "queue(%d) start streaming\n", *type);
++	LOGV_CTX(ctx, 1, "queue(%d) start streaming\n", *type);
+ 
+ 	/* Commit pending info change to mpp */
+ 	if (ctx->mpp_streaming && dec->video_info.dirty &&
+ 	    *type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+-		LOGV(1, "send info change ready\n");
++		LOGV_CTX(ctx, 1, "send info change ready\n");
+ 
+ 		ctx->mpi->control(ctx->mpp,
+ 				  MPP_DEC_SET_INFO_CHANGE_READY, NULL);
+@@ -581,11 +581,11 @@ static int rkmpp_dec_streamon(struct rkm
+ 	if (ctx->mpp_streaming)
+ 		goto out;
+ 
+-	LOGV(1, "mpp initializing for %s\n", ctx->output.rkmpp_format->name);
++	LOGV_CTX(ctx, 1, "mpp initializing for %s\n", ctx->output.rkmpp_format->name);
+ 
+ 	ret = mpp_create(&ctx->mpp, &ctx->mpi);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to create mpp\n");
++		LOGE_CTX(ctx, "failed to create mpp\n");
+ 		errno = ENOMEM;
+ 		goto err;
+ 	}
+@@ -596,7 +596,7 @@ static int rkmpp_dec_streamon(struct rkm
+ 	ret = mpp_init(ctx->mpp, MPP_CTX_DEC,
+ 		       ctx->output.rkmpp_format->type);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to init mpp\n");
++		LOGE_CTX(ctx, "failed to init mpp\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+@@ -606,7 +606,7 @@ static int rkmpp_dec_streamon(struct rkm
+ 				MPP_DEC_SET_PARSER_SPLIT_MODE,
+ 				&split);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set mpp split mode\n");
++		LOGE_CTX(ctx, "failed to set mpp split mode\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+@@ -615,7 +615,7 @@ static int rkmpp_dec_streamon(struct rkm
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_SET_OUTPUT_TIMEOUT,
+ 				(MppParam)&poll_type);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set mpp timeout\n");
++		LOGE_CTX(ctx, "failed to set mpp timeout\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+@@ -624,7 +624,7 @@ static int rkmpp_dec_streamon(struct rkm
+ 				MPP_DEC_SET_EXT_BUF_GROUP,
+ 				ctx->capture.external_group);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set buffer group\n");
++		LOGE_CTX(ctx, "failed to set buffer group\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+@@ -655,7 +655,7 @@ static int rkmpp_dec_streamoff(struct rk
+ 	if (!queue->streaming)
+ 		goto out;
+ 
+-	LOGV(1, "queue(%d) stop streaming\n", *type);
++	LOGV_CTX(ctx, 1, "queue(%d) stop streaming\n", *type);
+ 
+ 	rkmpp_reset_queue(ctx, queue);
+ 
+@@ -681,13 +681,13 @@ static int rkmpp_dec_g_selection(struct
+ 	if ((selection->type != V4L2_BUF_TYPE_VIDEO_CAPTURE &&
+ 	     selection->type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) ||
+ 	    selection->target != V4L2_SEL_TGT_COMPOSE) {
+-		LOGE("invalid type or target\n");
++		LOGE_CTX(ctx, "invalid type or target\n");
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+ 	/* The chromium uses g_selection to get visible rect */
+ 	if (!dec->video_info.valid) {
+-		LOGV(1, "cannot provide visible resolution yet\n");
++		LOGV_CTX(ctx, 1, "cannot provide visible resolution yet\n");
+ 		RETURN_ERR(EBUSY, -1);
+ 	}
+ 
+@@ -696,7 +696,7 @@ static int rkmpp_dec_g_selection(struct
+ 	selection->r.width = dec->video_info.width;
+ 	selection->r.height = dec->video_info.height;
+ 
+-	LOGV(1, "visible rect: %dx%d\n",
++	LOGV_CTX(ctx, 1, "visible rect: %dx%d\n",
+ 	     selection->r.width, selection->r.height);
+ 
+ 	LEAVE();
+@@ -711,12 +711,12 @@ static int rkmpp_dec_g_ctrl(struct rkmpp
+ 	ENTER();
+ 
+ 	if (ctrl->id != V4L2_CID_MIN_BUFFERS_FOR_CAPTURE) {
+-		LOGE("only support V4L2_CID_MIN_BUFFERS_FOR_CAPTURE now\n");
++		LOGE_CTX(ctx, "only support V4L2_CID_MIN_BUFFERS_FOR_CAPTURE now\n");
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+ 	if (!ctx->output.rkmpp_format) {
+-		LOGE("cannot get min buffers before s_fmt\n");
++		LOGE_CTX(ctx, "cannot get min buffers before s_fmt\n");
+ 		RETURN_ERR(EBUSY, -1);
+ 	}
+ 
+@@ -736,7 +736,7 @@ static int rkmpp_dec_g_ctrl(struct rkmpp
+ 		ctrl->value = 8;
+ 		break;
+ 	default:
+-		LOGE("unsupported format\n");
++		LOGE_CTX(ctx, "unsupported format\n");
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -800,7 +800,7 @@ static int rkmpp_dec_queryctrl(struct rk
+ 		break;
+ 	/* TODO: fill info for other supported ctrls */
+ 	default:
+-		LOGV(1, "unsupported ctrl: %x\n", query_ctrl->id);
++		LOGV_CTX(ctx, 1, "unsupported ctrl: %x\n", query_ctrl->id);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -824,7 +824,7 @@ static int rkmpp_dec_querymenu(struct rk
+ 		case V4L2_MPEG_VIDEO_H264_PROFILE_HIGH_10:
+ 			break;
+ 		default:
+-			LOGV(1, "unsupported H264 profile: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported H264 profile: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+@@ -835,21 +835,21 @@ static int rkmpp_dec_querymenu(struct rk
+ 		case V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10:
+ 			break;
+ 		default:
+-			LOGV(1, "unsupported HEVC profile: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported HEVC profile: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+ 		break;
+ 	case V4L2_CID_MPEG_VIDEO_AV1_PROFILE:
+ 		if (query_menu->index != V4L2_MPEG_VIDEO_AV1_PROFILE_MAIN) {
+-			LOGV(1, "unsupported VP8 profile: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported VP8 profile: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+ 		break;
+ 	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
+ 		if (query_menu->index != V4L2_MPEG_VIDEO_VP8_PROFILE_0) {
+-			LOGV(1, "unsupported VP8 profile: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported VP8 profile: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+@@ -860,13 +860,13 @@ static int rkmpp_dec_querymenu(struct rk
+ 		case V4L2_MPEG_VIDEO_VP9_PROFILE_2:
+ 			break;
+ 		default:
+-			LOGV(1, "unsupported VP9 profile: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported VP9 profile: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+ 		break;
+ 	default:
+-		LOGV(1, "unsupported menu: %x\n", query_menu->id);
++		LOGV_CTX(ctx, 1, "unsupported menu: %x\n", query_menu->id);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -882,7 +882,7 @@ static int rkmpp_try_dec_cmd(struct rkmp
+ 	ENTER();
+ 
+ 	if (cmd->cmd != V4L2_DEC_CMD_START && cmd->cmd != V4L2_DEC_CMD_STOP) {
+-		LOGE("unsupported cmd: %x\n", cmd->cmd);
++		LOGE_CTX(ctx, "unsupported cmd: %x\n", cmd->cmd);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -898,15 +898,15 @@ static int rkmpp_dec_cmd(struct rkmpp_de
+ 	ENTER();
+ 
+ 	if (cmd->cmd == V4L2_DEC_CMD_START) {
+-		LOGV(1, "handle start decoding cmd\n");
++		LOGV_CTX(ctx, 1, "handle start decoding cmd\n");
+ 
+ 		rkmpp_exit_flushing(ctx);
+ 	} else if (cmd->cmd == V4L2_DEC_CMD_STOP) {
+-		LOGV(1, "handle stop decoding cmd\n");
++		LOGV_CTX(ctx, 1, "handle stop decoding cmd\n");
+ 
+ 		rkmpp_start_flushing(ctx);
+ 	} else {
+-		LOGE("unsupported cmd: %x\n", cmd->cmd);
++		LOGE_CTX(ctx, "unsupported cmd: %x\n", cmd->cmd);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -937,7 +937,7 @@ void *rkmpp_dec_init(struct rkmpp_contex
+ 	ret = mpp_buffer_group_get_external(&ctx->capture.external_group,
+ 					    MPP_BUFFER_TYPE_DRM);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to use mpp ext drm buf group\n");
++		LOGE_CTX(ctx, "failed to use mpp ext drm buf group\n");
+ 		errno = ENODEV;
+ 		goto err_free_dec;
+ 	}
+@@ -1057,7 +1057,7 @@ int rkmpp_dec_ioctl(void *data, unsigned
+ 		ret = rkmpp_dec_cmd(dec, arg);
+ 		break;
+ 	default:
+-		LOGV(1, "unsupported ioctl cmd: %s(%lu)!\n",
++		LOGV_CTX(ctx, 1, "unsupported ioctl cmd: %s(%lu)!\n",
+ 		     rkmpp_cmd2str(cmd), cmd);
+ 		RETURN_ERR(ENOTTY, -1);
+ 	}
+Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-enc.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+@@ -156,7 +156,7 @@ static int rkmpp_put_frame(struct rkmpp_
+ 
+ 	/* Handle flushing */
+ 	if (rkmpp_buffer == &ctx->eos_buffer) {
+-		LOGV(1, "processing flush request\n");
++		LOGV_CTX(ctx, 1, "processing flush request\n");
+ 
+ 		ctx->pausing = true;
+ 
+@@ -175,7 +175,7 @@ static int rkmpp_put_frame(struct rkmpp_
+ 
+ 		rkmpp_finish_flushing(ctx, rkmpp_buffer);
+ 
+-		LOGV(1, "return EOS packet: %d\n", rkmpp_buffer->index);
++		LOGV_CTX(ctx, 1, "return EOS packet: %d\n", rkmpp_buffer->index);
+ 
+ 		LEAVE();
+ 		return 0;
+@@ -183,7 +183,7 @@ static int rkmpp_put_frame(struct rkmpp_
+ 
+ 	ret = mpp_frame_init(&frame);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to init frame\n");
++		LOGE_CTX(ctx, "failed to init frame\n");
+ 		return -1;
+ 	}
+ 
+@@ -202,7 +202,7 @@ static int rkmpp_put_frame(struct rkmpp_
+ 	mpp_frame_deinit(&frame);
+ 
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to put frame\n");
++		LOGE_CTX(ctx, "failed to put frame\n");
+ 		return -1;
+ 	}
+ 
+@@ -211,7 +211,7 @@ static int rkmpp_put_frame(struct rkmpp_
+ 	rkmpp_buffer_clr_pending(rkmpp_buffer);
+ 	pthread_mutex_unlock(&ctx->output.queue_mutex);
+ 
+-	LOGV(2, "put frame: %d(%" PRIu64 ")\n",
++	LOGV_CTX(ctx, 2, "put frame: %d(%" PRIu64 ")\n",
+ 	     rkmpp_buffer->index, rkmpp_buffer->timestamp);
+ 
+ 	rkmpp_buffer->bytesused = 0;
+@@ -248,19 +248,19 @@ static MppPacket rkmpp_get_header(struct
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "get header packet\n");
++	LOGV_CTX(ctx, 1, "get header packet\n");
+ 
+ 	mpp_packet_init(&tmp, buf, sizeof(buf));
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_GET_HDR_SYNC, tmp);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to get header\n");
++		LOGE_CTX(ctx, "failed to get header\n");
+ 		mpp_packet_deinit(&tmp);
+ 		return NULL;
+ 	}
+ 
+ 	mpp_packet_copy_init(&header, tmp);
+ 	mpp_packet_deinit(&tmp);
+-	LOGV(1, "header packet size: %ld\n", mpp_packet_get_length(header));
++	LOGV_CTX(ctx, 1, "header packet size: %ld\n", mpp_packet_get_length(header));
+ 
+ 	LEAVE();
+ 	return header;
+@@ -273,7 +273,7 @@ static void rkmpp_send_header(struct rkm
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "sending header\n");
++	LOGV_CTX(ctx, 1, "sending header\n");
+ 
+ 	pthread_mutex_lock(&ctx->capture.queue_mutex);
+ 	rkmpp_buffer = TAILQ_FIRST(&ctx->capture.pending_buffers);
+@@ -305,7 +305,7 @@ static void *encoder_thread_fn(void *dat
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "ctx(%p): starting encoder thread\n", (void *)ctx);
++	LOGV_CTX(ctx, 1, "ctx(%p): starting encoder thread\n", (void *)ctx);
+ 
+ 	while (1) {
+ 		pthread_mutex_lock(&ctx->worker_mutex);
+@@ -342,7 +342,7 @@ static void *encoder_thread_fn(void *dat
+ 		}
+ 
+ 		packet = NULL;
+-#if 1
++#if 0
+     while (!packet) {
+         ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
+         if (ret != MPP_OK) {
+@@ -354,7 +354,7 @@ static void *encoder_thread_fn(void *dat
+ #else
+ 		ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
+ 		if (ret != MPP_OK) {
+-			LOGE("failed to get packet\n");
++			LOGE_CTX(ctx, "failed to get packet\n");
+ 			pthread_mutex_unlock(&ctx->worker_mutex);
+ 			goto next;
+ 		}
+@@ -412,7 +412,7 @@ static void *encoder_thread_fn(void *dat
+ 
+ 		rkmpp_buffer->timestamp = frame_buffer->timestamp;
+ 
+-		LOGV(2, "return frame: %d(%" PRIu64 ")\n",
++		LOGV_CTX(ctx, 2, "return frame: %d(%" PRIu64 ")\n",
+ 		     index, frame_buffer->timestamp);
+ 
+ 		pthread_mutex_lock(&ctx->output.queue_mutex);
+@@ -425,7 +425,7 @@ static void *encoder_thread_fn(void *dat
+ 		/* Report new frame to count fps */
+ 		rkmpp_new_frame(ctx);
+ 
+-		LOGV(2, "return packet: %d(%" PRIu64 ") len=%d\n",
++		LOGV_CTX(ctx, 2, "return packet: %d(%" PRIu64 ") len=%d\n",
+ 		     rkmpp_buffer->index, rkmpp_buffer->timestamp,
+ 		     rkmpp_buffer->bytesused);
+ 
+@@ -479,13 +479,13 @@ static int rkmpp_enc_apply_h264_cfg(stru
+ 	MPP_RET ret;
+ 
+ 	if (mpp_enc_cfg_init(&cfg)) {
+-		LOGE("failed to init enc config\n");
++		LOGE_CTX(ctx, "failed to init enc config\n");
+ 		RETURN_ERR(ENOMEM, -1);
+ 	}
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_GET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to get enc config\n");
++		LOGE_CTX(ctx, "failed to get enc config\n");
+ 		goto err;
+ 	}
+ 
+@@ -503,7 +503,7 @@ static int rkmpp_enc_apply_h264_cfg(stru
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_SET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set enc config: %d\n", ret);
++		LOGE_CTX(ctx, "failed to set enc config: %d\n", ret);
+ 		goto err;
+ 	}
+ 
+@@ -521,13 +521,13 @@ static int rkmpp_enc_apply_vp8_cfg(struc
+ 	MPP_RET ret;
+ 
+ 	if (mpp_enc_cfg_init(&cfg)) {
+-		LOGE("failed to init enc config\n");
++		LOGE_CTX(ctx, "failed to init enc config\n");
+ 		RETURN_ERR(ENOMEM, -1);
+ 	}
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_GET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to get enc config\n");
++		LOGE_CTX(ctx, "failed to get enc config\n");
+ 		goto err;
+ 	}
+ 
+@@ -539,7 +539,7 @@ static int rkmpp_enc_apply_vp8_cfg(struc
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_SET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set enc config: %d\n", ret);
++		LOGE_CTX(ctx, "failed to set enc config: %d\n", ret);
+ 		goto err;
+ 	}
+ 
+@@ -557,13 +557,13 @@ static int rkmpp_enc_apply_mjpeg_cfg(str
+ 	MPP_RET ret;
+ 
+ 	if (mpp_enc_cfg_init(&cfg)) {
+-		LOGE("failed to init enc config\n");
++		LOGE_CTX(ctx, "failed to init enc config\n");
+ 		RETURN_ERR(ENOMEM, -1);
+ 	}
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_GET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to get enc config\n");
++		LOGE_CTX(ctx, "failed to get enc config\n");
+ 		goto err;
+ 	}
+ 
+@@ -571,7 +571,7 @@ static int rkmpp_enc_apply_mjpeg_cfg(str
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_SET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set enc config: %d\n", ret);
++		LOGE_CTX(ctx, "failed to set enc config: %d\n", ret);
+ 		goto err;
+ 	}
+ 
+@@ -591,13 +591,13 @@ static int rkmpp_enc_apply_input_cfg(str
+ 	MPP_RET ret;
+ 
+ 	if (mpp_enc_cfg_init(&cfg)) {
+-		LOGE("failed to init enc config\n");
++		LOGE_CTX(ctx, "failed to init enc config\n");
+ 		RETURN_ERR(ENOMEM, -1);
+ 	}
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_GET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to get enc config\n");
++		LOGE_CTX(ctx, "failed to get enc config\n");
+ 		goto err;
+ 	}
+ 
+@@ -613,12 +613,12 @@ static int rkmpp_enc_apply_input_cfg(str
+ 	mpp_enc_cfg_set_s32(cfg, "prep:hor_stride", enc->hstride);
+ 	mpp_enc_cfg_set_s32(cfg, "prep:ver_stride", enc->vstride);
+ 
+-	LOGV(1, "apply input size: %dx%d(%dx%d)\n",
++	LOGV_CTX(ctx, 1, "apply input size: %dx%d(%dx%d)\n",
+ 	     enc->width, enc->height, enc->hstride, enc->vstride);
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_SET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set enc config: %d\n", ret);
++		LOGE_CTX(ctx, "failed to set enc config: %d\n", ret);
+ 		goto err;
+ 	}
+ 
+@@ -638,13 +638,13 @@ static int rkmpp_enc_apply_rc_cfg(struct
+ 	int bitrate;
+ 
+ 	if (mpp_enc_cfg_init(&cfg)) {
+-		LOGE("failed to init enc config\n");
++		LOGE_CTX(ctx, "failed to init enc config\n");
+ 		RETURN_ERR(ENOMEM, -1);
+ 	}
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_GET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to get enc config\n");
++		LOGE_CTX(ctx, "failed to get enc config\n");
+ 		goto err;
+ 	}
+ 
+@@ -704,14 +704,14 @@ static int rkmpp_enc_apply_rc_cfg(struct
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_SET_CFG, cfg);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set enc config: %d\n", ret);
++		LOGE_CTX(ctx, "failed to set enc config: %d\n", ret);
+ 		goto err;
+ 	}
+ 
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_ENC_SET_HEADER_MODE,
+ 				&enc->header_mode);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set header mode: %d\n", ret);
++		LOGE_CTX(ctx, "failed to set header mode: %d\n", ret);
+ 		goto err;
+ 	}
+ 
+@@ -741,7 +741,7 @@ static int rkmpp_enc_streamon(struct rkm
+ 		goto out;
+ 	queue->streaming = true;
+ 
+-	LOGV(1, "queue(%d) start streaming\n", *type);
++	LOGV_CTX(ctx, 1, "queue(%d) start streaming\n", *type);
+ 
+ 	/* Start mpp streaming only when all queues started */
+ 	if (ctx->mpp_streaming ||
+@@ -762,11 +762,11 @@ static int rkmpp_enc_streamon(struct rkm
+ 		RETURN_ERR(errno, -1);
+ 	}
+ 
+-	LOGV(1, "mpp initializing for %s\n", ctx->capture.rkmpp_format->name);
++	LOGV_CTX(ctx, 1, "mpp initializing for %s\n", ctx->capture.rkmpp_format->name);
+ 
+ 	ret = mpp_create(&ctx->mpp, &ctx->mpi);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to create mpp\n");
++		LOGE_CTX(ctx, "failed to create mpp\n");
+ 		errno = ENOMEM;
+ 		goto err;
+ 	}
+@@ -774,7 +774,7 @@ static int rkmpp_enc_streamon(struct rkm
+ 	ret = mpp_init(ctx->mpp, MPP_CTX_ENC,
+ 		       ctx->capture.rkmpp_format->type);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to init mpp\n");
++		LOGE_CTX(ctx, "failed to init mpp\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+@@ -783,14 +783,14 @@ static int rkmpp_enc_streamon(struct rkm
+ 	ret = ctx->mpi->control(ctx->mpp, MPP_SET_OUTPUT_TIMEOUT,
+ 				(MppParam)&poll_type);
+ 	if (ret != MPP_OK) {
+-		LOGE("failed to set mpp timeout\n");
++		LOGE_CTX(ctx, "failed to set mpp timeout\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+ 	if (enc->type == H264) {
+ 		/* Apply h264's special configs */
+ 		if (rkmpp_enc_apply_h264_cfg(enc) < 0) {
+-			LOGE("failed to apply h264 cfg\n");
++			LOGE_CTX(ctx, "failed to apply h264 cfg\n");
+ 			goto err_destroy_mpp;
+ 		}
+ 
+@@ -798,13 +798,13 @@ static int rkmpp_enc_streamon(struct rkm
+ 	} else if (enc->type == VP8) {
+ 		/* Apply vp8's special configs */
+ 		if (rkmpp_enc_apply_vp8_cfg(enc) < 0) {
+-			LOGE("failed to apply vp8 cfg\n");
++			LOGE_CTX(ctx, "failed to apply vp8 cfg\n");
+ 			goto err_destroy_mpp;
+ 		}
+ 	} else if (enc->type == MJPEG) {
+ 		/* Apply mjpeg's special configs */
+ 		if (rkmpp_enc_apply_mjpeg_cfg(enc) < 0) {
+-			LOGE("failed to apply mjpeg cfg\n");
++			LOGE_CTX(ctx, "failed to apply mjpeg cfg\n");
+ 			goto err_destroy_mpp;
+ 		}
+ 	}
+@@ -815,13 +815,13 @@ static int rkmpp_enc_streamon(struct rkm
+ 
+ 	/* Apply configs about input frames */
+ 	if (rkmpp_enc_apply_input_cfg(enc) < 0) {
+-		LOGE("failed to apply input cfg\n");
++		LOGE_CTX(ctx, "failed to apply input cfg\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+ 	/* Apply configs about rate control */
+ 	if (rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-		LOGE("failed to apply rc cfg\n");
++		LOGE_CTX(ctx, "failed to apply rc cfg\n");
+ 		goto err_destroy_mpp;
+ 	}
+ 
+@@ -852,7 +852,7 @@ static int rkmpp_enc_streamoff(struct rk
+ 	if (!queue->streaming)
+ 		goto out;
+ 
+-	LOGV(1, "queue(%d) stop streaming\n", *type);
++	LOGV_CTX(ctx, 1, "queue(%d) stop streaming\n", *type);
+ 
+ 	rkmpp_reset_queue(ctx, queue);
+ 
+@@ -873,17 +873,17 @@ static int rkmpp_enc_s_selection(struct
+ 
+ 	if (selection->type != V4L2_BUF_TYPE_VIDEO_OUTPUT ||
+ 	    selection->target != V4L2_SEL_TGT_CROP) {
+-		LOGE("invalid type or target\n");
++		LOGE_CTX(ctx, "invalid type or target\n");
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+ 	if (ctx->output.streaming) {
+-		LOGE("output is streaming\n");
++		LOGE_CTX(ctx, "output is streaming\n");
+ 		RETURN_ERR(EBUSY, -1);
+ 	}
+ 
+ 	if (rect->top || rect->left) {
+-		LOGE("not support offsets\n");
++		LOGE_CTX(ctx, "not support offsets\n");
+ 		rect->width += rect->left;
+ 		rect->height += rect->top;
+ 		rect->top = rect->left = 0;
+@@ -891,7 +891,7 @@ static int rkmpp_enc_s_selection(struct
+ 
+ 	enc->crop = *rect;
+ 
+-	LOGV(1, "crop rect: %dx%d\n", enc->crop.width, enc->crop.height);
++	LOGV_CTX(ctx, 1, "crop rect: %dx%d\n", enc->crop.width, enc->crop.height);
+ 
+ 	LEAVE();
+ 	return 0;
+@@ -905,7 +905,7 @@ static int rkmpp_enc_s_parm(struct rkmpp
+ 	ENTER();
+ 
+ 	if (parms->type != V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+-		LOGE("only support s_parm for output now\n");
++		LOGE_CTX(ctx, "only support s_parm for output now\n");
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -913,13 +913,13 @@ static int rkmpp_enc_s_parm(struct rkmpp
+ 	enc->denominator = parms->parm.output.timeperframe.numerator;
+ 	enc->numerator = parms->parm.output.timeperframe.denominator;
+ 
+-	LOGV(1, "numerator: %d, denominator: %d\n",
++	LOGV_CTX(ctx, 1, "numerator: %d, denominator: %d\n",
+ 	     parms->parm.output.timeperframe.numerator,
+ 	     parms->parm.output.timeperframe.denominator);
+ 
+ 	if (ctx->mpp_streaming &&
+ 	    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-		LOGE("failed to apply framerate\n");
++		LOGE_CTX(ctx, "failed to apply framerate\n");
+ 		RETURN_ERR(errno, -1);
+ 	}
+ 
+@@ -953,7 +953,7 @@ static int rkmmp_enc_querymenu(struct rk
+     if (index >= 0 && index < 3 /*sizeof support_h264_profiles */) {
+       query_menu->index = support_h264_profiles[query_menu->index];
+     }else{
+-      LOGV(1, "unsupported menu: %x index:%d\n", query_menu->id, index);
++      LOGV_CTX(ctx, 1, "unsupported menu: %x index:%d\n", query_menu->id, index);
+       query_menu->index = V4L2_MPEG_VIDEO_H264_PROFILE_HIGH;
+     }
+     break;
+@@ -962,7 +962,7 @@ static int rkmmp_enc_querymenu(struct rk
+     query_menu->index = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN;
+     break;
+   default:
+-    LOGV(1, "unsupported menu: %x\n", query_menu->id);
++    LOGV_CTX(ctx, 1, "unsupported menu: %x\n", query_menu->id);
+     RETURN_ERR(EINVAL, -1);
+   }
+   LEAVE();
+@@ -997,7 +997,7 @@ static int rkmpp_enc_queryctrl(struct rk
+     break;
+ 		/* TODO: fill info for other supported ctrls */
+ 	default:
+-		LOGV(1, "unsupported ctrl: %x\n", query_ctrl->id);
++		LOGV_CTX(ctx, 1, "unsupported ctrl: %x\n", query_ctrl->id);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -1020,7 +1020,7 @@ static int rkmpp_enc_querymenu(struct rk
+ 		case V4L2_MPEG_VIDEO_BITRATE_MODE_CBR:
+ 			break;
+ 		default:
+-			LOGV(1, "unsupported bitrate mode: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported bitrate mode: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+@@ -1032,20 +1032,24 @@ static int rkmpp_enc_querymenu(struct rk
+ 		case V4L2_MPEG_VIDEO_H264_PROFILE_HIGH:
+ 			break;
+ 		default:
+-			LOGV(1, "unsupported H264 profile: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported H264 profile: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+ 		break;
+ 	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
+ 		if (query_menu->index != V4L2_MPEG_VIDEO_VP8_PROFILE_0) {
+-			LOGV(1, "unsupported VP8 profile: %x\n",
++			LOGV_CTX(ctx, 1, "unsupported VP8 profile: %x\n",
+ 			     query_menu->index);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+ 		break;
++  case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
++    if (query_menu->index != V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN)
++      RETURN_ERR(EINVAL, -1);
++    break;
+ 	default:
+-		LOGV(1, "unsupported menu: %x\n", query_menu->id);
++		LOGV_CTX(ctx, 1, "unsupported menu: %x\n", query_menu->id);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -1086,14 +1090,14 @@ static int rkmpp_enc_s_ext_ctrls(struct
+ 		switch (ctrl->id) {
+ 		case V4L2_CID_MPEG_VIDEO_H264_I_PERIOD:
+ 			if (ctrl->value) {
+-				LOGE("not supporting I-period\n");
++				LOGE_CTX(ctx, "not supporting I-period\n");
+ 				RETURN_ERR(EINVAL, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_H264_LOOP_FILTER_MODE:
+ 			if (ctrl->value !=
+ 			    V4L2_MPEG_VIDEO_H264_LOOP_FILTER_MODE_ENABLED) {
+-				LOGE("not supporting disabling loop filter\n");
++				LOGE_CTX(ctx, "not supporting disabling loop filter\n");
+ 				RETURN_ERR(EINVAL, -1);
+ 			}
+ 			break;
+@@ -1107,22 +1111,22 @@ static int rkmpp_enc_s_ext_ctrls(struct
+ 			else
+ 				enc->header_mode = MPP_ENC_HEADER_MODE_DEFAULT;
+ 
+-			LOGV(1, "header mode: %d\n", ctrl->value);
++			LOGV_CTX(ctx, 1, "header mode: %d\n", ctrl->value);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to apply header mode\n");
++				LOGE_CTX(ctx, "failed to apply header mode\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME:
+ 			enc->keyframe_requested++;
+-			LOGV(1, "request keyframes: %d\n",
++			LOGV_CTX(ctx, 1, "request keyframes: %d\n",
+ 			     enc->keyframe_requested);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to request keyframe\n");
++				LOGE_CTX(ctx, "failed to request keyframe\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+@@ -1135,58 +1139,58 @@ static int rkmpp_enc_s_ext_ctrls(struct
+ 				enc->rc_mode = MPP_ENC_RC_MODE_CBR;
+ 				break;
+ 			default:
+-				LOGV(1, "unsupported bitrate mode: %x\n",
++				LOGV_CTX(ctx, 1, "unsupported bitrate mode: %x\n",
+ 				     ctrl->value);
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 
+-			LOGV(1, "bitrate mode: %d\n", ctrl->value);
++			LOGV_CTX(ctx, 1, "bitrate mode: %d\n", ctrl->value);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to apply bitrate mode\n");
++				LOGE_CTX(ctx, "failed to apply bitrate mode\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_BITRATE:
+ 			enc->bitrate = ctrl->value;
+-			LOGV(1, "bitrate: %d\n", enc->bitrate);
++			LOGV_CTX(ctx, 1, "bitrate: %d\n", enc->bitrate);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to apply bitrate\n");
++				LOGE_CTX(ctx, "failed to apply bitrate\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE:
+ 			if (!ctrl->value) {
+-				LOGE("unable to disable bitrate control\n");
++				LOGE_CTX(ctx, "unable to disable bitrate control\n");
+ 				RETURN_ERR(EINVAL, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_B_FRAMES:
+ 			if (ctrl->value) {
+-				LOGE("not supporting B-frames\n");
++				LOGE_CTX(ctx, "not supporting B-frames\n");
+ 				RETURN_ERR(EINVAL, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_H264_MAX_QP:
+ 			enc->max_qp = ctrl->value;
+-			LOGV(1, "h264 max qp: %d\n", enc->max_qp);
++			LOGV_CTX(ctx, 1, "h264 max qp: %d\n", enc->max_qp);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_h264_cfg(enc) < 0) {
+-				LOGE("failed to apply h264 max qp\n");
++				LOGE_CTX(ctx, "failed to apply h264 max qp\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
+ 			enc->min_qp = ctrl->value;
+-			LOGV(1, "h264 min qp: %d\n", enc->min_qp);
++			LOGV_CTX(ctx, 1, "h264 min qp: %d\n", enc->min_qp);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_h264_cfg(enc) < 0) {
+-				LOGE("failed to apply h264 min qp\n");
++				LOGE_CTX(ctx, "failed to apply h264 min qp\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+@@ -1195,25 +1199,25 @@ static int rkmpp_enc_s_ext_ctrls(struct
+ 				rkmpp_enc_h264_convert_profile(ctrl->value);
+ 			if (enc->h264.profile < 0) {
+ 				enc->h264.profile = MPP_H264_PROFILE_HIGH;
+-				LOGE("only support baseline|main|high\n");
++				LOGE_CTX(ctx, "only support baseline|main|high\n");
+ 				RETURN_ERR(EINVAL, -1);
+ 			}
+ 
+-			LOGV(1, "h264 profile: %d\n", enc->h264.profile);
++			LOGV_CTX(ctx, 1, "h264 profile: %d\n", enc->h264.profile);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_h264_cfg(enc) < 0) {
+-				LOGE("failed to apply h264 profile\n");
++				LOGE_CTX(ctx, "failed to apply h264 profile\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
+ 			enc->h264.level = ctrl->value;
+-			LOGV(1, "h264 level: %d\n", enc->h264.level);
++			LOGV_CTX(ctx, 1, "h264 level: %d\n", enc->h264.level);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_h264_cfg(enc) < 0) {
+-				LOGE("failed to apply h264 level\n");
++				LOGE_CTX(ctx, "failed to apply h264 level\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+@@ -1223,81 +1227,81 @@ static int rkmpp_enc_s_ext_ctrls(struct
+ 			else
+ 				enc->h264.separate_header = false;
+ 
+-			LOGV(1, "h264 separate header: %d\n", enc->h264.separate_header);
++			LOGV_CTX(ctx, 1, "h264 separate header: %d\n", enc->h264.separate_header);
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_VPX_MAX_QP:
+ 			enc->max_qp = ctrl->value;
+-			LOGV(1, "vpx max qp: %d\n", enc->max_qp);
++			LOGV_CTX(ctx, 1, "vpx max qp: %d\n", enc->max_qp);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_vp8_cfg(enc) < 0) {
+-				LOGE("failed to apply vpx max qp\n");
++				LOGE_CTX(ctx, "failed to apply vpx max qp\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_VPX_MIN_QP:
+ 			enc->min_qp = ctrl->value;
+-			LOGV(1, "vpx min qp: %d\n", enc->min_qp);
++			LOGV_CTX(ctx, 1, "vpx min qp: %d\n", enc->min_qp);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_vp8_cfg(enc) < 0) {
+-				LOGE("failed to apply vpx min qp\n");
++				LOGE_CTX(ctx, "failed to apply vpx min qp\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_MB_RC_ENABLE:
+ 			enc->mb_rc = !!ctrl->value;
+-			LOGV(1, "mb rc: %d\n", enc->mb_rc);
++			LOGV_CTX(ctx, 1, "mb rc: %d\n", enc->mb_rc);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to apply mb bitrate control\n");
++				LOGE_CTX(ctx, "failed to apply mb bitrate control\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_VIDEO_GOP_SIZE:
+ 			enc->gop_size = ctrl->value;
+-			LOGV(1, "gop size: %d\n", enc->gop_size);
++			LOGV_CTX(ctx, 1, "gop size: %d\n", enc->gop_size);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to apply gop size\n");
++				LOGE_CTX(ctx, "failed to apply gop size\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_MFC51_VIDEO_RC_REACTION_COEFF:
+ 			enc->rc_reaction_coeff = ctrl->value;
+-			LOGV(1, "rc reaction coeff: %d\n",
++			LOGV_CTX(ctx, 1, "rc reaction coeff: %d\n",
+ 			     enc->rc_reaction_coeff);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to apply rc reaction coeff\n");
++				LOGE_CTX(ctx, "failed to apply rc reaction coeff\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_MPEG_MFC51_VIDEO_RC_FIXED_TARGET_BIT:
+ 			enc->fixed_bitrate = !!ctrl->value;
+-			LOGV(1, "fixed bitrate: %d\n", enc->fixed_bitrate);
++			LOGV_CTX(ctx, 1, "fixed bitrate: %d\n", enc->fixed_bitrate);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_rc_cfg(enc) < 0) {
+-				LOGE("failed to apply fixed bitrate\n");
++				LOGE_CTX(ctx, "failed to apply fixed bitrate\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		case V4L2_CID_JPEG_COMPRESSION_QUALITY:
+ 			enc->mjpeg.quality = ctrl->value;
+-			LOGV(1, "jpeg quality: %d\n", enc->mjpeg.quality);
++			LOGV_CTX(ctx, 1, "jpeg quality: %d\n", enc->mjpeg.quality);
+ 
+ 			if (ctx->mpp_streaming &&
+ 			    rkmpp_enc_apply_mjpeg_cfg(enc) < 0) {
+-				LOGE("failed to apply compression quality\n");
++				LOGE_CTX(ctx, "failed to apply compression quality\n");
+ 				RETURN_ERR(errno, -1);
+ 			}
+ 			break;
+ 		default:
+-			LOGE("unsupported ctrl: %x\n", ctrl->id);
++			LOGE_CTX(ctx, "unsupported ctrl: %x\n", ctrl->id);
+ 			RETURN_ERR(EINVAL, -1);
+ 		}
+ 	}
+@@ -1314,15 +1318,15 @@ static int rkmpp_enc_cmd(struct rkmpp_en
+ 	ENTER();
+ 
+ 	if (cmd->cmd == V4L2_ENC_CMD_START) {
+-		LOGV(1, "handle start encoding cmd\n");
++		LOGV_CTX(ctx, 1, "handle start encoding cmd\n");
+ 
+ 		rkmpp_exit_flushing(ctx);
+ 	} else if (cmd->cmd == V4L2_ENC_CMD_STOP) {
+-		LOGV(1, "handle stop encoding cmd\n");
++		LOGV_CTX(ctx, 1, "handle stop encoding cmd\n");
+ 
+ 		rkmpp_start_flushing(ctx);
+ 	} else {
+-		LOGE("unsupported cmd: %x\n", cmd->cmd);
++		LOGE_CTX(ctx, "unsupported cmd: %x\n", cmd->cmd);
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
+@@ -1465,7 +1469,7 @@ int rkmpp_enc_ioctl(void *data, unsigned
+ 		ret = rkmpp_enc_cmd(enc, arg);
+ 		break;
+ 	default:
+-		LOGV(1, "unsupported ioctl cmd: %s(%lu)!\n",
++		LOGV_CTX(ctx, 1, "unsupported ioctl cmd: %s(%lu)!\n",
+ 		     rkmpp_cmd2str(cmd), cmd);
+ 		RETURN_ERR(ENOTTY, -1);
+ 	}
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -277,7 +277,7 @@ int rkmpp_enum_fmt(struct rkmpp_context
+ 		++j;
+ 	}
+ 
+-	LOGV(1, "%s format(%d) not found\n",
++	LOGV_CTX(ctx, 1, "%s format(%d) not found\n",
+ 	     ctx_type(ctx), f->index);
+ 	RETURN_ERR(EINVAL, -1);
+ }
+@@ -422,7 +422,7 @@ int rkmpp_try_fmt(struct rkmpp_context *
+ 
+ 		sizeimage = calculate_format_size(fmt, pix_fmt_mp);
+ 
+-		LOGV(1, "calculated %dx%d:%d for %s format\n",
++		LOGV_CTX(ctx, 1, "calculated %dx%d:%d for %s format\n",
+ 		     pix_fmt_mp->width, pix_fmt_mp->height, sizeimage,
+ 		     codec_fmt ? codec_fmt->name : "unknown");
+ 	}
+@@ -475,7 +475,7 @@ int rkmpp_g_fmt(struct rkmpp_context *ct
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "f->type = %d\n", f->type);
++	LOGV_CTX(ctx, 1, "f->type = %d\n", f->type);
+ 
+ 	queue = rkmpp_get_queue(ctx, f->type);
+ 	if (!queue)
+@@ -509,7 +509,7 @@ int rkmpp_reqbufs(struct rkmpp_context *
+ 	}
+ 
+ 	if (!reqbufs->count) {
+-		LOGV(1, "release buffers\n");
++		LOGV_CTX(ctx, 1, "release buffers\n");
+ 		rkmpp_destroy_buffers(queue);
+ 		goto out;
+ 	}
+@@ -525,7 +525,7 @@ int rkmpp_reqbufs(struct rkmpp_context *
+ 		goto err;
+ 	}
+ 
+-	LOGV(1, "sizeimage: %d, count: %d\n", sizeimage, reqbufs->count);
++	LOGV_CTX(ctx, 1, "sizeimage: %d, count: %d\n", sizeimage, reqbufs->count);
+ 
+ 	pthread_mutex_lock(&queue->queue_mutex);
+ 	TAILQ_INIT(&queue->avail_buffers);
+@@ -562,7 +562,7 @@ int rkmpp_reqbufs(struct rkmpp_context *
+ 		queue->buffers[i].planes[0].length = sizeimage;
+ 		rkmpp_buffer_set_locked(&queue->buffers[i]);
+ 
+-		LOGV(1, "create buffer(%d), fd: %d\n",
++		LOGV_CTX(ctx, 1, "create buffer(%d), fd: %d\n",
+ 		     i, queue->buffers[i].fd);
+ 	}
+ 
+@@ -592,7 +592,7 @@ int rkmpp_reqbufs(struct rkmpp_context *
+ 		queue->buffers[i].rkmpp_buf = buffer;
+ 		queue->buffers[i].fd = mpp_buffer_get_fd(buffer);
+ 
+-		LOGV(1, "create external buffer(%d), fd: %d\n",
++		LOGV_CTX(ctx, 1, "create external buffer(%d), fd: %d\n",
+ 		     i, queue->buffers[i].fd);
+ 	}
+ 
+@@ -664,7 +664,7 @@ int rkmpp_expbuf(struct rkmpp_context *c
+ 	/* The userspace would close it at the end */
+ 	expbuf->fd = dup(rkmpp_buffer->fd);
+ 
+-	LOGV(1, "export buf(%d), type: %d, fd: %d(%d)\n",
++	LOGV_CTX(ctx, 1, "export buf(%d), type: %d, fd: %d(%d)\n",
+ 	     expbuf->index, expbuf->type, expbuf->fd, rkmpp_buffer->fd);
+ 
+ 	rkmpp_buffer_set_exported(rkmpp_buffer);
+@@ -706,7 +706,7 @@ int rkmpp_qbuf(struct rkmpp_context *ctx
+ 	rkmpp_buffer_set_pending(rkmpp_buffer);
+ 	pthread_mutex_unlock(&queue->queue_mutex);
+ 
+-	LOGV(2, "enqueue buffer: %d(%ld), size: %d, type: %d, fd: %d\n",
++	LOGV_CTX(ctx, 2, "enqueue buffer: %d(%ld), size: %d, type: %d, fd: %d\n",
+ 	     buffer->index, buffer->timestamp.tv_sec,
+ 	     rkmpp_buffer->bytesused, buffer->type,
+ 	     rkmpp_buffer->fd);
+@@ -752,7 +752,7 @@ static int rkmpp_try_dqbuf(struct rkmpp_
+ 
+ 	rkmpp_buffer_clr_queued(rkmpp_buffer);
+ 
+-	LOGV(2, "dequeue buffer: %d(%" PRIu64 "), size: %d, type: %d\n",
++	LOGV_CTX(ctx, 2, "dequeue buffer: %d(%" PRIu64 "), size: %d, type: %d\n",
+ 	     buffer->index, rkmpp_buffer->timestamp,
+ 	     rkmpp_buffer->bytesused, buffer->type);
+ 
+@@ -798,7 +798,7 @@ void rkmpp_streamon(struct rkmpp_context
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "mpp start streaming\n");
++	LOGV_CTX(ctx, 1, "mpp start streaming\n");
+ 
+ 	/* Notify the worker thread to start streaming */
+ 	pthread_mutex_lock(&ctx->worker_mutex);
+@@ -818,7 +818,7 @@ void rkmpp_streamoff(struct rkmpp_contex
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "mpp stop streaming\n");
++	LOGV_CTX(ctx, 1, "mpp stop streaming\n");
+ 
+ 	pthread_mutex_lock(&ctx->worker_mutex);
+ 	ctx->mpp_streaming = false;
+@@ -844,7 +844,7 @@ void rkmpp_cancel_flushing(struct rkmpp_
+ 
+ void rkmpp_exit_flushing(struct rkmpp_context *ctx)
+ {
+-	LOGV(1, "mpp exit flushing\n");
++	LOGV_CTX(ctx, 1, "mpp exit flushing\n");
+ 
+ 	rkmpp_cancel_flushing(ctx);
+ 
+@@ -857,7 +857,7 @@ void rkmpp_exit_flushing(struct rkmpp_co
+ 
+ void rkmpp_start_flushing(struct rkmpp_context *ctx)
+ {
+-	LOGV(1, "mpp start flushing\n");
++	LOGV_CTX(ctx, 1, "mpp start flushing\n");
+ 
+ 	rkmpp_cancel_flushing(ctx);
+ 
+@@ -877,7 +877,7 @@ void rkmpp_start_flushing(struct rkmpp_c
+ void rkmpp_finish_flushing(struct rkmpp_context *ctx,
+ 			   struct rkmpp_buffer *rkmpp_buffer)
+ {
+-	LOGV(1, "mpp finish flushing\n");
++	LOGV_CTX(ctx, 1, "mpp finish flushing\n");
+ 
+ 	/* Return a last empty buffer to represent flush finished */
+ 	assert(ctx->capture.streaming);
+@@ -918,7 +918,7 @@ int rkmpp_update_poll_event(struct rkmpp
+   	} else {
+   		ret = eventfd_read(ctx->eventfd, &event);
+     }
+-    LOGV(3, "%s: ret:%d\n", has_event ? "write" : "read", ret);
++    LOGV_CTX(ctx, 3, "%s: ret:%d\n", has_event ? "write" : "read", ret);
+   }
+   errno = 0;
+ 	LEAVE();
+@@ -1018,6 +1018,8 @@ static int rkmpp_parse_options(struct rk
+     return ret;
+   }
+   ctx->is_decoder = type == DEC;
++  if (ctx->is_decoder)
++    rkmpp_log_level = 0;
+ #endif
+ 
+ 	if (fcntl(fd, F_GETFL) & O_NONBLOCK)
+@@ -1138,7 +1140,7 @@ static void *plugin_init(int fd)
+ 	ctx->eos_buffer.index = -1;
+ 	rkmpp_buffer_set_last(&ctx->eos_buffer);
+ 
+-	LOGV(1, "ctx(%p): plugin %s inited\n", (void *)ctx, ctx_type(ctx));
++	LOGV_CTX(ctx, 1, "ctx(%p): plugin %s inited\n", (void *)ctx, ctx_type(ctx));
+ 
+ 	LEAVE();
+ 	return ctx;
+@@ -1164,7 +1166,7 @@ static void plugin_close(void *dev_ops_p
+ 
+ 	ENTER();
+ 
+-	LOGV(1, "ctx(%p): closing %s plugin\n", (void *)ctx, ctx_type(ctx));
++	LOGV_CTX(ctx, 1, "ctx(%p): closing %s plugin\n", (void *)ctx, ctx_type(ctx));
+ 
+ 	if (ctx->worker_thread) {
+ 		pthread_cancel(ctx->worker_thread);
+@@ -1221,14 +1223,14 @@ static int plugin_ioctl(void *dev_ops_pr
+ 
+ 	pthread_mutex_lock(&ctx->ioctl_mutex);
+ 
+-	LOGV(4, "ctx(%p)%s: %s\n", (void *)ctx, ctx_type(ctx), rkmpp_cmd2str(cmd));
++	LOGV_CTX(ctx, 4, "ctx(%p)%s: %s\n", (void *)ctx, ctx_type(ctx), rkmpp_cmd2str(cmd));
+ 
+ 	if (ctx->is_decoder)
+ 		ret = rkmpp_dec_ioctl(ctx->data, cmd, arg);
+ 	else
+ 		ret = rkmpp_enc_ioctl(ctx->data, cmd, arg);
+ 
+-	LOGV(4, "ctx(%p)%s: %s  ret: %d\n", (void *)ctx, ctx_type(ctx), rkmpp_cmd2str(cmd), ret);
++	LOGV_CTX(ctx, 4, "ctx(%p)%s: %s  ret: %d\n", (void *)ctx, ctx_type(ctx), rkmpp_cmd2str(cmd), ret);
+ 
+ 	pthread_mutex_unlock(&ctx->ioctl_mutex);
+ 
+@@ -1278,7 +1280,7 @@ static void *plugin_mmap(void *dev_ops_p
+ 	ptr = mmap(start, length, prot, flags, rkmpp_buffer->fd, 0);
+ 
+   if (ptr == MAP_FAILED)
+-    LOGV(1, "mmap failed buffer(%d): fd:%d errno:%d\n", index, rkmpp_buffer->fd, errno);
++    LOGV_CTX(ctx, 1, "mmap failed buffer(%d): fd:%d errno:%d\n", index, rkmpp_buffer->fd, errno);
+ 
+ 	LEAVE();
+ 	return ptr;
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -17,6 +17,34 @@
+ #include <fcntl.h>
+ 
+ #include "libv4l-rkmpp.h"
++static char* queue_type(uint32_t v4l2_buffer_type) {
++  switch (v4l2_buffer_type) {
++    case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
++      return "output";
++    break;
++    case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
++      return "capture";
++    break;
++    default:
++      return "unknow";
++  }
++}
++
++static char* mem_type(uint32_t mem_type) {
++  switch (mem_type) {
++    case V4L2_MEMORY_MMAP:
++      return "mmap";
++    break;
++    case V4L2_MEMORY_USERPTR:
++      return "userptr";
++    break;
++    case V4L2_MEMORY_DMABUF:
++      return "dmabuf";
++    break;
++    default:
++      return "unknow";
++  }
++}
+ 
+ static bool need_copy(bool is_decoder, uint32_t v4l2_buffer_type, bool send_in)
+ {
+@@ -27,11 +55,15 @@ static bool need_copy(bool is_decoder, u
+       return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+     }
+   } else {
++    // Encoder: need copy for both input (raw frames) and output (encoded packets)
++    return true;
++#if 0
+     if (send_in) {
+-      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+-    } else {
+       return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
++    } else {
++      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+     }
++#endif
+   }
+ }
+ 
+@@ -50,7 +82,7 @@ static int rkmpp_copy_buffer(struct rkmp
+ 	ENTER();
+ 
+ 	if (buffer->length > 3) {
+-		LOGE("wrong buffer planes: %d\n", buffer->length);
++		LOGE_CTX(ctx, "wrong buffer planes: %d\n", buffer->length);
+ 		return -1;
+ 	}
+ 
+@@ -68,10 +100,9 @@ static int rkmpp_copy_buffer(struct rkmp
+ 	for (i = 0; i < buffer->length; i++) {
+     sizes[i] = rkmpp_buffer->planes[i].plane_size;
+ 		offsets[i] = rkmpp_buffer->planes[i].data_offset;
+-//		sizes[i] = rkmpp_buffer->planes[i].bytesused - offsets[i];
+ 
++    LOGV_CTX(ctx, 3, "index:%d,planes[%u].size :%u, offset:%u, buffer->length:%u, bytesused:%u\n", rkmpp_buffer->index, i, sizes[i], offsets[i], buffer->length, rkmpp_buffer->planes[i].bytesused);
+ 		if (!sizes[i]) {
+-      LOGV(3, "index:%d,planes[%u].size :%u, offset:%u, buffer->length:%u, bytesused:%u\n", rkmpp_buffer->index, i, sizes[i], offsets[i], buffer->length, rkmpp_buffer->planes[i].bytesused);
+ 			goto out;
+     }
+ 		if (buffer->memory == V4L2_MEMORY_DMABUF) {
+@@ -81,14 +112,14 @@ static int rkmpp_copy_buffer(struct rkmp
+ 					MAP_SHARED, fd, offsets[i]);
+       err = errno;
+ 			if (addrs[i] == MAP_FAILED) {
+-        LOGV(3, "mmap failed: i:%u, fd:%d, size:%u, offsets:%u, errno:%d, sizeimage:%u, planes[0].length:%u\n", i, fd, sizes[i], offsets[i], err, rkmpp_buffer->size,
++        LOGV_CTX(ctx, 3, "mmap failed: i:%u, fd:%d, size:%u, offsets:%u, errno:%d, sizeimage:%u, planes[0].length:%u\n", i, fd, sizes[i], offsets[i], err, rkmpp_buffer->size,
+           rkmpp_buffer->planes[0].length);
+ 				goto out;
+       }
+ 		} else {
+ 			addrs[i] = (void *)rkmpp_buffer->planes[i].userptr;
+ 			if (!addrs[i]) {
+-        LOGV(3, "planes[%u]->userptr:%lu is 0\n", i, rkmpp_buffer->planes[i].userptr);
++        LOGV_CTX(ctx, 3, "planes[%u]->userptr:%lu is 0\n", i, rkmpp_buffer->planes[i].userptr);
+ 				goto out;
+       }
+ 			addrs[i] += offsets[i];
+@@ -97,11 +128,11 @@ static int rkmpp_copy_buffer(struct rkmp
+ 		offsets[i] = i == 0 ? 0 : offsets[i - 1] + sizes[i - 1];
+ 	}
+ 
+-	LOGV(3, "doing software copy\n");
++	LOGV_CTX(ctx, 3, "doing software copy\n");
+ 
+ 	for (i = 0; i < buffer->length; i++) {
+ 		if (offsets[i] + sizes[i] > rkmpp_buffer->size) {
+-			LOGE("buffer overflow!\n");
++			LOGE_CTX(ctx, "buffer overflow!\n");
+ 			goto out;
+ 		}
+ 
+@@ -150,7 +181,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 	ENTER();
+ 
+ 	if (buffer->length != rkmpp_buffer->length) {
+-		LOGE("wrong buffer planes: %d(expected: %d)\n",
++		LOGE_CTX(ctx, "wrong buffer planes: %d(expected: %d)\n",
+ 		     buffer->length, rkmpp_buffer->length);
+ 		return -1;
+ 	}
+@@ -173,7 +204,10 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 				rkmpp_buffer->planes[i].fd;
+ 	}
+   if (do_copy)
+-    LOGV(3, "deque output buffer, length:%d, fd(0):%d \n", buffer->length, rkmpp_buffer->planes[0].fd);
++    LOGV_CTX(ctx, 3, "queue:%s, do copy, mem_type:%s length:%d, fd(0):%d \n", queue_type(buffer->type), mem_type(buffer->memory),
++      buffer->length, rkmpp_buffer->planes[0].fd);
++  else
++    LOGV_CTX(ctx, 3, "queue:%s, skip copy\n", queue_type(buffer->type));
+ 
+ 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
+ 		/* Returning data are always in plane 0 */
+@@ -263,10 +297,13 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 		rkmpp_buffer_clr_error(rkmpp_buffer);
+ 	if (rkmpp_buffer_last(rkmpp_buffer))
+ 		rkmpp_buffer_clr_last(rkmpp_buffer);
+-  rkmpp_buffer->index = buffer->index;
++//  rkmpp_buffer->index = buffer->index;
+ 
+-  if (!do_copy)
+-    LOGV(2, "enque output buffer, length:%d, fd(0):%d, status:0x%x\n", buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
++  if (do_copy)
++    LOGV_CTX(ctx, 2, "queue:%s, do copy, mem_type:%s\n", queue_type(buffer->type), mem_type(buffer->memory));
++  else
++    LOGV_CTX(ctx, 2, "queue:%s, skip copy. length:%d, fd(0):%d, status:0x%x\n", queue_type(buffer->type),
++         buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
+ 	LEAVE();
+ 	return 0;
+ }

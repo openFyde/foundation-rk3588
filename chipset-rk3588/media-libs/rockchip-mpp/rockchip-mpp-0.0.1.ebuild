@@ -14,7 +14,7 @@ HOMEPAGE="https://github.com/rockchip-linux/mpp"
 LICENSE="Apache-2.0"
 SLOT="0"
 KEYWORDS="arm arm64"
-IUSE="test-utils asan static +shared-lib"
+IUSE="test-utils asan static +shared-lib debug"
 
 RESTRICT="arm? ( binchecks )"
 
@@ -38,6 +38,14 @@ src_install() {
   default
   insinto /etc/init
   udev_dorules ${FILESDIR}/99-rockchip-permissions.rules
+}
+
+src_prepare() {
+  cmake_src_prepare
+  if use debug; then
+    eapply -p1 ${FILESDIR}/0004-add-debug-info.patch
+  fi
+  eapply -p1 ${FILESDIR}/0005-fix-rk3588-vepu580-encoder-selection.patch
 }
 
 PATCHES=(

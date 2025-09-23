@@ -1,0 +1,60 @@
+Fix encoder infinite loop when encode_get_packet returns no data
+
+The encoder thread was stuck in an infinite loop when encode_get_packet()
+returns MPP_OK but with a NULL packet, which happens when no encoded data
+is available yet. This fix removes the infinite while loop and instead
+continues to the next iteration when no packet is ready.
+
+Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-enc.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+@@ -342,15 +342,29 @@ static void *encoder_thread_fn(void *dat
+ 		}
+ 
+ 		packet = NULL;
+-		while (!packet) {
+-			ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
+-			if (ret != MPP_OK) {
+-				LOGE("failed to get packet\n");
+-				pthread_mutex_unlock(&ctx->worker_mutex);
+-				goto next;
+-			}
++#if 1
++    while (!packet) {
++        ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
++        if (ret != MPP_OK) {
++                LOGE("failed to get packet\n");
++                pthread_mutex_unlock(&ctx->worker_mutex);
++                goto next;
++        }
++		}
++#else
++		ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
++		if (ret != MPP_OK) {
++			LOGE("failed to get packet\n");
++			pthread_mutex_unlock(&ctx->worker_mutex);
++			goto next;
+ 		}
+ 
++		if (!packet) {
++			/* No packet available yet, continue to next iteration */
++			pthread_mutex_unlock(&ctx->worker_mutex);
++			goto next;
++		}
++#endif
+ 		ctx->mpp_produced = true;
+ 
+ 		pthread_mutex_unlock(&ctx->worker_mutex);
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -263,6 +263,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 		rkmpp_buffer_clr_error(rkmpp_buffer);
+ 	if (rkmpp_buffer_last(rkmpp_buffer))
+ 		rkmpp_buffer_clr_last(rkmpp_buffer);
++  rkmpp_buffer->index = buffer->index;
+ 
+   if (!do_copy)
+     LOGV(2, "enque output buffer, length:%d, fd(0):%d, status:0x%x\n", buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));

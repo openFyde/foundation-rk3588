@@ -420,13 +420,13 @@ Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-nanopi-r6s.dts
  
  &pcie2x1l2 {
 -	pcie@40 {
-+	pcie@1,0 {
++	pcie@0,0 {
  		reg = <0x00400000 0 0 0 0>;
  		#address-cells = <3>;
  		#size-cells = <2>;
  
 -		r8125_u40: pcie@40,0 {
-+		r8125_u40: pcie@1,0,0 {
++		r8125_u40: pcie@0,0,0 {
  			reg = <0x000000 0 0 0 0>;
  			local-mac-address = [ 00 00 00 00 00 00 ];
  		};
