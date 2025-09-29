@@ -40,6 +40,8 @@ src_prepare() {
   eapply -p1 ${FILESDIR}/0009-fix-encoder-panic.patch
   eapply -p1 ${FILESDIR}/0010-fix-encoder-infinite-loop.patch
   eapply -p1 ${FILESDIR}/0011-add-context-aware-logging.patch
+  eapply -p1 ${FILESDIR}/0012-add-query-only-parameter.patch
+  eapply -p1 ${FILESDIR}/0013-fix-encoder-uvplanes.patch
   default
 }
 

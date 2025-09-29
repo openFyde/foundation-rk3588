@@ -548,15 +548,6 @@ Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
  
  	while (1) {
  		pthread_mutex_lock(&ctx->worker_mutex);
-@@ -342,7 +342,7 @@ static void *encoder_thread_fn(void *dat
- 		}
- 
- 		packet = NULL;
--#if 1
-+#if 0
-     while (!packet) {
-         ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
-         if (ret != MPP_OK) {
 @@ -354,7 +354,7 @@ static void *encoder_thread_fn(void *dat
  #else
  		ret = ctx->mpi->encode_get_packet(ctx->mpp, &packet);
@@ -1408,7 +1399,7 @@ Index: libv4l-rkmpp/src/utils.c
 ===================================================================
 --- libv4l-rkmpp.orig/src/utils.c
 +++ libv4l-rkmpp/src/utils.c
-@@ -17,6 +17,34 @@
+@@ -17,21 +17,41 @@
  #include <fcntl.h>
  
  #include "libv4l-rkmpp.h"
@@ -1441,27 +1432,28 @@ Index: libv4l-rkmpp/src/utils.c
 +  }
 +}
  
- static bool need_copy(bool is_decoder, uint32_t v4l2_buffer_type, bool send_in)
+-static bool need_copy(bool is_decoder, uint32_t v4l2_buffer_type, bool send_in)
++static bool need_copy(uint32_t v4l2_buffer_type, bool send_in)
  {
-@@ -27,11 +55,15 @@ static bool need_copy(bool is_decoder, u
-       return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-     }
+-  if (is_decoder) {
+-    if (send_in) {
+-      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+-    } else {
+-      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+-    }
++  if (send_in) {
++    return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
    } else {
-+    // Encoder: need copy for both input (raw frames) and output (encoded packets)
-+    return true;
-+#if 0
-     if (send_in) {
+-    if (send_in) {
 -      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 -    } else {
-       return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-+    } else {
-+      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-     }
-+#endif
+-      return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+-    }
++    return v4l2_buffer_type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
    }
  }
  
-@@ -50,7 +82,7 @@ static int rkmpp_copy_buffer(struct rkmp
+@@ -50,7 +70,7 @@ static int rkmpp_copy_buffer(struct rkmp
  	ENTER();
  
  	if (buffer->length > 3) {
@@ -1470,7 +1462,7 @@ Index: libv4l-rkmpp/src/utils.c
  		return -1;
  	}
  
-@@ -68,10 +100,9 @@ static int rkmpp_copy_buffer(struct rkmp
+@@ -68,10 +88,9 @@ static int rkmpp_copy_buffer(struct rkmp
  	for (i = 0; i < buffer->length; i++) {
      sizes[i] = rkmpp_buffer->planes[i].plane_size;
  		offsets[i] = rkmpp_buffer->planes[i].data_offset;
@@ -1482,7 +1474,7 @@ Index: libv4l-rkmpp/src/utils.c
  			goto out;
      }
  		if (buffer->memory == V4L2_MEMORY_DMABUF) {
-@@ -81,14 +112,14 @@ static int rkmpp_copy_buffer(struct rkmp
+@@ -81,14 +100,14 @@ static int rkmpp_copy_buffer(struct rkmp
  					MAP_SHARED, fd, offsets[i]);
        err = errno;
  			if (addrs[i] == MAP_FAILED) {
@@ -1499,7 +1491,7 @@ Index: libv4l-rkmpp/src/utils.c
  				goto out;
        }
  			addrs[i] += offsets[i];
-@@ -97,11 +128,11 @@ static int rkmpp_copy_buffer(struct rkmp
+@@ -97,11 +116,11 @@ static int rkmpp_copy_buffer(struct rkmp
  		offsets[i] = i == 0 ? 0 : offsets[i - 1] + sizes[i - 1];
  	}
  
@@ -1513,7 +1505,13 @@ Index: libv4l-rkmpp/src/utils.c
  			goto out;
  		}
  
-@@ -150,7 +181,7 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+@@ -145,12 +164,12 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+ 			 struct v4l2_buffer *buffer)
+ {
+ 	unsigned int i;
+-  bool do_copy = need_copy(ctx->is_decoder, buffer->type, false);
++  bool do_copy = need_copy(buffer->type, false);
+ 
  	ENTER();
  
  	if (buffer->length != rkmpp_buffer->length) {
@@ -1522,7 +1520,7 @@ Index: libv4l-rkmpp/src/utils.c
  		     buffer->length, rkmpp_buffer->length);
  		return -1;
  	}
-@@ -173,7 +204,10 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+@@ -173,7 +192,10 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
  				rkmpp_buffer->planes[i].fd;
  	}
    if (do_copy)
@@ -1534,7 +1532,16 @@ Index: libv4l-rkmpp/src/utils.c
  
  	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
  		/* Returning data are always in plane 0 */
-@@ -263,10 +297,13 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+@@ -219,7 +241,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 			   struct rkmpp_buffer *rkmpp_buffer)
+ {
+ 	unsigned int i;
+-  bool do_copy = need_copy(ctx->is_decoder, buffer->type, true);
++  bool do_copy = need_copy(buffer->type, true);
+ 
+ 	ENTER();
+ 
+@@ -263,10 +285,13 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
  		rkmpp_buffer_clr_error(rkmpp_buffer);
  	if (rkmpp_buffer_last(rkmpp_buffer))
  		rkmpp_buffer_clr_last(rkmpp_buffer);

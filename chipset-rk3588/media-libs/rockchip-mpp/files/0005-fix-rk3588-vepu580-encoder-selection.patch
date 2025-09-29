@@ -38,36 +38,36 @@ Index: mpp/mpp/hal/common/h264/hal_h264e_api_v2.c
      if (vcodec_type & HAVE_RKVENC) {
          RK_U32 hw_id = mpp_get_client_hw_id(VPU_CLIENT_RKVENC);
  
-+        mpp_log("hal_h264e_init: vcodec_type 0x%08x hw_id 0x%08x", vcodec_type, hw_id);
++        mpp_dbg_info("hal_h264e_init: vcodec_type 0x%08x hw_id 0x%08x", vcodec_type, hw_id);
 +
          switch (hw_id) {
          case HWID_VEPU58X : {
-+            mpp_log("hal_h264e_init: selecting VEPU580 for RK3588 hw_id 0x%08x", hw_id);
++            mpp_dbg_info("hal_h264e_init: selecting VEPU580 for RK3588 hw_id 0x%08x", hw_id);
              api = &hal_h264e_vepu580;
          } break;
          case HWID_VEPU540C : {
-+            mpp_log("hal_h264e_init: selecting VEPU540C for hw_id 0x%08x", hw_id);
++            mpp_dbg_info("hal_h264e_init: selecting VEPU540C for hw_id 0x%08x", hw_id);
              api = &hal_h264e_vepu540c;
          } break;
          case HWID_VEPU510 : {
-+            mpp_log("hal_h264e_init: selecting VEPU510 for hw_id 0x%08x", hw_id);
++            mpp_dbg_info("hal_h264e_init: selecting VEPU510 for hw_id 0x%08x", hw_id);
              api = &hal_h264e_vepu510;
          } break;
          case HWID_VEPU511 : {
-+            mpp_log("hal_h264e_init: selecting VEPU511 for hw_id 0x%08x", hw_id);
++            mpp_dbg_info("hal_h264e_init: selecting VEPU511 for hw_id 0x%08x", hw_id);
              api = &hal_h264e_vepu511;
          } break;
          default : {
-+            mpp_log("hal_h264e_init: using default VEPU541 for unknown hw_id 0x%08x", hw_id);
++            mpp_dbg_info("hal_h264e_init: using default VEPU541 for unknown hw_id 0x%08x", hw_id);
              api = &hal_h264e_vepu541;
 +            /* Safety check: For RK3588 (0x50603312), force VEPU580 */
 +            if (hw_id == 0x50603312) {
-+                mpp_log("hal_h264e_init: forcing VEPU580 for RK3588 hw_id 0x%08x", hw_id);
++                mpp_dbg_info("hal_h264e_init: forcing VEPU580 for RK3588 hw_id 0x%08x", hw_id);
 +                api = &hal_h264e_vepu580;
 +            }
 +            /* Additional fallback check for RK3588 vcodec_type pattern */
 +            if (hw_id == 0 && (vcodec_type & 0x000d321a) == 0x000d321a) {
-+                mpp_log("hal_h264e_init: detected RK3588 vcodec pattern fallback, forcing VEPU580");
++                mpp_dbg_info("hal_h264e_init: detected RK3588 vcodec pattern fallback, forcing VEPU580");
 +                api = &hal_h264e_vepu580;
 +            }
          } break;
@@ -78,9 +78,9 @@ Index: mpp/mpp/hal/common/h264/hal_h264e_api_v2.c
      }
  
 +    if (api) {
-+        mpp_log("hal_h264e_init: selected HAL API at %p, ctx_size=%d", api, api->ctx_size);
++        mpp_dbg_info("hal_h264e_init: selected HAL API at %p, ctx_size=%d", api, api->ctx_size);
 +        if (api->init)
-+            mpp_log("hal_h264e_init: HAL init function at %p", api->init);
++            mpp_dbg_info("hal_h264e_init: HAL init function at %p", api->init);
 +    } else {
 +        mpp_err("hal_h264e_init: failed to select HAL API for vcodec_type 0x%08x", vcodec_type);
 +    }
@@ -97,10 +97,10 @@ Index: mpp/osal/mpp_platform.c
      MppServiceCmdCap *cap;
  
 -    if (srv)
-+    mpp_log("mpp_plat_srv_init: called, srv_platform = %p", srv_platform);
++    mpp_dbg_info("mpp_plat_srv_init: called, srv_platform = %p", srv_platform);
 +
 +    if (srv) {
-+        mpp_log("mpp_plat_srv_init: platform service already exists, returning");
++        mpp_dbg_info("mpp_plat_srv_init: platform service already exists, returning");
          return;
 +    }
  
@@ -110,25 +110,25 @@ Index: mpp/osal/mpp_platform.c
          mpp_log("can not found match soc name: %s\n", srv->soc_name);
  
      srv->ioctl_version = IOCTL_VCODEC_SERVICE;
-+    mpp_log("mpp_plat_srv_init: mpp_get_mpp_service_name() = %s", mpp_get_mpp_service_name() ? mpp_get_mpp_service_name() : "NULL");
++    mpp_dbg_info("mpp_plat_srv_init: mpp_get_mpp_service_name() = %s", mpp_get_mpp_service_name() ? mpp_get_mpp_service_name() : "NULL");
 +
      if (mpp_get_mpp_service_name()) {
          srv->ioctl_version = IOCTL_MPP_SERVICE_V1;
-+        mpp_log("mpp_plat_srv_init: using IOCTL_MPP_SERVICE_V1, calling check_mpp_service_cap");
++        mpp_dbg_info("mpp_plat_srv_init: using IOCTL_MPP_SERVICE_V1, calling check_mpp_service_cap");
          check_mpp_service_cap(&srv->vcodec_type, srv->hw_ids, cap);
          mpp_dbg_platform("vcodec_type from kernel 0x%08x, vs from soc info 0x%08x\n",
                           srv->vcodec_type, srv->soc_info->vcodec_type);
 +    } else {
-+        mpp_log("mpp_plat_srv_init: using IOCTL_VCODEC_SERVICE, check_mpp_service_cap not called");
++        mpp_dbg_info("mpp_plat_srv_init: using IOCTL_VCODEC_SERVICE, check_mpp_service_cap not called");
      }
 +
 +    /* Fallback: ensure hw_ids are populated even if service detection failed */
-+    mpp_log("mpp_plat_srv_init: checking if hw_ids need fallback population");
++    mpp_dbg_info("mpp_plat_srv_init: checking if hw_ids need fallback population");
 +    if (srv->vcodec_type && srv->hw_ids[16] == 0) {
-+        mpp_log("mpp_plat_srv_init: hw_ids[16] is 0, attempting fallback detection");
++        mpp_dbg_info("mpp_plat_srv_init: hw_ids[16] is 0, attempting fallback detection");
 +        /* If we have vcodec_type but no hw_ids, try to populate them */
 +        if (mpp_get_mpp_service_name()) {
-+            mpp_log("mpp_plat_srv_init: fallback - calling check_mpp_service_cap");
++            mpp_dbg_info("mpp_plat_srv_init: fallback - calling check_mpp_service_cap");
 +            check_mpp_service_cap(&srv->vcodec_type, srv->hw_ids, &srv->mpp_service_cmd_cap);
 +        }
 +    }
@@ -140,12 +140,12 @@ Index: mpp/osal/mpp_platform.c
  
  static void mpp_plat_srv_deinit()
  {
-+    mpp_log("mpp_plat_srv_deinit: called, srv_platform = %p", srv_platform);
++    mpp_dbg_info("mpp_plat_srv_deinit: called, srv_platform = %p", srv_platform);
 +    if (srv_platform) {
-+        mpp_log("mpp_plat_srv_deinit: freeing platform service");
++        mpp_dbg_info("mpp_plat_srv_deinit: freeing platform service");
 +    }
      MPP_FREE(srv_platform);
-+    mpp_log("mpp_plat_srv_deinit: srv_platform set to NULL");
++    mpp_dbg_info("mpp_plat_srv_deinit: srv_platform set to NULL");
  }
  
  MppIoctlVersion mpp_get_ioctl_version(void)
@@ -155,53 +155,40 @@ Index: mpp/osal/mpp_platform.c
  
 -    if (srv && srv->vcodec_type & (1 << client_type))
 -        hw_id = srv->hw_ids[client_type];
-+    mpp_log("mpp_get_client_hw_id: client_type=%d", client_type);
++    mpp_dbg_info("mpp_get_client_hw_id: client_type=%d", client_type);
 +
 +    if (srv) {
-+        mpp_log("mpp_get_client_hw_id: srv->vcodec_type=0x%08x", srv->vcodec_type);
-+        mpp_log("mpp_get_client_hw_id: checking bit (1<<%d)=0x%08x", client_type, (1 << client_type));
++        mpp_dbg_info("mpp_get_client_hw_id: srv->vcodec_type=0x%08x", srv->vcodec_type);
++        mpp_dbg_info("mpp_get_client_hw_id: checking bit (1<<%d)=0x%08x", client_type, (1 << client_type));
 +
 +        if (srv->vcodec_type & (1 << client_type)) {
 +            hw_id = srv->hw_ids[client_type];
-+            mpp_log("mpp_get_client_hw_id: found hw_id=0x%08x for client_type=%d", hw_id, client_type);
++            mpp_dbg_info("mpp_get_client_hw_id: found hw_id=0x%08x for client_type=%d", hw_id, client_type);
 +
 +            /* Workaround: RK3588 platform service doesn't populate hw_ids correctly */
 +            if (hw_id == 0 && client_type == 16 /* VPU_CLIENT_RKVENC */) {
 +                /* Check if this is RK3588 based on vcodec_type pattern */
 +                if ((srv->vcodec_type & 0x000d321a) == 0x000d321a) {
 +                    hw_id = 0x50603312; /* HWID_VEPU58X for RK3588 */
-+                    mpp_log("mpp_get_client_hw_id: applying RK3588 RKVENC hw_id workaround: 0x%08x", hw_id);
++                    mpp_dbg_info("mpp_get_client_hw_id: applying RK3588 RKVENC hw_id workaround: 0x%08x", hw_id);
 +                }
 +            }
 +        } else {
-+            mpp_log("mpp_get_client_hw_id: client_type=%d not supported in vcodec_type=0x%08x", client_type, srv->vcodec_type);
++            mpp_dbg_info("mpp_get_client_hw_id: client_type=%d not supported in vcodec_type=0x%08x", client_type, srv->vcodec_type);
 +        }
 +
 +        // Debug: show all available hw_ids
 +        for (int i = 0; i < 32; i++) {
 +            if (srv->vcodec_type & (1 << i)) {
-+                mpp_log("mpp_get_client_hw_id: available client %d hw_id=0x%08x", i, srv->hw_ids[i]);
++                mpp_dbg_info("mpp_get_client_hw_id: available client %d hw_id=0x%08x", i, srv->hw_ids[i]);
 +            }
 +        }
 +    } else {
-+        mpp_log("mpp_get_client_hw_id: srv is NULL");
++        mpp_dbg_info("mpp_get_client_hw_id: srv is NULL");
 +    }
  
      return hw_id;
  }
-Index: mpp/osal/mpp_log.c
-===================================================================
---- mpp.orig/osal/mpp_log.c
-+++ mpp/osal/mpp_log.c
-@@ -20,7 +20,7 @@
- extern "C" {
- #endif
- 
--RK_U32 mpp_debug = 0;
-+RK_U32 mpp_debug = 0x10;
- 
- // TODO: add log timing information and switch flag
- static const char *msg_log_warning = "log message is long\n";
 Index: mpp/osal/driver/mpp_service.c
 ===================================================================
 --- mpp.orig/osal/driver/mpp_service.c
@@ -211,38 +198,38 @@ Index: mpp/osal/driver/mpp_service.c
      };
  
 -    if (mpp_service_name)
-+    mpp_log("mpp_get_mpp_service_name: called, cached service name = %s",
++    mpp_dbg_info("mpp_get_mpp_service_name: called, cached service name = %s",
 +            mpp_service_name ? mpp_service_name : "NULL");
 +
 +    if (mpp_service_name) {
-+        mpp_log("mpp_get_mpp_service_name: returning cached name %s", mpp_service_name);
++        mpp_dbg_info("mpp_get_mpp_service_name: returning cached name %s", mpp_service_name);
          return mpp_service_name;
 +    }
  
 -    if (!access(mpp_service_dev[0], F_OK | R_OK | W_OK)) {
-+    mpp_log("mpp_get_mpp_service_name: checking %s accessibility", mpp_service_dev[0]);
++    mpp_dbg_info("mpp_get_mpp_service_name: checking %s accessibility", mpp_service_dev[0]);
 +    int ret0 = access(mpp_service_dev[0], F_OK | R_OK | W_OK);
 +    if (!ret0) {
          mpp_service_name = mpp_service_dev[0];
 -    } else if (!access(mpp_service_dev[1], F_OK | R_OK | W_OK))
 -        mpp_service_name = mpp_service_dev[1];
-+        mpp_log("mpp_get_mpp_service_name: %s accessible, using it", mpp_service_dev[0]);
++        mpp_dbg_info("mpp_get_mpp_service_name: %s accessible, using it", mpp_service_dev[0]);
 +    } else {
-+        mpp_log("mpp_get_mpp_service_name: %s not accessible, errno=%d (%s)",
++        mpp_dbg_info("mpp_get_mpp_service_name: %s not accessible, errno=%d (%s)",
 +                mpp_service_dev[0], errno, strerror(errno));
 +
-+        mpp_log("mpp_get_mpp_service_name: checking %s accessibility", mpp_service_dev[1]);
++        mpp_dbg_info("mpp_get_mpp_service_name: checking %s accessibility", mpp_service_dev[1]);
 +        int ret1 = access(mpp_service_dev[1], F_OK | R_OK | W_OK);
 +        if (!ret1) {
 +            mpp_service_name = mpp_service_dev[1];
-+            mpp_log("mpp_get_mpp_service_name: %s accessible, using it", mpp_service_dev[1]);
++            mpp_dbg_info("mpp_get_mpp_service_name: %s accessible, using it", mpp_service_dev[1]);
 +        } else {
-+            mpp_log("mpp_get_mpp_service_name: %s not accessible, errno=%d (%s)",
++            mpp_dbg_info("mpp_get_mpp_service_name: %s not accessible, errno=%d (%s)",
 +                    mpp_service_dev[1], errno, strerror(errno));
 +        }
 +    }
  
-+    mpp_log("mpp_get_mpp_service_name: final service name = %s",
++    mpp_dbg_info("mpp_get_mpp_service_name: final service name = %s",
 +            mpp_service_name ? mpp_service_name : "NULL");
      return mpp_service_name;
  }
@@ -251,12 +238,12 @@ Index: mpp/osal/driver/mpp_service.c
  
      /* check each valid client type for hw_id */
      /* kernel need to set client type then get hw_id */
-+    mpp_log("check_mpp_service_cap: checking hw_ids for hw_support=0x%08x", hw_support);
++    mpp_dbg_info("check_mpp_service_cap: checking hw_ids for hw_support=0x%08x", hw_support);
      for (i = 0; i < 32; i++) {
          if (hw_support & (1 << i)) {
              val = i;
  
-+            mpp_log("check_mpp_service_cap: checking client %d (%s)", i, strof_client_type((MppClientType)i));
++            mpp_dbg_info("check_mpp_service_cap: checking client %d (%s)", i, strof_client_type((MppClientType)i));
              fd = open(mpp_get_mpp_service_name(), O_RDWR | O_CLOEXEC);
              if (fd < 0) {
                  mpp_err("open mpp_service to check cmd capability failed\n");
@@ -267,13 +254,13 @@ Index: mpp/osal/driver/mpp_service.c
 -                mpp_err("check valid client type %d failed\n", i);
 +                mpp_err("check valid client type %d failed, ret=%d\n", i, ret);
              } else {
-+                mpp_log("check_mpp_service_cap: MPP_CMD_INIT_CLIENT_TYPE success for client %d", i);
++                mpp_dbg_info("check_mpp_service_cap: MPP_CMD_INIT_CLIENT_TYPE success for client %d", i);
                  /* then get hw_id */
                  ret = mpp_service_ioctl(fd, MPP_CMD_QUERY_HW_ID, sizeof(val), &val);
                  if (!ret) {
                      mpp_dev_dbg_probe("client %-10s hw_id %08x\n",
                                        strof_client_type((MppClientType)i), val);
-+                    mpp_log("check_mpp_service_cap: got hw_id=0x%08x for client %d (%s)", val, i, strof_client_type((MppClientType)i));
++                    mpp_dbg_info("check_mpp_service_cap: got hw_id=0x%08x for client %d (%s)", val, i, strof_client_type((MppClientType)i));
                      hw_ids[i] = val;
 -                } else
 -                    mpp_err("check valid client %-10s for hw_id failed\n",
@@ -288,10 +275,10 @@ Index: mpp/osal/driver/mpp_service.c
      }
 +
 +    /* Debug: show final hw_ids array */
-+    mpp_log("check_mpp_service_cap: final hw_ids array:");
++    mpp_dbg_info("check_mpp_service_cap: final hw_ids array:");
 +    for (i = 0; i < 32; i++) {
 +        if (hw_support & (1 << i)) {
-+            mpp_log("check_mpp_service_cap: hw_ids[%d] = 0x%08x", i, hw_ids[i]);
++            mpp_dbg_info("check_mpp_service_cap: hw_ids[%d] = 0x%08x", i, hw_ids[i]);
 +        }
 +    }
  }

@@ -1,0 +1,305 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -326,6 +326,9 @@ static void calculate_plane_sizes(const
+ 		 */
+ 		if (i != 0)
+ 			pix_fmt_mp->plane_fmt[i].sizeimage /= 2;
++
++		LOGV( 1, "plane[%d]: depth=%d, bytesperline=%d, sizeimage=%d\n",
++			i, fmt->depth[i], pix_fmt_mp->plane_fmt[i].bytesperline, pix_fmt_mp->plane_fmt[i].sizeimage);
+ 	}
+ }
+ 
+@@ -368,6 +371,9 @@ int rkmpp_try_fmt(struct rkmpp_context *
+ 		RETURN_ERR(EINVAL, -1);
+ 	}
+ 
++	LOGV_CTX(ctx, 1, "%s format found: %s, num_planes=%d\n",
++		 ctx_type(ctx), (char *) &pix_fmt_mp->pixelformat, fmt->num_planes);
++
+ 	if (compressed) {
+ 		if (pix_fmt_mp->plane_fmt[0].sizeimage == 0) {
+ 			LOGE("sizeimage of compressed format must be given\n");
+@@ -375,6 +381,8 @@ int rkmpp_try_fmt(struct rkmpp_context *
+ 		}
+ 
+ 		pix_fmt_mp->num_planes = fmt->num_planes;
++		LOGV_CTX(ctx, 1, "%s compressed format num_planes set to %d\n",
++			 ctx_type(ctx), pix_fmt_mp->num_planes);
+ 		pix_fmt_mp->plane_fmt[0].bytesperline = 0;
+ 	} else if (ctx->is_decoder && ctx->capture.format.pixelformat) {
+ 		struct rkmpp_buf_queue *queue = &ctx->capture;
+@@ -392,6 +400,8 @@ int rkmpp_try_fmt(struct rkmpp_context *
+ 			codec_fmt = ctx->capture.rkmpp_format;
+ 
+ 		pix_fmt_mp->num_planes = fmt->num_planes;
++		LOGV_CTX(ctx, 1, "%s uncompressed format num_planes set to %d\n",
++			 ctx_type(ctx), pix_fmt_mp->num_planes);
+ 
+ 		/* Round up to macroblocks. */
+ 		pix_fmt_mp->width = round_up(pix_fmt_mp->width, RKMPP_MB_DIM);
+@@ -422,6 +432,7 @@ int rkmpp_try_fmt(struct rkmpp_context *
+ 
+ 		sizeimage = calculate_format_size(fmt, pix_fmt_mp);
+ 
++
+ 		LOGV_CTX(ctx, 1, "calculated %dx%d:%d for %s format\n",
+ 		     pix_fmt_mp->width, pix_fmt_mp->height, sizeimage,
+ 		     codec_fmt ? codec_fmt->name : "unknown");
+@@ -559,6 +570,8 @@ int rkmpp_reqbufs(struct rkmpp_context *
+ 		queue->buffers[i].index = i;
+ 		queue->buffers[i].type = reqbufs->type;
+ 		queue->buffers[i].length = queue->format.num_planes;
++		LOGV_CTX(ctx, 1, "buffer[%d] length set to %d (format.num_planes=%d, format.pixelformat=%s)\n",
++			 i, queue->buffers[i].length, queue->format.num_planes, (char *) &queue->format.pixelformat);
+ 		queue->buffers[i].planes[0].length = sizeimage;
+ 		rkmpp_buffer_set_locked(&queue->buffers[i]);
+ 
+@@ -623,7 +636,7 @@ int rkmpp_querybuf(struct rkmpp_context
+ 
+ 	rkmpp_buffer = &queue->buffers[buffer->index];
+ 
+-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
++	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, true);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer\n");
+ 		RETURN_ERR(EINVAL, -1);
+@@ -736,7 +749,7 @@ static int rkmpp_try_dqbuf(struct rkmpp_
+ 	rkmpp_buffer = TAILQ_FIRST(&queue->avail_buffers);
+ 	pthread_mutex_unlock(&queue->queue_mutex);
+ 
+-	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer);
++	ret = rkmpp_to_v4l2_buffer(ctx, rkmpp_buffer, buffer, false);
+ 	if (ret < 0) {
+ 		LOGE("failed to convert buffer, ret:%d\n", ret);
+ 		RETURN_ERR(EINVAL, -1);
+@@ -1018,8 +1031,6 @@ static int rkmpp_parse_options(struct rk
+     return ret;
+   }
+   ctx->is_decoder = type == DEC;
+-  if (ctx->is_decoder)
+-    rkmpp_log_level = 0;
+ #endif
+ 
+ 	if (fcntl(fd, F_GETFL) & O_NONBLOCK)
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -46,6 +46,31 @@ static char* mem_type(uint32_t mem_type)
+   }
+ }
+ 
++void dump_rkmpp_buf(struct rkmpp_context *ctx, struct rkmpp_buffer *rkmpp_buffer)
++{
++  LOGV_CTX(ctx, 3, "rkmpp: length:%u, bytesused:%u, timestamp:%lu\n",
++    rkmpp_buffer->length, rkmpp_buffer->bytesused, rkmpp_buffer->timestamp);
++  for (uint32_t i=0; i< rkmpp_buffer->length; i++)
++    LOGV_CTX(ctx, 3, "  --plane[%d], bytesused:%u, data_offset:%u, plane_size:%u, length:%u, fd:%d, ptr:0x%lx\n",
++      i, rkmpp_buffer->planes[i].bytesused,
++      rkmpp_buffer->planes[i].data_offset,
++      rkmpp_buffer->planes[i].plane_size,
++      rkmpp_buffer->planes[i].length,
++      rkmpp_buffer->planes[i].fd,
++      rkmpp_buffer->planes[i].userptr);
++}
++
++void dump_v4l2_buf(struct rkmpp_context *ctx, struct v4l2_buffer *buffer)
++{
++  LOGV_CTX(ctx, 3, "v4l2_buf: length:%u\n", buffer->length);
++  for (uint32_t i=0; i< buffer->length; i++)
++    LOGV_CTX(ctx, 3, "  --plane[%d], bytesused:%u, data_offset:%u, length:%u, type:%s \n",
++      i, buffer->m.planes[i].bytesused,
++      buffer->m.planes[i].data_offset,
++      buffer->m.planes[i].length,
++      mem_type(buffer->memory));
++}
++
+ static bool need_copy(uint32_t v4l2_buffer_type, bool send_in)
+ {
+   if (send_in) {
+@@ -161,10 +186,11 @@ out:
+ 
+ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
+ 			 struct rkmpp_buffer *rkmpp_buffer,
+-			 struct v4l2_buffer *buffer)
++			 struct v4l2_buffer *buffer, bool query_only)
+ {
+ 	unsigned int i;
+-  bool do_copy = need_copy(buffer->type, false);
++  bool do_copy = !query_only && need_copy(buffer->type, false);
++  int ret = 0;
+ 
+ 	ENTER();
+ 
+@@ -198,14 +224,39 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+     LOGV_CTX(ctx, 3, "queue:%s, skip copy\n", queue_type(buffer->type));
+ 
+ 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
+-		/* Returning data are always in plane 0 */
+-		rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
+-    if (!rkmpp_buffer->planes[0].plane_size)
+-      rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
+-		buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
++		/* For multi-plane formats like H.264 NV12, distribute data across planes properly */
++    if (ctx->is_decoder) {
++      rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
++      buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
++      if (!rkmpp_buffer->planes[0].plane_size)
++        rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
++    } else {
++  		for (i = 0; i < buffer->length; i++) {
++  			/* Set per-plane bytesused from MPP plane info, or fallback calculation */
++  			if (rkmpp_buffer->planes[i].bytesused > 0) {
++  				/* MPP provided per-plane bytesused - use it directly */
++  				buffer->m.planes[i].bytesused = rkmpp_buffer->planes[i].bytesused;
++  			} else if (i == 0) {
++  				/* For plane 0, use total bytesused if no per-plane info */
++  				rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
++  				buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
++  			}
++
++  			/* Ensure plane_size is set correctly */
++  			if (!rkmpp_buffer->planes[i].plane_size && buffer->m.planes[i].bytesused > 0)
++  				rkmpp_buffer->planes[i].plane_size = buffer->m.planes[i].bytesused - rkmpp_buffer->planes[i].data_offset;
++  		}
++    }
+ 
+-		if (do_copy && (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1) < 0))
+-			return -1;
++		if (do_copy) {
++      ret = rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1);
++      if (ret >= 0) {
++        LOGV_CTX(ctx, 3, "%s queue:%s, success to do rkmpp_copy_buffer\n", __func__, queue_type(buffer->type));
++      } else {
++        LOGE_CTX(ctx, "%s queue:%s, fail to rkmpp_copy_buffer, ret:%d\n", __func__, queue_type(buffer->type), ret);
++			  return -1;
++      }
++    }
+ 	}
+ 
+ 	buffer->timestamp.tv_sec = rkmpp_buffer->timestamp / 1000000;
+@@ -250,29 +301,47 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 
+ 	for (i = 0; i < buffer->length; i++) {
+ 		rkmpp_buffer->planes[i].length = buffer->m.planes[i].length;
+-		rkmpp_buffer->planes[i].data_offset =
+-			buffer->m.planes[i].data_offset;
+ 		rkmpp_buffer->planes[i].bytesused =
+ 			buffer->m.planes[i].bytesused;
+-		rkmpp_buffer->planes[i].plane_size =
+-			rkmpp_buffer->planes[i].bytesused -
+-			rkmpp_buffer->planes[i].data_offset;
+-
++    if (ctx->is_decoder) {
++      rkmpp_buffer->planes[i].data_offset =
++            buffer->m.planes[i].data_offset;
++      rkmpp_buffer->planes[i].plane_size =
++          rkmpp_buffer->planes[i].bytesused -
++          rkmpp_buffer->planes[i].data_offset;
++    } else {
++  		rkmpp_buffer->planes[i].data_offset = 0;
++  		rkmpp_buffer->planes[i].plane_size = buffer->m.planes[i].length;
++    }
+ 		rkmpp_buffer->bytesused +=
+ 			rkmpp_buffer->planes[i].plane_size;
+ 
+-		if (buffer->memory == V4L2_MEMORY_USERPTR)
++		if (buffer->memory == V4L2_MEMORY_USERPTR) {
+ 			rkmpp_buffer->planes[i].userptr =
+ 				buffer->m.planes[i].m.userptr;
+-		else if (buffer->memory == V4L2_MEMORY_DMABUF)
++		} else if (buffer->memory == V4L2_MEMORY_DMABUF) {
+ 			rkmpp_buffer->planes[i].fd =
+ 				buffer->m.planes[i].m.fd;
++    }
+ 	}
+ 
+-	if (rkmpp_buffer->bytesused && do_copy) {
+-		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 0) < 0)
++	if(rkmpp_buffer->bytesused && do_copy) {
++		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 0) < 0) {
++      LOGV_CTX(ctx, 2, "queue:%s, faild to copy v4l2 buffer to rkmpp_buff\n", queue_type(buffer->type));
++      dump_rkmpp_buf(ctx, rkmpp_buffer);
++      dump_v4l2_buf(ctx, buffer);
+ 			return -1;
+-	}
++    }
++    dump_rkmpp_buf(ctx, rkmpp_buffer);
++    dump_v4l2_buf(ctx, buffer);
++    LOGV_CTX(ctx, 2, "queue:%s, mem_type:%s, do rkmpp_copy_bufer success.\n", queue_type(buffer->type), mem_type(buffer->memory));
++	} else {
++    if (do_copy)
++      LOGV_CTX(ctx, 2, "queue:%s, skip copy. because bytesused 0\n", queue_type(buffer->type));
++    else
++      LOGV_CTX(ctx, 2, "queue:%s, skip copy. length:%d, fd(0):%d, status:0x%x\n", queue_type(buffer->type),
++         buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
++  }
+ 
+ 	rkmpp_buffer->timestamp =
+ 		(uint64_t)buffer->timestamp.tv_sec * 1000000 +
+@@ -285,13 +354,7 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 		rkmpp_buffer_clr_error(rkmpp_buffer);
+ 	if (rkmpp_buffer_last(rkmpp_buffer))
+ 		rkmpp_buffer_clr_last(rkmpp_buffer);
+-//  rkmpp_buffer->index = buffer->index;
+ 
+-  if (do_copy)
+-    LOGV_CTX(ctx, 2, "queue:%s, do copy, mem_type:%s\n", queue_type(buffer->type), mem_type(buffer->memory));
+-  else
+-    LOGV_CTX(ctx, 2, "queue:%s, skip copy. length:%d, fd(0):%d, status:0x%x\n", queue_type(buffer->type),
+-         buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
+ 	LEAVE();
+ 	return 0;
+ }
+Index: libv4l-rkmpp/include/libv4l-rkmpp.h
+===================================================================
+--- libv4l-rkmpp.orig/include/libv4l-rkmpp.h
++++ libv4l-rkmpp/include/libv4l-rkmpp.h
+@@ -513,7 +513,7 @@ void rkmpp_finish_flushing(struct rkmpp_
+ 
+ int rkmpp_to_v4l2_buffer(struct rkmpp_context *ctx,
+ 			 struct rkmpp_buffer *rkmpp_buffer,
+-			 struct v4l2_buffer *buffer);
++			 struct v4l2_buffer *buffer, bool query_only);
+ int rkmpp_from_v4l2_buffer(struct rkmpp_context *ctx,
+ 			   struct v4l2_buffer *buffer,
+ 			   struct rkmpp_buffer *rkmpp_buffer);
+Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-enc.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+@@ -37,13 +37,6 @@ enum v4l2_mpeg_video_bitrate_mode {
+ #define RKMPP_ENC_POLL_TIMEOUT_MS	100
+ 
+ static struct rkmpp_fmt rkmpp_enc_fmts[] = {
+-  {
+-    .name = "4:2:0 1 plane Y/CbCr",
+-    .fourcc = V4L2_PIX_FMT_NV12,
+-    .num_planes = 1,
+-    .type = MPP_VIDEO_CodingNone,
+-    .depth = { 12 },
+-  },
+ 	{
+ 		.name = "4:2:0 3 plane Y/Cb/Cr",
+ 		.fourcc = V4L2_PIX_FMT_YUV420M,
+@@ -926,7 +919,7 @@ static int rkmpp_enc_s_parm(struct rkmpp
+ 	LEAVE();
+ 	return 0;
+ }
+-
++#if 0
+ static int rkmmp_enc_querymenu(struct rkmpp_enc_context *enc,
+              struct v4l2_querymenu *query_menu)
+ {
+@@ -968,7 +961,7 @@ static int rkmmp_enc_querymenu(struct rk
+   LEAVE();
+   return 0;
+ }
+-
++#endif
+ static int rkmpp_enc_queryctrl(struct rkmpp_enc_context *enc,
+ 			       struct v4l2_queryctrl *query_ctrl)
+ {

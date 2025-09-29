@@ -16,7 +16,7 @@ Index: mpp/inc/rk_mpi.h
 @@ -267,6 +267,11 @@ MPP_RET mpp_check_support_format(MppCtxT
  void    mpp_show_support_format(void);
  void    mpp_show_color_format(void);
- 
+
 +int mpp_convert_mjpeg_to_nv12(const uint8_t *sample, size_t sample_size,
 +			      uint8_t *out_y, size_t y_size,
 +			      uint8_t *out_uv, size_t uv_size,
@@ -31,7 +31,7 @@ Index: mpp/mpp/mpi.cpp
 +++ mpp/mpp/mpi.cpp
 @@ -17,6 +17,14 @@
  #define MODULE_TAG "mpi"
- 
+
  #include <string.h>
 +#include <stdio.h>
 +#include <stdlib.h>
@@ -41,19 +41,19 @@ Index: mpp/mpp/mpi.cpp
 +#include <unistd.h>
 +#include <fcntl.h>
 +#include <errno.h>
- 
+
  #include "rk_mpi.h"
- 
+
 @@ -28,6 +36,10 @@
  #include "mpi_impl.h"
  #include "mpp_info.h"
- 
+
 +#include "mpp_time.h"
 +#include "mpp_common.h"
 +#include "mpi_dec_utils.h"
 +
  RK_U32 mpi_debug = 0;
- 
+
  typedef struct {
 @@ -578,3 +590,550 @@ void mpp_show_color_format()
                  info->format, info->format, info->name);
@@ -132,7 +132,7 @@ Index: mpp/mpp/mpi.cpp
 +    case MPP_FMT_YUV420SP_VU :
 +    case MPP_FMT_YUV420SP : {
 +#ifdef DEBUG
-+	    mpp_log("mpp_frame_to_nv12 size %lu x %lu stride %lu x %lu\n", width, height,
++	    mpp_dbg_info("mpp_frame_to_nv12 size %lu x %lu stride %lu x %lu\n", width, height,
 +                h_stride, v_stride);
 +#endif
 +	    RK_U32 i;
@@ -271,7 +271,7 @@ Index: mpp/mpp/mpi.cpp
 +                              (char *)data->out_uv, data->uv_size);
 +
 +#ifdef DEBUG
-+            mpp_log("%p decoded frame %d\n", ctx, data->frame_count);
++            mpp_dbg_info("%p decoded frame %d\n", ctx, data->frame_count);
 +#endif
 +            data->frame_count++;
 +
@@ -362,7 +362,7 @@ Index: mpp/mpp/mpi.cpp
 +    data->delay = data->first_frm - data->first_pkt;
 +
 +#ifdef DEBUG
-+    mpp_log("decode %d frames time %lld ms delay %3d ms fps %3.2f\n",
++    mpp_dbg_info("decode %d frames time %lld ms delay %3d ms fps %3.2f\n",
 +            data->frame_count, (RK_S64)(data->elapsed_time / 1000),
 +            (RK_S32)(data->delay / 1000), data->frame_rate);
 +#endif
@@ -462,9 +462,9 @@ Index: mpp/mpp/mpi.cpp
 +    }
 +
 +#ifdef DEBUG
-+    mpp_log("%p mpi_dec_test decoder test start w %d h %d type %d\n",
++    mpp_dbg_info("%p mpi_dec_test decoder test start w %d h %d type %d\n",
 +            ctx, width, height, type);
-+    mpp_log("sample@%p size: %ld y@%p size: %ld   uv@%p size: %ld \n input %ld x %ld, output %ld x %ld\n",
++    mpp_dbg_info("sample@%p size: %ld y@%p size: %ld   uv@%p size: %ld \n input %ld x %ld, output %ld x %ld\n",
 +            sample, sample_size, out_y, y_size, out_uv, uv_size,
 +            input_width, input_height, output_width, output_height);
 +#endif
@@ -529,9 +529,9 @@ Index: mpp/mpp/mpi.cpp
 +
 +    if (cmd->frame_num < 0) {
 +        // wait for input then quit decoding
-+        mpp_log("*******************************************\n");
-+        mpp_log("**** Press Enter to stop loop decoding ****\n");
-+        mpp_log("*******************************************\n");
++        mpp_dbg_info("*******************************************\n");
++        mpp_dbg_info("**** Press Enter to stop loop decoding ****\n");
++        mpp_dbg_info("*******************************************\n");
 +
 +        getc(stdin);
 +        data.loop_end = 1;

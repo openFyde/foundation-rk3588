@@ -1,0 +1,83 @@
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -112,20 +112,26 @@ static int rkmpp_copy_buffer(struct rkmp
+ 	/* Prepare access */
+ 	for (i = 0; i < buffer->length; i++) {
+     sizes[i] = rkmpp_buffer->planes[i].plane_size;
+-		offsets[i] = rkmpp_buffer->planes[i].data_offset;
++    if (ctx->is_decoder)
++		  offsets[i] = rkmpp_buffer->planes[i].data_offset;
++    else
++      offsets[i] = rkmpp_buffer->planes[i].bytesused - rkmpp_buffer->planes[i].plane_size;
+ 
+-    LOGV_CTX(ctx, 3, "index:%d,planes[%u].size :%u, offset:%u, buffer->length:%u, bytesused:%u\n", rkmpp_buffer->index, i, sizes[i], offsets[i], buffer->length, rkmpp_buffer->planes[i].bytesused);
+ 		if (!sizes[i]) {
+ 			goto out;
+     }
+ 		if (buffer->memory == V4L2_MEMORY_DMABUF) {
+ 			int fd = rkmpp_buffer->planes[i].fd;
+-			addrs[i] = mmap(NULL, sizes[i],
+-					PROT_READ | PROT_WRITE,
+-					MAP_SHARED, fd, offsets[i]);
++      if (ctx->is_decoder)
++		  	addrs[i] = mmap(NULL, sizes[i],
++		  			PROT_READ | PROT_WRITE,
++		  			MAP_SHARED, fd, offsets[i]);
++      else
++         addrs[i] = mmap(NULL, sizes[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd, rkmpp_buffer->planes[i].data_offset);
++
+       err = errno;
+ 			if (addrs[i] == MAP_FAILED) {
+-        LOGV_CTX(ctx, 3, "mmap failed: i:%u, fd:%d, size:%u, offsets:%u, errno:%d, sizeimage:%u, planes[0].length:%u\n", i, fd, sizes[i], offsets[i], err, rkmpp_buffer->size,
++        LOGV_CTX(ctx, 3, "mmap failed: i:%u, fd:%d, size:%u, offsets:%u, errno:%d, sizeimage:%u, planes[0].length:%u\n", i, fd, sizes[i], rkmpp_buffer->planes[i].data_offset, err, rkmpp_buffer->size,
+           rkmpp_buffer->planes[0].length);
+ 				goto out;
+       }
+@@ -135,10 +141,14 @@ static int rkmpp_copy_buffer(struct rkmp
+         LOGV_CTX(ctx, 3, "planes[%u]->userptr:%lu is 0\n", i, rkmpp_buffer->planes[i].userptr);
+ 				goto out;
+       }
+-			addrs[i] += offsets[i];
++      if (ctx->is_decoder)
++			  addrs[i] += offsets[i];
++      else
++        addrs[i] += rkmpp_buffer->planes[i].data_offset;
+ 		}
+ 
+-		offsets[i] = i == 0 ? 0 : offsets[i - 1] + sizes[i - 1];
++    if (ctx->is_decoder)
++		  offsets[i] = i == 0 ? 0 : offsets[i - 1] + sizes[i - 1];
+ 	}
+ 
+ 	LOGV_CTX(ctx, 3, "doing software copy\n");
+@@ -150,21 +160,23 @@ static int rkmpp_copy_buffer(struct rkmp
+ 		}
+ 
+ 		if (copy_to) {
+-			uint32_t size = rkmpp_buffer->planes[i].bytesused;
++			uint32_t size = ctx->is_decoder ? rkmpp_buffer->planes[i].bytesused : sizes[i];
+ 
+ 			if (!size)
+ 				size = sizes[i];
+ 
+ 			memcpy(addrs[i], rkmpp_ptr + offsets[i], size);
+-			buffer->m.planes[i].bytesused = size;
++      if (ctx->is_decoder)
++			  buffer->m.planes[i].bytesused = size;
+ 		} else {
+-			uint32_t size = buffer->m.planes[i].bytesused;
++			uint32_t size = ctx->is_decoder ? buffer->m.planes[i].bytesused : buffer->m.planes[i].length;
+ 
+-			if (!size)
++			if (!size || size > sizes[i])
+ 				size = sizes[i];
+ 
+ 			memcpy(rkmpp_ptr + offsets[i], addrs[i], size);
+-			rkmpp_buffer->planes[i].bytesused = size;
++      if (ctx->is_decoder)
++			  rkmpp_buffer->planes[i].bytesused = size;
+ 		}
+ 	}
+ 
