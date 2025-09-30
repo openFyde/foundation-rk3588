@@ -193,7 +193,14 @@ Index: mpp/osal/driver/mpp_service.c
 ===================================================================
 --- mpp.orig/osal/driver/mpp_service.c
 +++ mpp/osal/driver/mpp_service.c
-@@ -44,14 +44,36 @@ const char *mpp_get_mpp_service_name(voi
+@@ -38,21 +38,46 @@ static const RK_U32 query_count = MPP_AR
+ 
+ const char *mpp_get_mpp_service_name(void)
+ {
++#if 0
+     static const char *mpp_service_name = NULL;
+     static const char *mpp_service_dev[] = {
+         "/dev/mpp_service",
          "/dev/mpp-service",
      };
  
@@ -232,9 +239,12 @@ Index: mpp/osal/driver/mpp_service.c
 +    mpp_dbg_info("mpp_get_mpp_service_name: final service name = %s",
 +            mpp_service_name ? mpp_service_name : "NULL");
      return mpp_service_name;
++#endif
++    return "/dev/mpp_service";
  }
  
-@@ -149,10 +171,12 @@ void check_mpp_service_cap(RK_U32 *codec
+ RK_S32 mpp_service_ioctl(RK_S32 fd, RK_U32 cmd, RK_U32 size, void *param)
+@@ -149,10 +174,12 @@ void check_mpp_service_cap(RK_U32 *codec
  
      /* check each valid client type for hw_id */
      /* kernel need to set client type then get hw_id */
@@ -247,7 +257,7 @@ Index: mpp/osal/driver/mpp_service.c
              fd = open(mpp_get_mpp_service_name(), O_RDWR | O_CLOEXEC);
              if (fd < 0) {
                  mpp_err("open mpp_service to check cmd capability failed\n");
-@@ -161,21 +185,32 @@ void check_mpp_service_cap(RK_U32 *codec
+@@ -161,21 +188,32 @@ void check_mpp_service_cap(RK_U32 *codec
              /* set client type first */
              ret = mpp_service_ioctl(fd, MPP_CMD_INIT_CLIENT_TYPE, sizeof(val), &val);
              if (ret) {

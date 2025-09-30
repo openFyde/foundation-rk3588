@@ -1,0 +1,13 @@
+Index: kernel-rockchip/drivers/media/usb/uvc/uvc_video.c
+===================================================================
+--- kernel-rockchip.orig/drivers/media/usb/uvc/uvc_video.c
++++ kernel-rockchip/drivers/media/usb/uvc/uvc_video.c
+@@ -80,7 +80,7 @@ int uvc_query_ctrl(struct uvc_device *de
+ 	if (likely(ret == size))
+ 		return 0;
+ 
+-	dev_err(&dev->udev->dev,
++	dev_dbg(&dev->udev->dev,
+ 		"Failed to query (%s) UVC control %u on unit %u: %d (exp. %u).\n",
+ 		uvc_query_name(query), cs, unit, ret, size);
+ 

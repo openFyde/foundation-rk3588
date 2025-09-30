@@ -464,7 +464,7 @@ Index: src/content/common/gpu_pre_sandbox_hook_linux.cc
    }
 +
 +  permissions->push_back(BrokerFilePermission::ReadOnly("/proc/device-tree/compatible"));
-+  permissions->push_back(BrokerFilePermission::ReadWrite("/dev/mpp_service"));
++  permissions->push_back(BrokerFilePermission::AllPermissions("/dev/mpp_service"));
 +  permissions->push_back(BrokerFilePermission::ReadOnly("/etc/localtime"));
 +  permissions->push_back(BrokerFilePermission::ReadWrite("/dev/rga"));
 +  permissions->push_back(BrokerFilePermission::ReadWrite("/var/log/libv4l2.log"));
@@ -495,6 +495,14 @@ Index: src/content/common/gpu_pre_sandbox_hook_linux.cc
    } else {
      if (UseChromecastSandboxAllowlist() && IsArchitectureArm()) {
        if (UseV4L2Codec(options)) {
+@@ -687,6 +707,7 @@ sandbox::syscall_broker::BrokerCommandSe
+        options.use_nvidia_specific_policies ||
+        options.use_virtio_specific_policies || IsArchitectureArm())) {
+     command_set.set(sandbox::syscall_broker::COMMAND_READLINK);
++    command_set.set(sandbox::syscall_broker::COMMAND_INOTIFY_ADD_WATCH);
+   }
+   return command_set;
+ }
 Index: src/media/gpu/v4l2/v4l2_utils.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_utils.cc

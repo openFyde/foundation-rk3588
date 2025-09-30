@@ -72,3 +72,16 @@ Index: mpp/osal/driver/vcodec_service.c
      } else {
          RK_U32 cmd = (vcodec_ioctl_version == 0) ?
                       (VPU_IOC_SET_CLIENT_TYPE) :
+Index: mpp/osal/mpp_log.c
+===================================================================
+--- mpp.orig/osal/mpp_log.c
++++ mpp/osal/mpp_log.c
+@@ -20,7 +20,7 @@
+ extern "C" {
+ #endif
+ 
+-RK_U32 mpp_debug = 0;
++RK_U32 mpp_debug = MPP_DBG_INFO;
+ 
+ // TODO: add log timing information and switch flag
+ static const char *msg_log_warning = "log message is long\n";

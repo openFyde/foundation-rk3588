@@ -1,0 +1,50 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-dec.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+@@ -103,8 +103,8 @@ static struct rkmpp_fmt rkmpp_dec_fmts[]
+ 		},
+ 	},
+   {
+-    .name = "MJPEG",
+-    .fourcc = V4L2_PIX_FMT_MJPEG,
++    .name = "JPEG",
++    .fourcc = V4L2_PIX_FMT_JPEG,
+     .num_planes = 1,
+     .type = MPP_VIDEO_CodingMJPEG,
+     .format = MPP_FMT_BUTT,
+Index: libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-enc.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-enc.c
+@@ -101,7 +101,7 @@ static struct rkmpp_fmt rkmpp_enc_fmts[]
+ 	},
+     {
+ 		.name = "MJPEG",
+-		.fourcc = V4L2_PIX_FMT_MJPEG,
++		.fourcc = V4L2_PIX_FMT_JPEG,
+ 		.num_planes = 1,
+ 		.type = MPP_VIDEO_CodingMJPEG,
+ 		.format = MPP_FMT_BUTT,
+@@ -748,7 +748,7 @@ static int rkmpp_enc_streamon(struct rkm
+ 	case V4L2_PIX_FMT_VP8:
+ 		enc->type = VP8;
+ 		break;
+-	case V4L2_PIX_FMT_MJPEG:
++	case V4L2_PIX_FMT_JPEG:
+ 		enc->type = MJPEG;
+ 		break;
+ 	default:
+Index: libv4l-rkmpp/src/libv4l-rkmpp.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp.c
++++ libv4l-rkmpp/src/libv4l-rkmpp.c
+@@ -1070,7 +1070,7 @@ static void *plugin_init(int fd)
+ 	if (ctx->is_decoder) {
+ 		if (ctx->codecs)
+ 			free(ctx->codecs);
+-		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1");
++		ctx->codecs = strdup("VP8:VP9:H.264:H.265:AV1:JPEG");
+ 	} else {
+     if (ctx->codecs)
+       free(ctx->codecs);

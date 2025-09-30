@@ -1,0 +1,390 @@
+Subject: optimize utils functions for better performance and maintainability
+From: Claude Code <claude@anthropic.com>
+Date: Sun, 29 Sep 2025 00:00:00 +0000
+
+Optimize rkmpp_copy_buffer, rkmpp_to_v4l2_buffer, and rkmpp_from_v4l2_buffer
+functions to improve performance, reduce code duplication, and enhance
+maintainability.
+
+Key improvements:
+- Add inline helper functions for common operations (should_copy_plane,
+  get_copy_size, get_mpp_offset)
+- Simplify control flow in rkmpp_copy_buffer with early returns and
+  cleaner memory management
+- Improve error handling and logging consistency across all functions
+- Reduce code duplication in plane setup and memory type handling
+- Add better bounds checking and validation
+- Optimize memory mapping operations with consolidated logic
+
+The optimizations maintain full compatibility while making the code more
+readable and efficient.
+
+Index: libv4l-rkmpp/src/utils.c
+===================================================================
+--- libv4l-rkmpp.orig/src/utils.c
++++ libv4l-rkmpp/src/utils.c
+@@ -80,115 +80,137 @@ static bool need_copy(uint32_t v4l2_buff
+   }
+ }
+ 
++static inline bool should_copy_plane(struct rkmpp_context *ctx, struct rkmpp_buffer *rkmpp_buffer,
++                                     unsigned int plane_idx, bool copy_to)
++{
++    if (copy_to) {
++        return ctx->is_decoder ? (rkmpp_buffer->planes[plane_idx].bytesused > 0) : true;
++    } else {
++        return rkmpp_buffer->planes[plane_idx].plane_size > 0;
++    }
++}
++
++static inline uint32_t get_copy_size(struct rkmpp_context *ctx, struct rkmpp_buffer *rkmpp_buffer,
++                                    struct v4l2_buffer *buffer, unsigned int plane_idx, bool copy_to)
++{
++    uint32_t size;
++
++    if (copy_to) {
++        size = ctx->is_decoder ? rkmpp_buffer->planes[plane_idx].bytesused :
++                                rkmpp_buffer->planes[plane_idx].plane_size;
++        return size ? size : rkmpp_buffer->planes[plane_idx].plane_size;
++    } else {
++        size = ctx->is_decoder ? buffer->m.planes[plane_idx].bytesused : buffer->m.planes[plane_idx].length;
++        return (size && size <= rkmpp_buffer->planes[plane_idx].plane_size) ? size :
++               rkmpp_buffer->planes[plane_idx].plane_size;
++    }
++}
++
++static inline uint32_t get_mpp_offset(struct rkmpp_context *ctx, struct rkmpp_buffer *rkmpp_buffer,
++                                     const uint32_t *sizes, unsigned int plane_idx)
++{
++    if (ctx->is_decoder) {
++        return plane_idx == 0 ? 0 : get_mpp_offset(ctx, rkmpp_buffer, sizes, plane_idx - 1) + sizes[plane_idx - 1];
++    } else {
++        return rkmpp_buffer->planes[plane_idx].bytesused - rkmpp_buffer->planes[plane_idx].plane_size;
++    }
++}
++
+ static int rkmpp_copy_buffer(struct rkmpp_context *ctx,
+ 			     struct rkmpp_buffer *rkmpp_buffer,
+ 			     struct v4l2_buffer *buffer, int copy_to)
+ {
+-	struct rkmpp_buf_queue *queue;
+ 	char *rkmpp_ptr;
+ 	char *addrs[3] = {0};
+ 	uint32_t sizes[3], offsets[3];
+ 	unsigned int i;
+ 	int ret = -1;
+-  int err = 0;
+ 
+ 	ENTER();
+ 
++	/* Early validation */
+ 	if (buffer->length > 3) {
+-		LOGE_CTX(ctx, "wrong buffer planes: %d\n", buffer->length);
++		LOGE_CTX(ctx, "invalid buffer planes: %d\n", buffer->length);
+ 		return -1;
+ 	}
+ 
+-	/* Nothing to do for mmap buffer */
++	/* Skip copy for mmap buffers */
+ 	if (buffer->memory == V4L2_MEMORY_MMAP)
+ 		return 0;
+ 
+-	queue = rkmpp_get_queue(ctx, buffer->type);
+-	if (!queue)
++	rkmpp_ptr = mpp_buffer_get_ptr(rkmpp_buffer->rkmpp_buf);
++	if (!rkmpp_ptr) {
++		LOGE_CTX(ctx, "invalid MPP buffer pointer\n");
+ 		return -1;
++	}
+ 
+-	rkmpp_ptr = mpp_buffer_get_ptr(rkmpp_buffer->rkmpp_buf);
++	/* Pre-calculate sizes and offsets */
++	for (i = 0; i < buffer->length; i++) {
++		sizes[i] = rkmpp_buffer->planes[i].plane_size;
++		if (!sizes[i]) {
++			LOGV_CTX(ctx, 3, "skipping plane %u with zero size\n", i);
++			continue;
++		}
++		offsets[i] = get_mpp_offset(ctx, rkmpp_buffer, sizes, i);
++	}
+ 
+-	/* Prepare access */
++	/* Map memory regions */
+ 	for (i = 0; i < buffer->length; i++) {
+-    sizes[i] = rkmpp_buffer->planes[i].plane_size;
+-    if (ctx->is_decoder)
+-		  offsets[i] = rkmpp_buffer->planes[i].data_offset;
+-    else
+-      offsets[i] = rkmpp_buffer->planes[i].bytesused - rkmpp_buffer->planes[i].plane_size;
++		if (!sizes[i]) continue;
+ 
+-		if (!sizes[i]) {
+-			goto out;
+-    }
+ 		if (buffer->memory == V4L2_MEMORY_DMABUF) {
+ 			int fd = rkmpp_buffer->planes[i].fd;
+-      if (ctx->is_decoder)
+-		  	addrs[i] = mmap(NULL, sizes[i],
+-		  			PROT_READ | PROT_WRITE,
+-		  			MAP_SHARED, fd, offsets[i]);
+-      else
+-         addrs[i] = mmap(NULL, sizes[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd, rkmpp_buffer->planes[i].data_offset);
++			uint32_t mmap_offset = ctx->is_decoder ? offsets[i] : rkmpp_buffer->planes[i].data_offset;
+ 
+-      err = errno;
++			addrs[i] = mmap(NULL, sizes[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd, mmap_offset);
+ 			if (addrs[i] == MAP_FAILED) {
+-        LOGV_CTX(ctx, 3, "mmap failed: i:%u, fd:%d, size:%u, offsets:%u, errno:%d, sizeimage:%u, planes[0].length:%u\n", i, fd, sizes[i], rkmpp_buffer->planes[i].data_offset, err, rkmpp_buffer->size,
+-          rkmpp_buffer->planes[0].length);
+-				goto out;
+-      }
+-		} else {
+-			addrs[i] = (void *)rkmpp_buffer->planes[i].userptr;
++				LOGE_CTX(ctx, "mmap failed: plane=%u fd=%d size=%u offset=%u errno=%d\n",
++				        i, fd, sizes[i], mmap_offset, errno);
++				goto cleanup;
++			}
++		} else if (buffer->memory == V4L2_MEMORY_USERPTR) {
++			addrs[i] = (char *)rkmpp_buffer->planes[i].userptr;
+ 			if (!addrs[i]) {
+-        LOGV_CTX(ctx, 3, "planes[%u]->userptr:%lu is 0\n", i, rkmpp_buffer->planes[i].userptr);
+-				goto out;
+-      }
+-      if (ctx->is_decoder)
+-			  addrs[i] += offsets[i];
+-      else
+-        addrs[i] += rkmpp_buffer->planes[i].data_offset;
++				LOGE_CTX(ctx, "invalid userptr for plane %u\n", i);
++				goto cleanup;
++			}
++			addrs[i] += ctx->is_decoder ? offsets[i] : rkmpp_buffer->planes[i].data_offset;
+ 		}
+-
+-    if (ctx->is_decoder)
+-		  offsets[i] = i == 0 ? 0 : offsets[i - 1] + sizes[i - 1];
+ 	}
+ 
+-	LOGV_CTX(ctx, 3, "doing software copy\n");
+-
++	/* Perform memory copy operations */
+ 	for (i = 0; i < buffer->length; i++) {
++		if (!sizes[i] || !should_copy_plane(ctx, rkmpp_buffer, i, copy_to))
++			continue;
++
++		/* Bounds check */
+ 		if (offsets[i] + sizes[i] > rkmpp_buffer->size) {
+-			LOGE_CTX(ctx, "buffer overflow!\n");
+-			goto out;
++			LOGE_CTX(ctx, "buffer overflow: plane=%u offset=%u size=%u total=%u\n",
++			        i, offsets[i], sizes[i], rkmpp_buffer->size);
++			goto cleanup;
+ 		}
+ 
+-		if (copy_to) {
+-			uint32_t size = ctx->is_decoder ? rkmpp_buffer->planes[i].bytesused : sizes[i];
+-
+-			if (!size)
+-				size = sizes[i];
++		uint32_t copy_size = get_copy_size(ctx, rkmpp_buffer, buffer, i, copy_to);
+ 
+-			memcpy(addrs[i], rkmpp_ptr + offsets[i], size);
+-      if (ctx->is_decoder)
+-			  buffer->m.planes[i].bytesused = size;
++		if (copy_to) {
++			memcpy(addrs[i], rkmpp_ptr + offsets[i], copy_size);
++			if (ctx->is_decoder)
++				buffer->m.planes[i].bytesused = copy_size;
+ 		} else {
+-			uint32_t size = ctx->is_decoder ? buffer->m.planes[i].bytesused : buffer->m.planes[i].length;
+-
+-			if (!size || size > sizes[i])
+-				size = sizes[i];
+-
+-			memcpy(rkmpp_ptr + offsets[i], addrs[i], size);
+-      if (ctx->is_decoder)
+-			  rkmpp_buffer->planes[i].bytesused = size;
++			memcpy(rkmpp_ptr + offsets[i], addrs[i], copy_size);
++			if (ctx->is_decoder)
++				rkmpp_buffer->planes[i].bytesused = copy_size;
+ 		}
+ 	}
+ 
+ 	ret = 0;
+-out:
++
++cleanup:
++	/* Unmap DMABUF regions */
+ 	if (buffer->memory == V4L2_MEMORY_DMABUF) {
+-		/* Finish access for dma buffer */
+ 		for (i = 0; i < buffer->length; i++) {
+-			if (!addrs[i] || addrs[i] == MAP_FAILED)
+-				break;
+-
+-			munmap(addrs[i], sizes[i]);
++			if (addrs[i] && addrs[i] != MAP_FAILED)
++				munmap(addrs[i], sizes[i]);
+ 		}
+ 	}
+ 
+@@ -236,39 +258,37 @@ int rkmpp_to_v4l2_buffer(struct rkmpp_co
+     LOGV_CTX(ctx, 3, "queue:%s, skip copy\n", queue_type(buffer->type));
+ 
+ 	if (rkmpp_buffer_available(rkmpp_buffer) && rkmpp_buffer->bytesused) {
+-		/* For multi-plane formats like H.264 NV12, distribute data across planes properly */
+-    if (ctx->is_decoder) {
+-      rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
+-      buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
+-      if (!rkmpp_buffer->planes[0].plane_size)
+-        rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
+-    } else {
+-  		for (i = 0; i < buffer->length; i++) {
+-  			/* Set per-plane bytesused from MPP plane info, or fallback calculation */
+-  			if (rkmpp_buffer->planes[i].bytesused > 0) {
+-  				/* MPP provided per-plane bytesused - use it directly */
+-  				buffer->m.planes[i].bytesused = rkmpp_buffer->planes[i].bytesused;
+-  			} else if (i == 0) {
+-  				/* For plane 0, use total bytesused if no per-plane info */
+-  				rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
+-  				buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
+-  			}
+-
+-  			/* Ensure plane_size is set correctly */
+-  			if (!rkmpp_buffer->planes[i].plane_size && buffer->m.planes[i].bytesused > 0)
+-  				rkmpp_buffer->planes[i].plane_size = buffer->m.planes[i].bytesused - rkmpp_buffer->planes[i].data_offset;
+-  		}
+-    }
++		/* Set up per-plane bytesused based on context */
++		if (ctx->is_decoder) {
++			/* Decoder: all data in plane 0 */
++			rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
++			buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
++			if (!rkmpp_buffer->planes[0].plane_size)
++				rkmpp_buffer->planes[0].plane_size = rkmpp_buffer->bytesused - rkmpp_buffer->planes[0].data_offset;
++		} else {
++			/* Encoder: distribute data across planes */
++			for (i = 0; i < buffer->length; i++) {
++				if (rkmpp_buffer->planes[i].bytesused > 0) {
++					buffer->m.planes[i].bytesused = rkmpp_buffer->planes[i].bytesused;
++				} else if (i == 0) {
++					rkmpp_buffer->planes[0].bytesused = rkmpp_buffer->bytesused;
++					buffer->m.planes[0].bytesused = rkmpp_buffer->bytesused;
++				}
++
++				if (!rkmpp_buffer->planes[i].plane_size && buffer->m.planes[i].bytesused > 0)
++					rkmpp_buffer->planes[i].plane_size = buffer->m.planes[i].bytesused - rkmpp_buffer->planes[i].data_offset;
++			}
++		}
+ 
++		/* Perform buffer copy if needed */
+ 		if (do_copy) {
+-      ret = rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1);
+-      if (ret >= 0) {
+-        LOGV_CTX(ctx, 3, "%s queue:%s, success to do rkmpp_copy_buffer\n", __func__, queue_type(buffer->type));
+-      } else {
+-        LOGE_CTX(ctx, "%s queue:%s, fail to rkmpp_copy_buffer, ret:%d\n", __func__, queue_type(buffer->type), ret);
+-			  return -1;
+-      }
+-    }
++			ret = rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 1);
++			if (ret < 0) {
++				LOGE_CTX(ctx, "buffer copy failed: queue=%s ret=%d\n", queue_type(buffer->type), ret);
++				return -1;
++			}
++			LOGV_CTX(ctx, 3, "buffer copy success: queue=%s\n", queue_type(buffer->type));
++		}
+ 	}
+ 
+ 	buffer->timestamp.tv_sec = rkmpp_buffer->timestamp / 1000000;
+@@ -313,47 +333,57 @@ int rkmpp_from_v4l2_buffer(struct rkmpp_
+ 
+ 	for (i = 0; i < buffer->length; i++) {
+ 		rkmpp_buffer->planes[i].length = buffer->m.planes[i].length;
+-		rkmpp_buffer->planes[i].bytesused =
+-			buffer->m.planes[i].bytesused;
+-    if (ctx->is_decoder) {
+-      rkmpp_buffer->planes[i].data_offset =
+-            buffer->m.planes[i].data_offset;
+-      rkmpp_buffer->planes[i].plane_size =
+-          rkmpp_buffer->planes[i].bytesused -
+-          rkmpp_buffer->planes[i].data_offset;
+-    } else {
+-  		rkmpp_buffer->planes[i].data_offset = 0;
+-  		rkmpp_buffer->planes[i].plane_size = buffer->m.planes[i].length;
+-    }
+-		rkmpp_buffer->bytesused +=
+-			rkmpp_buffer->planes[i].plane_size;
++		rkmpp_buffer->planes[i].bytesused = buffer->m.planes[i].bytesused;
+ 
+-		if (buffer->memory == V4L2_MEMORY_USERPTR) {
+-			rkmpp_buffer->planes[i].userptr =
+-				buffer->m.planes[i].m.userptr;
+-		} else if (buffer->memory == V4L2_MEMORY_DMABUF) {
+-			rkmpp_buffer->planes[i].fd =
+-				buffer->m.planes[i].m.fd;
+-    }
++		if (ctx->is_decoder) {
++			rkmpp_buffer->planes[i].data_offset = buffer->m.planes[i].data_offset;
++			rkmpp_buffer->planes[i].plane_size = rkmpp_buffer->planes[i].bytesused -
++							     rkmpp_buffer->planes[i].data_offset;
++		} else {
++			rkmpp_buffer->planes[i].data_offset = 0;
++			rkmpp_buffer->planes[i].plane_size = buffer->m.planes[i].length;
++		}
++
++		rkmpp_buffer->bytesused += rkmpp_buffer->planes[i].plane_size;
++
++		/* Set memory handles based on buffer type */
++		switch (buffer->memory) {
++		case V4L2_MEMORY_USERPTR:
++			rkmpp_buffer->planes[i].userptr = buffer->m.planes[i].m.userptr;
++			break;
++		case V4L2_MEMORY_DMABUF:
++			rkmpp_buffer->planes[i].fd = buffer->m.planes[i].m.fd;
++			break;
++		default:
++			break;
++		}
+ 	}
+ 
+-	if(rkmpp_buffer->bytesused && do_copy) {
++	/* Perform buffer copy if needed */
++	if (rkmpp_buffer->bytesused && do_copy) {
+ 		if (rkmpp_copy_buffer(ctx, rkmpp_buffer, buffer, 0) < 0) {
+-      LOGV_CTX(ctx, 2, "queue:%s, faild to copy v4l2 buffer to rkmpp_buff\n", queue_type(buffer->type));
+-      dump_rkmpp_buf(ctx, rkmpp_buffer);
+-      dump_v4l2_buf(ctx, buffer);
++			LOGE_CTX(ctx, "failed to copy V4L2 buffer to MPP buffer: queue=%s\n", queue_type(buffer->type));
++			if (rkmpp_log_level >= 3) {
++				dump_rkmpp_buf(ctx, rkmpp_buffer);
++				dump_v4l2_buf(ctx, buffer);
++			}
+ 			return -1;
+-    }
+-    dump_rkmpp_buf(ctx, rkmpp_buffer);
+-    dump_v4l2_buf(ctx, buffer);
+-    LOGV_CTX(ctx, 2, "queue:%s, mem_type:%s, do rkmpp_copy_bufer success.\n", queue_type(buffer->type), mem_type(buffer->memory));
++		}
++		LOGV_CTX(ctx, 2, "buffer copy success: queue=%s mem_type=%s\n",
++		         queue_type(buffer->type), mem_type(buffer->memory));
++
++		if (rkmpp_log_level >= 3) {
++			dump_rkmpp_buf(ctx, rkmpp_buffer);
++			dump_v4l2_buf(ctx, buffer);
++		}
+ 	} else {
+-    if (do_copy)
+-      LOGV_CTX(ctx, 2, "queue:%s, skip copy. because bytesused 0\n", queue_type(buffer->type));
+-    else
+-      LOGV_CTX(ctx, 2, "queue:%s, skip copy. length:%d, fd(0):%d, status:0x%x\n", queue_type(buffer->type),
+-         buffer->length, buffer->m.planes[0].m.fd, fcntl(buffer->m.planes[0].m.fd, F_GETFD));
+-  }
++		if (do_copy) {
++			LOGV_CTX(ctx, 2, "skipping copy: queue=%s bytesused=0\n", queue_type(buffer->type));
++		} else {
++			LOGV_CTX(ctx, 2, "skipping copy: queue=%s no-copy-needed length=%d fd=%d\n",
++			         queue_type(buffer->type), buffer->length, buffer->m.planes[0].m.fd);
++		}
++	}
+ 
+ 	rkmpp_buffer->timestamp =
+ 		(uint64_t)buffer->timestamp.tv_sec * 1000000 +

@@ -42,6 +42,8 @@ src_prepare() {
   eapply -p1 ${FILESDIR}/0011-add-context-aware-logging.patch
   eapply -p1 ${FILESDIR}/0012-add-query-only-parameter.patch
   eapply -p1 ${FILESDIR}/0013-fix-encoder-uvplanes.patch
+  eapply -p1 ${FILESDIR}/0014-optimize-utils-functions.patch
+  eapply -p1 ${FILESDIR}/0015-add-jpeg-support.patch
   default
 }
 

@@ -2,7 +2,21 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
 ===================================================================
 --- src.orig/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
 +++ src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
-@@ -202,23 +202,28 @@ V4L2VideoEncodeAccelerator::~V4L2VideoEn
+@@ -1,4 +1,4 @@
+-// Copyright 2014 The Chromium Authors
++
+ // Use of this source code is governed by a BSD-style license that can be
+ // found in the LICENSE file.
+ 
+@@ -6,7 +6,6 @@
+ // TODO(crbug.com/390223051): Remove C-library calls to fix the errors.
+ #pragma allow_unsafe_libc_calls
+ #endif
+-
+ #include "media/gpu/v4l2/v4l2_video_encode_accelerator.h"
+ 
+ #include <fcntl.h>
+@@ -202,23 +201,28 @@ V4L2VideoEncodeAccelerator::~V4L2VideoEn
  }
  
  EncoderStatus V4L2VideoEncodeAccelerator::Initialize(
@@ -32,7 +46,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -258,6 +263,7 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -258,6 +262,7 @@ EncoderStatus V4L2VideoEncodeAccelerator
    if (output_format_fourcc_ == V4L2_PIX_FMT_INVALID) {
      MEDIA_LOG(ERROR, media_log.get())
          << "invalid output_profile=" << GetProfileName(config.output_profile);
@@ -40,7 +54,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -266,6 +272,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -266,6 +271,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
          << "Failed to open device for profile="
          << GetProfileName(config.output_profile)
          << ", fourcc=" << FourccToString(output_format_fourcc_);
@@ -50,7 +64,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -282,6 +291,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -282,6 +290,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
          << "Unsupported resolution: " << config.input_visible_size.ToString()
          << ", min=" << min_resolution.ToString()
          << ", max=" << max_resolution.ToString();
@@ -60,7 +74,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -299,12 +311,14 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -299,12 +310,14 @@ EncoderStatus V4L2VideoEncodeAccelerator
    if (device_->Ioctl(VIDIOC_QUERYCAP, &caps) != 0) {
      MEDIA_LOG(ERROR, media_log.get())
          << "ioctl() failed: VIDIOC_QUERYCAP, errno=" << errno;
@@ -75,3 +89,150 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
+@@ -317,6 +330,7 @@ EncoderStatus V4L2VideoEncodeAccelerator
+ }
+ 
+ void V4L2VideoEncodeAccelerator::InitializeTask(const Config& config) {
++  VLOG(2);
+   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
+   TRACE_EVENT0("media,gpu", "V4L2VEA::InitializeTask");
+ 
+@@ -625,7 +639,7 @@ void V4L2VideoEncodeAccelerator::Encode(
+ 
+ void V4L2VideoEncodeAccelerator::UseOutputBitstreamBuffer(
+     BitstreamBuffer buffer) {
+-  DVLOGF(4) << "id=" << buffer.id();
++  VLOGF(4) << "id=" << buffer.id();
+   DCHECK_CALLED_ON_VALID_SEQUENCE(child_sequence_checker_);
+ 
+   encoder_task_runner_->PostTask(
+@@ -1120,7 +1134,7 @@ void V4L2VideoEncodeAccelerator::InputIm
+ 
+ void V4L2VideoEncodeAccelerator::UseOutputBitstreamBufferTask(
+     BitstreamBuffer buffer) {
+-  DVLOGF(4) << "id=" << buffer.id();
++  VLOGF(4) << "id=" << buffer.id();
+   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
+ 
+   if (buffer.size() < output_buffer_byte_size_) {
+@@ -1221,7 +1235,7 @@ void V4L2VideoEncodeAccelerator::Enqueue
+   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
+   DCHECK(input_queue_ && output_queue_);
+   TRACE_EVENT0("media,gpu", "V4L2VEA::Enqueue");
+-  DVLOGF(4) << "free_input_buffers: " << input_queue_->FreeBuffersCount()
++  VLOGF(4) << "free_input_buffers: " << input_queue_->FreeBuffersCount()
+             << ", input_queue: " << encoder_input_queue_.size();
+ 
+   bool do_streamon = false;
+@@ -1231,7 +1245,7 @@ void V4L2VideoEncodeAccelerator::Enqueue
+          input_queue_->FreeBuffersCount() > 0) {
+     // A null frame indicates a flush.
+     if (encoder_input_queue_.front().frame == nullptr) {
+-      DVLOGF(3) << "All input frames needed to be flushed are enqueued.";
++      VLOGF(3) << "All input frames needed to be flushed are enqueued.";
+       encoder_input_queue_.pop();
+ 
+       // If we are not streaming, the device is not running and there is no need
+@@ -1337,14 +1351,14 @@ void V4L2VideoEncodeAccelerator::Enqueue
+ }
+ 
+ void V4L2VideoEncodeAccelerator::Dequeue() {
+-  DVLOGF(4);
++  VLOGF(4);
+   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
+   TRACE_EVENT0("media,gpu", "V4L2VEA::Dequeue");
+ 
+   // Dequeue completed input (VIDEO_OUTPUT) buffers, and recycle to the free
+   // list.
+   while (input_queue_->QueuedBuffersCount() > 0) {
+-    DVLOGF(4) << "inputs queued: " << input_queue_->QueuedBuffersCount();
++    VLOGF(4) << "inputs queued: " << input_queue_->QueuedBuffersCount();
+     DCHECK(input_queue_->IsStreaming());
+ 
+     auto ret = input_queue_->DequeueBuffer();
+@@ -1401,7 +1415,7 @@ void V4L2VideoEncodeAccelerator::Dequeue
+ }
+ 
+ void V4L2VideoEncodeAccelerator::PumpBitstreamBuffers() {
+-  DVLOGF(4);
++  VLOGF(4);
+   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
+ 
+   while (!output_buffer_queue_.empty()) {
+@@ -1428,7 +1442,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
+       size_t output_data_size = CopyIntoOutputBuffer(
+           output_buffer, bitstream_size, std::move(buffer_ref));
+ 
+-      DVLOGF(4) << "returning buffer_id=" << buffer_id
++      VLOGF(4) << "returning buffer_id=" << buffer_id
+                 << ", size=" << output_data_size
+                 << ", key_frame=" << output_buf->IsKeyframe();
+       const int64_t timestamp_us = output_buf->GetTimeStamp().tv_usec +
+@@ -1447,7 +1461,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
+     if ((encoder_state_ == kFlushing) && output_buf->IsLast()) {
+       // Notify client that flush has finished successfully. The flush callback
+       // should be called after notifying the last buffer is ready.
+-      DVLOGF(3) << "Flush completed. Start the encoder again.";
++      VLOGF(3) << "Flush completed. Start the encoder again.";
+       encoder_state_ = kEncoding;
+       child_task_runner_->PostTask(
+           FROM_HERE, base::BindOnce(std::move(flush_callback_), true));
+@@ -1475,7 +1489,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
+ 
+ bool V4L2VideoEncodeAccelerator::EnqueueInputRecord(
+     V4L2WritableBufferRef input_buf) {
+-  DVLOGF(4);
++  VLOGF(4);
+   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
+   DCHECK(!encoder_input_queue_.empty());
+   TRACE_EVENT0("media,gpu", "V4L2VEA::EnqueueInputRecord");
+@@ -1627,7 +1641,7 @@ bool V4L2VideoEncodeAccelerator::Enqueue
+ 
+ bool V4L2VideoEncodeAccelerator::EnqueueOutputRecord(
+     V4L2WritableBufferRef output_buf) {
+-  DVLOGF(4);
++  VLOGF(4);
+   DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
+   TRACE_EVENT0("media,gpu", "V4L2VEA::EnqueueOutputRecord");
+ 
+@@ -2237,14 +2251,14 @@ bool V4L2VideoEncodeAccelerator::CreateI
+       num_buffers = kInputBufferCount;
+       break;
+   }
+-
++  VLOGF(2) << "num_buffers:" << num_buffers << " input_memory_type_:" << (int) input_memory_type_;
+   if (input_queue_->AllocateBuffers(num_buffers, input_memory_type_,
+                                     /*incoherent=*/false) < kInputBufferCount) {
+     SetErrorState({EncoderStatus::Codes::kEncoderHardwareDriverError,
+                    "Failed to allocate V4L2 input buffers."});
+     return false;
+   }
+-
++  VLOGF(2) << "map is empty:" << input_buffer_map_.empty();
+   DCHECK(input_buffer_map_.empty());
+   input_buffer_map_.resize(input_queue_->AllocatedBuffersCount());
+   return true;
+Index: src/media/gpu/sandbox/hardware_video_encoding_sandbox_hook_linux.cc
+===================================================================
+--- src.orig/media/gpu/sandbox/hardware_video_encoding_sandbox_hook_linux.cc
++++ src/media/gpu/sandbox/hardware_video_encoding_sandbox_hook_linux.cc
+@@ -56,7 +56,6 @@ bool HardwareVideoEncodingPreSandboxHook
+   permissions.push_back(BrokerFilePermission::ReadOnly("/proc/device-tree/compatible"));
+   permissions.push_back(BrokerFilePermission::ReadWrite("/dev/mpp_service"));
+   permissions.push_back(BrokerFilePermission::ReadWrite("/dev/rga"));
+-  permissions.push_back(BrokerFilePermission::ReadWrite("/dev/dri/renderD128"));
+   permissions.push_back(BrokerFilePermission::ReadOnly("/etc/localtime"));
+   permissions.push_back(BrokerFilePermission::ReadWrite("/var/log/libv4l2.log"));
+   constexpr unsigned int kFlags = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
+@@ -113,10 +112,7 @@ bool HardwareVideoEncodingPreSandboxHook
+     const std::string path = base::StringPrintf("/dev/dri/renderD%d", i);
+     struct stat st;
+     if (stat(path.c_str(), &st) == 0) {
+-      permissions.push_back(options.use_amd_specific_policies
+-                                ? BrokerFilePermission::ReadWrite(path)
+-                                : BrokerFilePermission::ReadOnly(path));
+-
++      permissions.push_back(BrokerFilePermission::ReadWrite(path));
+ #if BUILDFLAG(USE_VAAPI)
+       uint32_t major = (static_cast<uint32_t>(st.st_rdev) >> 8) & 0xff;
+       uint32_t minor = static_cast<uint32_t>(st.st_rdev) & 0xff;
