@@ -1,0 +1,132 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-tablet-12c.dtsi
+@@ -109,70 +109,70 @@
+ 		status = "okay";
+ 	};
+ 
+-    es8388_sound: es8388-sound {
+-        status = "okay";
+-        compatible = "rockchip,multicodecs-card";
+-        rockchip,card-name = "rockchip-es8388";
+-        hp-det-gpio = <&gpio1 RK_PC0 GPIO_ACTIVE_LOW>;
+-        io-channels = <&saradc 3>;
+-        io-channel-names = "adc-detect";
+-        keyup-threshold-microvolt = <500000>;
+-        poll-interval = <100>;
+-        spk-con-gpio = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
+-        hp-con-gpio = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
+-        rockchip,format = "i2s";
+-        rockchip,mclk-fs = <256>;
+-        rockchip,cpu = <&i2s0_8ch>;
+-        rockchip,codec = <&es8388>;
+-        rockchip,audio-routing =
+-                "Headphone", "LOUT1",
+-                "Headphone", "ROUT1",
+-                "Speaker", "LOUT2",
+-                "Speaker", "ROUT2",
+-                "Headphone", "Headphone Power",
+-                "Speaker", "Speaker Power",
+-                "LINPUT1", "Main Mic",
+-                "LINPUT2", "Main Mic",
+-                "RINPUT1", "Headset Mic",
+-                "RINPUT2", "Headset Mic";
+-        pinctrl-names = "default";
+-        pinctrl-0 = <&hp_det>, <&spk_con>, <&hp_con>;
+-        play-pause-key {
+-                label = "playpause";
+-                linux,code = <KEY_PLAYPAUSE>;
+-                press-threshold-microvolt = <10000>;
+-        };
+-        vol-up-key {
+-            label = "volume up";
+-            linux,code = <KEY_VOLUMEUP>;
+-            press-threshold-microvolt = <135000>;
+-        };
+-        vol-down-key {
+-            label = "volume down";
+-            linux,code = <KEY_VOLUMEDOWN>;
+-            press-threshold-microvolt = <220000>;
+-        };
++  es8388_sound: es8388-sound {
++    status = "okay";
++    compatible = "rockchip,multicodecs-card";
++    rockchip,card-name = "rockchip-es8388";
++    hp-det-gpio = <&gpio1 RK_PC0 GPIO_ACTIVE_LOW>;
++    io-channels = <&saradc 3>;
++    io-channel-names = "adc-detect";
++    keyup-threshold-microvolt = <500000>;
++    poll-interval = <100>;
++    spk-con-gpio = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
++    hp-con-gpio = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
++    rockchip,format = "i2s";
++    rockchip,mclk-fs = <256>;
++    rockchip,cpu = <&i2s0_8ch>;
++    rockchip,codec = <&es8388>;
++    rockchip,audio-routing =
++            "Headphone", "LOUT1",
++            "Headphone", "ROUT1",
++            "Speaker", "LOUT2",
++            "Speaker", "ROUT2",
++            "Headphone", "Headphone Power",
++            "Speaker", "Speaker Power",
++            "LINPUT1", "Main Mic",
++            "LINPUT2", "Main Mic",
++            "RINPUT1", "Headset Mic",
++            "RINPUT2", "Headset Mic";
++    pinctrl-names = "default";
++    pinctrl-0 = <&hp_det>, <&spk_con>, <&hp_con>;
++    play-pause-key {
++      label = "playpause";
++      linux,code = <KEY_PLAYPAUSE>;
++      press-threshold-microvolt = <10000>;
+     };
++    vol-up-key {
++      label = "volume up";
++      linux,code = <KEY_VOLUMEUP>;
++      press-threshold-microvolt = <135000>;
++    };
++    vol-down-key {
++      label = "volume down";
++      linux,code = <KEY_VOLUMEDOWN>;
++      press-threshold-microvolt = <220000>;
++    };
++  };
+ 
+-    dmic: dmic {
+-        status = "okay";
+-        compatible = "simple-audio-card";
+-        simple-audio-card,name = "rockchip-dmic";
++  dmic: dmic {
++    status = "okay";
++    compatible = "simple-audio-card";
++    simple-audio-card,name = "rockchip-dmic";
+ 
+-        simple-audio-card,dai-link@0 {
+-            format = "pdm";
+-            cpu {
+-                sound-dai = <&pdm1>;
+-            };
+-			codec {
+-				sound-dai = <&pdmics>;
+-			};
+-        };
++    simple-audio-card,dai-link@0 {
++      format = "pdm";
++      cpu {
++          sound-dai = <&pdm1>;
++      };
++	    codec {
++		    sound-dai = <&pdmics>;
++	    };
+     };
++  };
+ 
+ 	pdmics: dummy-codec {
+ 		status = "okay";
+-		compatible = "linux,snd-soc-dummy";
++		compatible = "rockchip,dummy-codec";
+ 		#sound-dai-cells = <0>;
+ 	};
+ 
