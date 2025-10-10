@@ -1,0 +1,79 @@
+--- a/drivers/net/ethernet/motorcomm/fuxi-gmac-hw.c
++++ b/drivers/net/ethernet/motorcomm/fuxi-gmac-hw.c
+@@ -565,8 +565,6 @@
+ 
+     //if(hash_table[i])
+     //	DPRINTK("fxgmac_set_mac_hash_tabl[%d]=%08x.\n", i, hash_table[i]);
+-#else
+-    pdata = pdata;
+ #endif
+ 
+ #else
+@@ -698,8 +696,6 @@
+     unsigned long tx_timeout;
+     unsigned int tx_status;
+     
+-    pdata = pdata;
+-
+     /* Calculate the status register to read and the position within */
+     if (channel->queue_index < DMA_DSRX_FIRST_QUEUE) {
+         tx_dsr = DMA_DSR0;
+@@ -1493,7 +1489,6 @@
+     struct fxgmac_desc_data *desc_data;
+     int start_index = ring->cur;
+     unsigned int i;
+-    start_index = start_index;
+     //DEBUGPRINT(INIT, "["STR_FORMAT","STR_FORMAT",%d]:dma_desc_count=%d,0x%x\n",__FILE__, __func__,__LINE__,ring->dma_desc_count,channel->tx_ring);
+ 
+     /* Initialize all descriptors */
+@@ -1867,7 +1862,7 @@
+ 
+ static int fxgmac_config_tx_coalesce(struct fxgmac_pdata *pdata)
+ {
+-    pdata = pdata;
++    (void)pdata;
+     return 0;
+ }
+ 
+@@ -3003,7 +2998,7 @@
+                 unsigned int index, unsigned int val)
+ {
+     int ret = 0;
+-    type = type;
++    (void)type;
+ 
+     writereg(pdata->pAdapter, val, (pdata->base_mem+ index));
+ 
+@@ -5350,7 +5345,7 @@
+ {
+     unsigned int dma_ch_ier;
+ 
+-    int_id = int_id;
++    (void)int_id;
+     dma_ch_ier = readreg(channel->pdata->pAdapter, FXGMAC_DMA_REG(channel, DMA_CH_SR /*1160*/));
+     writereg(channel->pdata->pAdapter, dma_ch_ier, FXGMAC_DMA_REG(channel, DMA_CH_SR));
+ 
+--- a/drivers/net/ethernet/motorcomm/fuxi-gmac-net.c
++++ b/drivers/net/ethernet/motorcomm/fuxi-gmac-net.c
+@@ -1035,8 +1035,8 @@
+  */
+ static int fxgmac_disable_pci_msi_config(struct pci_dev *pdev)
+ {
+-    u16 pcie_cap_offset;
+-    u32 pcie_msi_mask_bits;
++    u16 pcie_cap_offset = 0;
++    u32 pcie_msi_mask_bits = 0;
+     int ret = 0;
+ 
+     pcie_cap_offset = pci_find_capability(pdev, PCI_CAP_ID_MSI);
+@@ -1063,8 +1063,8 @@
+ 
+ static int fxgmac_disable_pci_msix_config(struct pci_dev *pdev)
+ {
+-    u16 pcie_cap_offset;
+-    u32 pcie_msi_mask_bits;
++    u16 pcie_cap_offset = 0;
++    u32 pcie_msi_mask_bits = 0;
+     int ret = 0;
+ 
+     pcie_cap_offset = pci_find_capability(pdev, PCI_CAP_ID_MSIX);
