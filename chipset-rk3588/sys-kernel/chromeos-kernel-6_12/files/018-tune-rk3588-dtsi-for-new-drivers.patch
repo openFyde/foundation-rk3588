@@ -551,7 +551,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 +  };
 +
 +  rknpu_mmu: iommu@fdab9000 {
-+    compatible = "rockchip,rk3568-iommu";
++    compatible = "rockchip,rk3588-iommu", "rockchip,rk3568-iommu";
 +    reg = <0x0 0xfdab9000 0x0 0x100>,
 +          <0x0 0xfdaba000 0x0 0x100>,
 +          <0x0 0xfdaca000 0x0 0x100>,
@@ -954,7 +954,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 +    compatible = "rockchip,rk3588-mipidcphy-grf", "syscon";
 +    reg = <0x0 0xfd5ec000 0x0 0x100>;
 +  };
-+
++#if 0
 +  hclk_vo1: hclk_vo1@fd7c08ec {
 +    compatible = "rockchip,rk3588-clock-gate-link";
 +    reg = <0 0xfd7c08ec 0 0x10>;
@@ -972,7 +972,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 +    #power-domain-cells = <1>;
 +    #clock-cells = <0>;
 +  };
-+
++#endif
 +  /* Updated to use existing aliases from rk3588-base.dtsi */
 +  /* Removed duplicate phy@fed60000 and phy@fed80000 nodes - they exist in rk3588-base.dtsi */
 +
@@ -1393,7 +1393,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 +&hdptxphy_hdmi0 {
 +  #clock-cells = <0>;
 +};
-+
++#if 0
 +&cru {
 +    assigned-clocks =
 +      <&cru PLL_PPLL>, <&cru PLL_AUPLL>,
@@ -1420,7 +1420,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 +      <12000000>, <99000000>,
 +      <20000000>;
 +};
-+
++#endif
 +#include "rk3588s-sound.dtsi"
 Index: kernel-6_12/include/dt-bindings/suspend/rockchip-rk3588.h
 ===================================================================

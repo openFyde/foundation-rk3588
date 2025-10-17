@@ -34,3 +34,7 @@ CHROMEOS_DTBS="${ROCKCHIP_DTS}.dtb"
 cros_pre_src_prepare_build_toolchain_catch() {
   true
 }
+
+builtin_fw_mali_g57_files=(
+  mali_csffw.bin
+)

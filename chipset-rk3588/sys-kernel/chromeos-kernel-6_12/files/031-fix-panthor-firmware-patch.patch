@@ -1,0 +1,20 @@
+Index: kernel-6_12/drivers/gpu/drm/panthor/panthor_fw.c
+===================================================================
+--- kernel-6_12.orig/drivers/gpu/drm/panthor/panthor_fw.c
++++ kernel-6_12/drivers/gpu/drm/panthor/panthor_fw.c
+@@ -707,9 +707,12 @@ static int panthor_fw_load(struct pantho
+ 
+ 	ret = request_firmware(&fw, fw_path, ptdev->base.dev);
+ 	if (ret) {
+-		drm_err(&ptdev->base, "Failed to load firmware image '%s'\n",
+-			CSF_FW_NAME);
+-		return ret;
++    ret = request_firmware(&fw, CSF_FW_NAME, ptdev->base.dev);
++    if (ret) {
++		  drm_err(&ptdev->base, "Failed to load firmware image '%s'\n",
++			  CSF_FW_NAME);
++		  return ret;
++    }
+ 	}
+ 
+ 	iter.data = fw->data;

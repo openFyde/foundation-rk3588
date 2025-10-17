@@ -235,7 +235,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
-@@ -0,0 +1,502 @@
+@@ -0,0 +1,503 @@
 +# bcmdhd
 +#
 +# Copyright (C) 2023, Broadcom.
@@ -293,7 +293,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 +	-Wno-uninitialized -Wno-unused-but-set-variable -Wno-address	      \
 +	-Dlinux -DLINUX -DBCMDRIVER -DBCMUTILS_ERR_CODES                      \
 +	-DBCMDONGLEHOST -DBCMDMA32 -DBCMFILEIMAGE                             \
-+	-DDHDTHREAD -DDHD_DEBUG -DSHOW_EVENTS -DGET_OTP_MAC_ENABLE            \
++	-DDHDTHREAD -DSHOW_EVENTS -DGET_OTP_MAC_ENABLE            \
 +	-DWIFI_ACT_FRAME -DARP_OFFLOAD_SUPPORT -DSUPPORT_PM2_ONLY             \
 +	-DPKTPRIO_OVERRIDE                                                    \
 +	-DKEEP_ALIVE -DPKT_FILTER_SUPPORT -DDHDTCPACK_SUPPRESS                \
@@ -349,12 +349,13 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 +	DHDCFLAGS += -DSPECIFIC_MAC_GEN_SCHEME
 +	DHDCFLAGS += -DWL_IFACE_MGMT
 +	DHDCFLAGS += -DSUPPORT_RSSI_SUM_REPORT
-+	DHDCFLAGS += -DWLFBT -DWL_GCMP_SUPPORT -DWL_OWE -DWL_SAE_FT
++	DHDCFLAGS += -DWLFBT -DWL_GCMP_SUPPORT -DWL_OWE -DWL_SAE_FT -DWL_DPP -DWL_SUITE_B -DWL_BEACON_PROTECTION
 +	DHDCFLAGS += -DROAM_CHANNEL_CACHE -DDHD_LOSSLESS_ROAMING
 +#	DHDCFLAGS += -DWL_CFGVENDOR_SEND_HANG_EVENT
 +	DHDCFLAGS += -DGTK_OFFLOAD_SUPPORT
 +#	DHDCFLAGS += -DWL_STATIC_IF #-DDHD_MAX_STATIC_IFS=2
-+	DHDCFLAGS += -DWL_CLIENT_SAE
++	DHDCFLAGS += -DWL_CLIENT_SAE -DWL_WPA3_TRANSITION_DISABLE -DWL_ENHANCED_PMF
++#-DWPA3_DEBUG
 +	DHDCFLAGS += -DCONNECT_INFO_WAR -DWL_ROAM_WAR
 +	DHDCFLAGS += -DVNDR_IE_WAR
 +	DHDCFLAGS += -DRESTART_AP_WAR -DRXF0OVFL_REINIT_WAR
@@ -35376,7 +35377,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd.h
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd.h
-@@ -0,0 +1,5011 @@
+@@ -0,0 +1,5014 @@
 +/*
 + * Header file describing the internal (inter-module) DHD interfaces.
 + *
@@ -39405,10 +39406,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd.h
 +void custom_xps_map_clear(struct net_device *net);
 +#endif
 +
-+#if defined(SET_RPS_CPUS)
-+int dhd_rps_cpus_enable(struct net_device *net, int enable);
-+int custom_rps_map_set(struct netdev_rx_queue *queue, char *buf, size_t len);
-+void custom_rps_map_clear(struct netdev_rx_queue *queue);
++#if defined(SET_RPS_CPUS) || defined(SET_XPS_CPUS)
 +#define PRIMARY_INF 0
 +#define VIRTUAL_INF 1
 +#if defined(CONFIG_MACH_UNIVERSAL7420) || defined(CONFIG_SOC_EXYNOS8890)
@@ -39427,7 +39425,13 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd.h
 +#define RPS_CPUS_MASK_IBSS "6"
 +#endif
 +#endif  /* CONFIG_MACH_UNIVERSAL7420 || CONFIG_SOC_EXYNOS8890 */
-+#endif  // endif
++#endif  /* SET_RPS_CPUS || SET_XPS_CPUS */
++
++#if defined(SET_RPS_CPUS) && (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 12, 0))
++int dhd_rps_cpus_enable(struct net_device *net, int enable);
++int custom_rps_map_set(struct netdev_rx_queue *queue, char *buf, size_t len);
++void custom_rps_map_clear(struct netdev_rx_queue *queue);
++#endif  /* SET_RPS_CPUS && KERNEL < 6.12 */
 +
 +int dhd_get_download_buffer(dhd_pub_t *dhd, char *file_path,
 +                            download_type_t component, char **buffer,
@@ -63033,7 +63037,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_dbg.h
 +#define DHD_LOG_DUMP_FWLOG DHD_LOG_DUMP_WRITE_EX
 +#define DHD_LOG_DUMP_FWLOG_TS DHD_LOG_DUMP_WRITE_EX_TS
 +#else
-+#define DHD_INFO_RING(args)
++#define DHD_INFO_RING(args) do { } while (0)
 +/* DLD_BUF_TYPE_GENERAL */
 +#define DHD_LOG_DUMP_FWLOG DHD_LOG_DUMP_WRITE
 +#define DHD_LOG_DUMP_FWLOG_TS DHD_LOG_DUMP_WRITE_TS
@@ -63534,36 +63538,36 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_dbg.h
 +  do {                                              \
 +    if (dhd_msg_level & DHD_ERROR_VAL) printf args; \
 +  } while (0)
-+#define DHD_TRACE(args)
-+#define DHD_INFO(args)
++#define DHD_TRACE(args) do { } while (0)
++#define DHD_INFO(args) do { } while (0)
 +#define DHD_ERROR_ROAM(args) DHD_ERROR(args)
 +#endif /* defined(NDIS) */
 +
-+#define DHD_DATA(args)
-+#define DHD_CTL(args)
-+#define DHD_TIMER(args)
-+#define DHD_HDRS(args)
-+#define DHD_BYTES(args)
-+#define DHD_INTR(args)
-+#define DHD_GLOM(args)
++#define DHD_DATA(args) do { } while (0)
++#define DHD_CTL(args) do { } while (0)
++#define DHD_TIMER(args) do { } while (0)
++#define DHD_HDRS(args) do { } while (0)
++#define DHD_BYTES(args) do { } while (0)
++#define DHD_INTR(args) do { } while (0)
++#define DHD_GLOM(args) do { } while (0)
 +
-+#define DHD_EVENT(args)
++#define DHD_EVENT(args) do { } while (0)
 +#define DHD_ECNTR_LOG(args) DHD_EVENT(args)
 +
 +#define DHD_PRSRV_MEM(args) DHD_EVENT(args)
 +
-+#define DHD_BTA(args)
-+#define DHD_ISCAN(args)
-+#define DHD_ARPOE(args)
-+#define DHD_REORDER(args)
-+#define DHD_PNO(args)
-+#define DHD_RTT(args)
-+#define DHD_PKT_MON(args)
++#define DHD_BTA(args) do { } while (0)
++#define DHD_ISCAN(args) do { } while (0)
++#define DHD_ARPOE(args) do { } while (0)
++#define DHD_REORDER(args) do { } while (0)
++#define DHD_PNO(args) do { } while (0)
++#define DHD_RTT(args) do { } while (0)
++#define DHD_PKT_MON(args) do { } while (0)
 +
-+#define DHD_MSGTRACE_LOG(args)
-+#define DHD_FWLOG(args)
++#define DHD_MSGTRACE_LOG(args) do { } while (0)
++#define DHD_FWLOG(args) do { } while (0)
 +
-+#define DHD_DBGIF(args)
++#define DHD_DBGIF(args) do { } while (0)
 +
 +#define DHD_ERROR_MEM(args) DHD_ERROR(args)
 +#define DHD_IOVAR_MEM(args) DHD_ERROR(args)
@@ -63637,12 +63641,12 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_dbg.h
 +    if (dhd_msg_level & DHD_LOG_VAL) bcmlog args; \
 +  } while (0)
 +#else
-+#define DHD_LOG(args)
++#define DHD_LOG(args) do { } while (0)
 +#endif
 +
-+#define DHD_BLOG(cp, size)
++#define DHD_BLOG(cp, size) do { } while (0)
 +
-+#define DHD_NONE(args)
++#define DHD_NONE(args) do { } while (0)
 +extern int dhd_msg_level;
 +extern int dhd_log_level;
 +#ifdef DHD_LOG_PRINT_RATE_LIMIT
@@ -76581,7 +76585,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
-@@ -0,0 +1,23351 @@
+@@ -0,0 +1,23362 @@
 +/*
 + * Broadcom Dongle Host Driver (DHD), Linux-specific network interface.
 + * Basically selected code segments from usb-cdc.c and usb-rndis.c
@@ -83671,7 +83675,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +  dhd_tx_start_queues(net);
 +  WL_MSG(net->name, "tx queue started\n");
 +
-+#if defined(SET_RPS_CPUS)
++#if defined(SET_RPS_CPUS) && (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 12, 0))
 +  dhd_rps_cpus_enable(net, TRUE);
 +#endif
 +
@@ -84387,7 +84391,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +      } else {
 +        netif_tx_disable(ifp->net);
 +
-+#if defined(SET_RPS_CPUS)
++#if defined(SET_RPS_CPUS) && (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 12, 0))
 +        custom_rps_map_clear(ifp->net->_rx);
 +#endif /* SET_RPS_CPUS */
 +#if (defined(BCM_ROUTER_DHD) && defined(HNDCTF))
@@ -90500,7 +90504,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +      if (ifp->net->reg_state == NETREG_UNINITIALIZED) {
 +        free_netdev(ifp->net);
 +      } else {
-+#ifdef SET_RPS_CPUS
++#if defined(SET_RPS_CPUS) && (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 12, 0))
 +        custom_rps_map_clear(ifp->net->_rx);
 +#endif /* SET_RPS_CPUS */
 +        netif_tx_disable(ifp->net);
@@ -96786,7 +96790,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +}
 +#endif  // endif
 +
-+#if defined(SET_RPS_CPUS)
++#if defined(SET_RPS_CPUS) && (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 12, 0))
 +int dhd_rps_cpus_enable(struct net_device *net, int enable) {
 +  dhd_info_t *dhd = DHD_DEV_INFO(net);
 +  dhd_if_t *ifp;
@@ -97979,7 +97983,9 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +void dhd_print_kirqstats(dhd_pub_t *dhd, unsigned int irq_num) {
 +  unsigned long flags = 0;
 +  struct irq_desc *desc;
++#if (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 12, 0))
 +  int i; /* cpu iterator */
++#endif
 +  struct bcmstrbuf strbuf;
 +  char tmp_buf[KIRQ_PRINT_BUF_LEN];
 +
@@ -97996,9 +98002,18 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +  bcm_binit(&strbuf, tmp_buf, KIRQ_PRINT_BUF_LEN);
 +  raw_spin_lock_irqsave(&desc->lock, flags);
 +  bcm_bprintf(&strbuf, "dhd irq %u:", irq_num);
-+  for_each_online_cpu(i)
-+      bcm_bprintf(&strbuf, "%10u ",
-+                  desc->kstat_irqs ? *per_cpu_ptr(desc->kstat_irqs, i) : 0);
++#if (LINUX_VERSION_CODE <= KERNEL_VERSION(6, 12, 0))
++  for_each_online_cpu(i) {
++      unsigned int irq_count;
++      if (desc->kstat_irqs)
++          irq_count = (unsigned int)*per_cpu_ptr(desc->kstat_irqs, i);
++      else
++          irq_count = 0;
++      bcm_bprintf(&strbuf, "%10u ", irq_count);
++  }
++#else
++  bcm_bprintf(&strbuf, " [kstat_irqs not available]");
++#endif
 +  if (desc->irq_data.chip) {
 +    if (desc->irq_data.chip->name)
 +      bcm_bprintf(&strbuf, " %8s", desc->irq_data.chip->name);
@@ -118904,7 +118919,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_msgbuf.c
 +  struct bcm_mwbmap *pktid_audit; /* multi word bitmap based audit */
 +#endif                            /* DHD_PKTID_AUDIT_ENABLED */
 +  dhd_pktid_key_t *keys;          /* map_items +1 unique pkt ids */
-+  dhd_pktid_item_t lockers[0];    /* metadata storage */
++  dhd_pktid_item_t lockers[2];    /* metadata storage */
 +} dhd_pktid_map_t;
 +
 +/*
@@ -149047,7 +149062,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_pcie.h
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_pcie.h
-@@ -0,0 +1,944 @@
+@@ -0,0 +1,945 @@
 +/*
 + * Linux DHD Bus Module for PCIE
 + *
@@ -149077,6 +149092,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_pcie.h
 +#define dhd_pcie_h
 +
 +#include <bcmpcie.h>
++#include <pcie_core.h>
 +#include <dhd_linux.h>
 +#include <fwpkg_utils.h>
 +#include <hnd_cons.h>
@@ -150086,7 +150102,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_pcie_lin
 +
 +#include <dhd_plat.h>
 +
-+#ifdef CONFIG_ARCH_ROCKCHIP
++#if defined(CONFIG_ARCH_ROCKCHIP) && (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
 +#include <linux/aspm_ext.h>
 +#endif
 +
@@ -152306,7 +152322,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_pcie_lin
 +  ret = tegra_pcie_pm_resume();
 +#endif /* CONFIG_ARCH_TEGRA_210_SOC */
 +#endif /* CONFIG_ARCH_TEGRA */
-+#ifdef CONFIG_ARCH_ROCKCHIP
++#if defined(CONFIG_ARCH_ROCKCHIP) && (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
 +  if (bus->rc_dev)
 +    ret = rockchip_dw_pcie_pm_ctrl_for_user(bus->rc_dev,
 +                                            ROCKCHIP_PCIE_PM_CTRL_RESET);
@@ -179331,7 +179347,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_static_b
 +#define STATIC_ERROR_LEVEL BIT(0)
 +#define STATIC_TRACE_LEVEL BIT(1)
 +#define STATIC_MSG_LEVEL BIT(0)
-+uint static_msg_level = STATIC_ERROR_LEVEL | STATIC_MSG_LEVEL;
++uint static_msg_level = STATIC_ERROR_LEVEL;
 +
 +#define DHD_STATIC_MSG(x, args...)                           \
 +  do {                                                       \
@@ -238878,7 +238894,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linu
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linuxver.h
-@@ -0,0 +1,1079 @@
+@@ -0,0 +1,1083 @@
 +/*
 + * Linux-specific abstractions to gain some independence from linux kernel versions.
 + * Pave over some 2.2 versus 2.4 versus 2.6 kernel differences.
@@ -239602,8 +239618,9 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linu
 +		sem_up = true;
 +	} else if (tsk->up_cnt == 1) {
 +		/* dhd_sched_dpc: dpc is alread up! */
-+	} else
++	} else {
 +		DBG_THR(("dhd_sched_dpc: unexpected up cnt %d!\n", tsk->up_cnt));
++	}
 +
 +	TSK_UNLOCK(&tsk->spinlock, flags);
 +
@@ -239655,12 +239672,13 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linu
 +	DBG_THR(("%s(): thread:%s:%lx wait for terminate\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
 +	timeout = (uint)wait_for_completion_timeout(&((tsk_ctl)->completed), timeout); \
-+	if (timeout == 0) \
++	if (timeout == 0) { \
 +		DBG_THR(("%s(): thread:%s:%lx terminate timeout\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
-+	else \
++	} else { \
 +		DBG_THR(("%s(): thread:%s:%lx terminated OK\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
++	} \
 +	(tsk_ctl)->parent = NULL; \
 +	(tsk_ctl)->proc_name = NULL;  \
 +	(tsk_ctl)->thr_pid = -1; \
@@ -239676,12 +239694,13 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linu
 +	DBG_THR(("%s(): thread:%s:%lx wait for terminate\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
 +	timeout = (uint)wait_for_completion_timeout(&((tsk_ctl)->completed), timeout); \
-+	if (timeout == 0) \
++	if (timeout == 0) { \
 +		DBG_THR(("%s(): thread:%s:%lx terminate timeout\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
-+	else \
++	} else { \
 +		DBG_THR(("%s(): thread:%s:%lx terminated OK\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
++	} \
 +	(tsk_ctl)->parent = NULL; \
 +	(tsk_ctl)->proc_name = NULL;  \
 +	(tsk_ctl)->thr_pid = -1; \
@@ -239702,12 +239721,13 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/linu
 +	DBG_THR(("%s(): thread:%s:%lx wait for flush\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
 +	timeout = (uint)wait_for_completion_timeout(&((tsk_ctl)->flushed), timeout); \
-+	if (timeout == 0) \
++	if (timeout == 0) { \
 +		DBG_THR(("%s(): thread:%s:%lx flush timeout\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
-+	else \
++	} else { \
 +		DBG_THR(("%s(): thread:%s:%lx flushed OK\n", __FUNCTION__, \
 +			 (tsk_ctl)->proc_name, (tsk_ctl)->thr_pid)); \
++	} \
 +}
 +
 +#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
@@ -245241,7 +245261,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/pcie
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/pcie_core.h
-@@ -0,0 +1,1513 @@
+@@ -0,0 +1,1509 @@
 +/*
 + * BCM43XX PCIE core hardware definitions.
 + *
@@ -245454,8 +245474,6 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/pcie
 +	uint32	PAD[1];
 +} pcie_hmapviolation_t;
 +
-+#if !defined(DONGLEBUILD) || defined(BCMSTANDALONE_TEST) || defined(ATE_BUILD) || \
-+	defined(BCMDVFS)
 +/* SB side: PCIE core and host control registers */
 +typedef volatile struct sbpcieregs {
 +	uint32 control;		/* host mode only */
@@ -245666,8 +245684,6 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/pcie
 +		uint32		PAD[45];		/* 0xC4C-0xCFF */
 +	} ftn_ctrl;
 +} sbpcieregs_t;
-+#endif /* !defined(DONGLEBUILD) || defined(BCMSTANDALONE_TEST) || */
-+	/* defined(ATE_BUILD) defined(BCMDVFS) */
 +
 +#define PCIE_CFG_DA_OFFSET 0x400	/* direct access register offset for configuration space */
 +
@@ -262462,7 +262478,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/wlio
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/wlioctl.h
-@@ -0,0 +1,31227 @@
+@@ -0,0 +1,31228 @@
 +/*
 + * Custom OID/ioctl definitions for
 + *
@@ -264533,6 +264549,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/include/wlio
 +
 +#define WL_AUTH_EVENT_DATA_V1		0x1
 +#define WL_AUTH_EVENT_DATA_V2		0x2
++#define WL_AUTH_EVENT_DATA_V3   0x3
 +
 +/* tlv ids for auth event */
 +#define WL_AUTH_PMK_TLV_ID		1u
@@ -327296,7 +327313,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
-@@ -0,0 +1,28341 @@
+@@ -0,0 +1,28523 @@
 +/*
 + * Linux cfg80211 driver
 + *
@@ -332248,6 +332265,8 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +    val = WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED;
 +  else if (sme->crypto.wpa_versions & NL80211_WPA_VERSION_2)
 +    val = WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED;
++  else if (sme->crypto.wpa_versions & NL80211_WPA_VERSION_3)
++    val = WPA3_AUTH_SAE_PSK;
 +  else
 +    val = WPA_AUTH_DISABLED;
 +
@@ -332349,6 +332368,11 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +      }
 +
 +      WL_DBG(("sae auth type\n"));
++#ifdef WPA3_DEBUG
++	    WL_ERR(("WPA3-SAE: Authentication initiated for BSSID %pM\n", sme->bssid));
++   	  WL_ERR(("WPA3-SAE: PMKID available: %s, Auth value: 0x%x\n",
++     		wl_is_pmkid_available(dev, sme->bssid) ? "Yes" : "No", val));
++#endif /* WPA3_DEBUG */
 +      break;
 +#endif /* WL_SAE || WL_CLIENT_SAE */
 +#ifdef BCMCCX
@@ -332704,11 +332728,25 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +                                 DOT11_MNG_RSN_ID)) != NULL) &&
 +      (wl_cfg80211_get_rsn_capa(wpa2_ie, &rsn_cap) == 0) && rsn_cap) {
 +    WL_DBG(("rsn_cap 0x%x%x\n", rsn_cap[0], rsn_cap[1]));
++#ifdef WPA3_DEBUG
++    WL_ERR(("WPA3-DEBUG: RSN cap analysis - rsn_cap[0]=0x%02x\n", rsn_cap[0]));
++    WL_ERR(("WPA3-DEBUG: RSN_CAP_MFPR=0x%02x RSN_CAP_MFPC=0x%02x\n", RSN_CAP_MFPR, RSN_CAP_MFPC));
++    WL_ERR(("WPA3-DEBUG: MFPR check: (0x%02x & 0x%02x) = 0x%02x\n",
++      rsn_cap[0], RSN_CAP_MFPR, (rsn_cap[0] & RSN_CAP_MFPR)));
++    WL_ERR(("WPA3-DEBUG: MFPC check: (0x%02x & 0x%02x) = 0x%02x\n",
++      rsn_cap[0], RSN_CAP_MFPC, (rsn_cap[0] & RSN_CAP_MFPC)));
++#endif /* WPA3_DEBUG */
 +    /* Check for MFP cap in the RSN capability field */
 +    if (rsn_cap[0] & RSN_CAP_MFPR) {
 +      mfp = WL_MFP_REQUIRED;
++#ifdef WPA3_DEBUG
++      WL_ERR(("WPA3-DEBUG: Setting MFP to REQUIRED (0x%x)\n", mfp));
++#endif /* WPA3_DEBUG */
 +    } else if (rsn_cap[0] & RSN_CAP_MFPC) {
 +      mfp = WL_MFP_CAPABLE;
++#ifdef WPA3_DEBUG
++      WL_ERR(("WPA3-DEBUG: Setting MFP to CAPABLE (0x%x)\n", mfp));
++#endif /* WPA3_DEBUG */
 +    }
 +    /*
 +     * eptr --> end/last byte addr of wpa2_ie
@@ -332735,8 +332773,25 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +    }
 +  }
 +
-+  WL_DBG(
-+      ("mfp:%d wpa2_ie ptr:%p mfp fw_support:%d\n", mfp, wpa2_ie, fw_support));
++  /* WPA3-SAE REQUIRES MFP - Override if SAE authentication is being used */
++  if (sec && (sec->wpa_auth & WPA3_AUTH_SAE_PSK) && (mfp == WL_MFP_NONE)) {
++    WL_INFORM_MEM(("WPA3-SAE detected but MFP=NONE! Forcing MFP=REQUIRED for WPA3\n"));
++    mfp = WL_MFP_REQUIRED;
++  }
++
++  WL_DBG(("mfp:%d wpa2_ie ptr:%p mfp fw_support:%d\n", mfp, wpa2_ie, fw_support));
++
++#ifdef WPA3_DEBUG
++  WL_ERR(("WPA3-DEBUG: MFP final decision - mfp=%d fw_support=%d current_mfp=%d\n",
++    mfp, fw_support, current_mfp));
++  WL_ERR(("WPA3-DEBUG: sme->mfp=%d\n",
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0))
++   sme->mfp
++#else
++   0  /* mfp field not available in older kernels */
++#endif
++   ));
++#endif /* WPA3_DEBUG */
 +
 +  if (fw_support == false) {
 +    if (mfp == WL_MFP_REQUIRED) {
@@ -333060,6 +333115,9 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +
 +    /* Set auto_wpa_enabled to avoid wpa ie plumb */
 +    assoc_info->auto_wpa_enabled = TRUE;
++#ifdef WPA3_DEBUG
++   WL_ERR(("WPA3-DEBUG: Multi-AKM transition mode detected (SAE+PSK) - auto_wpa enabled\n"));
++#endif /* WPA3_DEBUG */
 +    /* Update seamless_psk for AKMs needing psk plumb */
 +    assoc_info->seamless_psk = TRUE;
 +
@@ -333203,6 +333261,10 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +          case WLAN_AKM_SUITE_8021X_SUITE_B_192:
 +#ifdef WL_OWE
 +          case WLAN_AKM_SUITE_OWE:
++#ifdef WPA3_DEBUG
++         WL_ERR(("WPA3-OWE: Processing OWE (Enhanced Open) connection\n"));
++         fallthrough;
++#endif /* WPA3_DEBUG */
 +#endif /* WL_OWE */
 +#if defined(WL_SAE) || defined(WL_CLIENT_SAE)
 +          case WLAN_AKM_SUITE_SAE:
@@ -333213,6 +333275,10 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +          case WLAN_AKM_SUITE_DPP:
 +          case WLAN_AKM_SUITE_FT_8021X_SHA384:
 +            val = wl_rsn_akm_wpa_auth_lookup(sme->crypto.akm_suites[0]);
++#ifdef WPA3_DEBUG
++         WL_ERR(("WPA3: AKM Suite 0x%08x -> wpa_auth 0x%08x\n",
++           sme->crypto.akm_suites[0], val));
++#endif /* WPA3_DEBUG */
 +            break;
 +          case WLAN_AKM_SUITE_FT_FILS_SHA256:
 +            val = WPA2_AUTH_FILS_SHA256 | WPA2_AUTH_FT;
@@ -333223,6 +333289,39 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +          default:
 +            WL_ERR(("invalid akm suite (0x%x)\n", sme->crypto.akm_suites[0]));
 +            return -EINVAL;
++        }
++      }
++      else if (val & WPA3_AUTH_SAE_PSK) {
++        switch (sme->crypto.akm_suites[0]) {
++#ifdef WL_OWE
++        case WLAN_AKM_SUITE_OWE:
++#ifdef WPA3_DEBUG
++          WL_ERR(("WPA3-OWE: Processing OWE (Enhanced Open) connection\n"));
++          fallthrough;
++#endif /* WPA3_DEBUG */
++#endif /* WL_OWE */
++#if defined(WL_SAE) || defined(WL_CLIENT_SAE)
++        case WLAN_AKM_SUITE_SAE:
++#ifdef WPA3_DEBUG
++          WL_ERR(("WPA3-SAE: Processing SAE AKM suite for connection\n"));
++          fallthrough;
++#endif /* WPA3_DEBUG */
++#endif /* WL_SAE || WL_CLIENT_SAE */
++#ifdef WL_SAE_FT
++        case WLAN_AKM_SUITE_FT_OVER_SAE:
++#endif /* WL_SAE_FT */
++        case WLAN_AKM_SUITE_DPP:
++        case WLAN_AKM_SUITE_FT_8021X_SHA384:
++          val = wl_rsn_akm_wpa_auth_lookup(sme->crypto.akm_suites[0]);
++#ifdef WPA3_DEBUG
++          WL_ERR(("WPA3: AKM Suite 0x%08x -> wpa_auth 0x%08x\n",
++            sme->crypto.akm_suites[0], val));
++#endif /* WPA3_DEBUG */
++          break;
++        default:
++          WL_ERR(("invalid akm suite (0x%x)\n",
++            sme->crypto.akm_suites[0]));
++          return  -EINVAL;
 +        }
 +      }
 +#ifdef BCMWAPI_WPI
@@ -333268,8 +333367,15 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +  sec = wl_read_prof(cfg, dev, WL_PROF_SEC);
 +  if (assoc_info->auto_wpa_enabled == TRUE) {
 +    /* Set to value 0 indicating multi-akm configuration */
-+    sec->wpa_auth = 0;
-+    sec->fw_wpa_auth = 0;
++    /* For WPA3-SAE, preserve the auth information to prevent association failure */
++    if (val & WPA3_AUTH_SAE_PSK) {
++      WL_INFORM_MEM(("Preserving WPA3-SAE auth (0x%x) despite multi-AKM\n", val));
++      sec->wpa_auth = val;  /* Keep WPA3-SAE info for proper operation */
++      sec->fw_wpa_auth = val;
++    } else {
++      sec->wpa_auth = 0;
++      sec->fw_wpa_auth = 0;
++    }
 +  } else {
 +    sec->wpa_auth = sme->crypto.akm_suites[0];
 +    sec->fw_wpa_auth = val;
@@ -333299,7 +333405,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +    WL_DBG(("wpa_versions 0x%x cipher_pairwise 0x%x\n", sec->wpa_versions,
 +            sec->cipher_pairwise));
 +    if (!(sec->wpa_versions &
-+          (NL80211_WPA_VERSION_1 | NL80211_WPA_VERSION_2)) &&
++          (NL80211_WPA_VERSION_1 | NL80211_WPA_VERSION_2 | NL80211_WPA_VERSION_3)) &&
 +#ifdef BCMWAPI_WPI
 +        !is_wapi(sec->cipher_pairwise) &&
 +#endif
@@ -337108,14 +337214,14 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +    return err;
 +  }
 +
++#ifdef WPA3_DEBUG
 +  WL_DBG(("No of elements %d\n", npmkids));
 +  for (i = 0; i < npmkids; i++) {
 +    WL_DBG(("PMKID[%d]: %pM =\n", i, &pmk_list->pmkids.pmkid[i].bssid));
-+    for (j = 0; j < WPA2_PMKID_LEN; j++) {
-+      WL_DBG(("%02x\n", pmk_list->pmkids.pmkid[i].pmkid[j]));
-+    }
++		print_hex_dump(KERN_DEBUG, "update_pmklist: ", DUMP_PREFIX_OFFSET, 16, 1,
++			pmk_list->pmkids.pmkid[i].pmkid, WPA2_PMKID_LEN, false);
 +  }
-+
++#endif
 +  WL_INFORM_MEM(("wlc_ver_major %x(%x) minor %x\n", cfg->wlc_ver.wlc_ver_major,
 +                 MIN_PMKID_LIST_V3_FW_MAJOR, cfg->wlc_ver.wlc_ver_minor));
 +
@@ -337345,16 +337451,6 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +  } else {
 +    err = -EINVAL;
 +  }
-+
-+#if (WL_DBG_LEVEL > 0)
-+  if (pmksa->bssid != NULL) {
-+    WL_DBG(("set_pmksa,IW_PMKSA_ADD - PMKID: %pM =\n",
-+            &cfg->pmk_list->pmkids.pmkid[npmkids - 1].bssid));
-+  }
-+  for (i = 0; i < WPA2_PMKID_LEN; i++) {
-+    WL_DBG(("%02x\n", cfg->pmk_list->pmkids.pmkid[npmkids - 1].pmkid[i]));
-+  }
-+#endif /* (WL_DBG_LEVEL > 0) */
 +
 +  err = wl_update_pmklist(dev, cfg->pmk_list, err);
 +
@@ -340749,6 +340845,12 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +  uint32 type;
 +  pmkid_v3_t *t_pmkid = NULL;
 +
++#ifdef WPA3_DEBUG
++  size_t act_size = ksize(data);
++  WL_ERR(("%s data:%p, size:%lu\n", __func__, data, act_size));
++  print_hex_dump(KERN_DEBUG, "sae_auth_v2: ", DUMP_PREFIX_ADDRESS, 16, 1,
++    data, act_size, true);
++#endif
 +  auth_data = (wl_auth_event_t *)data;
 +  if (!auth_data) {
 +    WL_ERR(("Invalid param"));
@@ -340762,7 +340864,8 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +      auth_data->xtlvs, tlv_buf_len, WL_AUTH_PMK_TLV_ID, &(sae_key.pmk_len),
 +      BCM_XTLV_OPTION_ALIGN32);
 +  if (!sae_key.pmk || !sae_key.pmk_len) {
-+    WL_ERR(("Mandatory PMK info not present"));
++		WL_ERR(("Mandatory PMK info not present version:%u, length:%u, tlv_buf_len:%u, pmk:%p, pmk_len:%u\n",
++			auth_data->version, auth_data->length, tlv_buf_len, sae_key.pmk, sae_key.pmk_len));
 +    err = BCME_NOTFOUND;
 +    goto done;
 +  }
@@ -340860,6 +340963,82 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +  return err;
 +}
 +
++static s32
++wl_bss_handle_sae_auth_v3(struct bcm_cfg80211 *cfg, struct net_device *ndev,
++ const wl_event_msg_t *event, void *data)
++{
++ int err = BCME_OK;
++ wl_auth_event_t *auth_data;
++ wl_sae_key_info_t sae_key;
++ uint8 *pmk_data;
++ uint16 pmk_len;
++ size_t act_size = ksize(data);
++#ifdef WPA3_DEBUG
++ WL_ERR(("%s data:%p, size:%lu\n", __func__, data, act_size));
++ print_hex_dump(KERN_DEBUG, "sae_auth_v3: ", DUMP_PREFIX_ADDRESS, 16, 1,
++   data, act_size, false);
++#endif
++ auth_data = (wl_auth_event_t *)data;
++ if (!auth_data) {
++   WL_ERR(("Invalid param"));
++   return BCME_ERROR;
++ }
++
++ WL_ERR(("SAE v3: version=0x%04x, length=0x%04x, act_size=%lu\n",
++   auth_data->version, auth_data->length, act_size));
++
++ /* Initialize SAE key structure */
++ memset(&sae_key, 0, sizeof(sae_key));
++
++ /* Copy peer MAC address from event */
++ (void)memcpy_s(sae_key.peer_mac, ETHER_ADDR_LEN, event->addr.octet, ETHER_ADDR_LEN);
++
++ /* For v3, the length field appears to be unreliable, so use actual data size
++  * Skip the 4-byte header (version + length) and extract PMK from xtlvs area
++  */
++ if (act_size > WL_AUTH_EVENT_FIXED_LEN_V2) {
++   pmk_data = auth_data->xtlvs;
++   pmk_len = act_size - WL_AUTH_EVENT_FIXED_LEN_V2;
++
++   /* Skip any padding/reserved bytes and look for actual PMK data
++    * Based on hex dump, PMK starts after initial bytes
++    */
++   if (pmk_len > 8) {
++     /* Skip first 4 bytes (00 00 13 00) which appear to be TLV header/length */
++     pmk_data += 4;
++     pmk_len -= 4;
++
++     /* Limit PMK to reasonable size (32 bytes for WPA2, 48 for WPA3) */
++     if (pmk_len > 64) {
++       pmk_len = 48; /* Use standard PMK length */
++     }
++
++     sae_key.pmk = pmk_data;
++     sae_key.pmk_len = pmk_len;
++#ifdef WPA3_DEBUG
++     WL_ERR(("SAE v3: extracted PMK len=%u\n", sae_key.pmk_len));
++     print_hex_dump(KERN_INFO, "sae_v3_pmk: ", DUMP_PREFIX_OFFSET, 16, 1,
++       sae_key.pmk, sae_key.pmk_len, false);
++#endif
++     /* Process the SAE key */
++     err = wl_cfg80211_event_sae_key(cfg, ndev, &sae_key);
++     if (err) {
++       WL_ERR(("Failed to process SAE v3 key: %d\n", err));
++     } else {
++       WL_ERR(("Successfully processed SAE v3 key\n"));
++     }
++   } else {
++     WL_ERR(("SAE v3: insufficient data for PMK (len=%u)\n", pmk_len));
++     err = BCME_BUFTOOSHORT;
++   }
++ } else {
++   WL_ERR(("SAE v3: invalid data size %lu\n", act_size));
++   err = BCME_BUFTOOSHORT;
++ }
++
++ return err;
++}
++
 +s32 wl_bss_handle_sae_auth(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 +                           const wl_event_msg_t *event, void *data) {
 +  int err = BCME_OK;
@@ -340872,6 +341051,8 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +      err = wl_bss_handle_sae_auth_v1(cfg, ndev, event, data);
 +    } else if (auth_data->version == WL_AUTH_EVENT_DATA_V2) {
 +      err = wl_bss_handle_sae_auth_v2(cfg, ndev, event, data);
++		} else if (auth_data->version == WL_AUTH_EVENT_DATA_V3) {
++			err = wl_bss_handle_sae_auth_v3(cfg, ndev, event, data);
 +    } else {
 +      WL_ERR(("unknown auth event data version %x\n", auth_data->version));
 +      err = BCME_VERSION;
@@ -353561,9 +353742,25 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +static void wl_cfg80211_handle_set_ssid_complete(struct bcm_cfg80211 *cfg,
 +                                                 wl_assoc_status_t *as,
 +                                                 const wl_event_msg_t *event,
-+                                                 wl_assoc_state_t assoc_state) {
++                                                 wl_assoc_state_t assoc_state)
++{
++#ifdef WPA3_DEBUG
++ WL_ERR(("WPA3-DEBUG: SET_SSID_COMPLETE status=0x%x reason=0x%x event_type=0x%x\n",
++   as->status, as->reason, as->event_type));
++ WL_ERR(("WPA3-DEBUG: assoc_state=0x%x flags=0x%x\n", assoc_state, as->flags));
++#endif /* WPA3_DEBUG */
++
 +  if (as->status != WLC_E_STATUS_SUCCESS) {
 +    struct wl_security *sec = wl_read_prof(cfg, as->ndev, WL_PROF_SEC);
++
++#ifdef WPA3_DEBUG
++   WL_ERR(("WPA3-DEBUG: SET_SSID FAILED - investigating WPA3-SAE association failure\n"));
++   if (sec) {
++     WL_ERR(("WPA3-DEBUG: sec->wpa_auth=0x%x sec->auth_type=0x%x sec->fw_auth=0x%x\n",
++       sec->wpa_auth, sec->auth_type, sec->fw_auth));
++     WL_ERR(("WPA3-DEBUG: sec->auth_assoc_res_status=0x%x\n", sec->auth_assoc_res_status));
++   }
++#endif /* WPA3_DEBUG */
 +
 +    if (sec && sec->auth_assoc_res_status) {
 +      WL_INFORM_MEM(("Assoc fail status %d\n", sec->auth_assoc_res_status));
@@ -354011,6 +354208,8 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +  int i;
 +
 +  /* check the bssid is null or not */
++	WL_DBG(("%s bssid:%p, cfg->pmk_list->pmkids.count:%d\n", __func__,
++		bssid, cfg->pmk_list->pmkids.count));
 +  if (!bssid) return FALSE;
 +
 +  for (i = 0; i < cfg->pmk_list->pmkids.count; i++) {
@@ -354059,7 +354258,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +  MFREE(cfg->osh, buf, WLC_IOCTL_MAXLEN);
 +}
 +
-+#define WL_AUTH_START_EVT_V0 0
++#define WL_AUTH_START_EVT_V0
 +static s32 wl_notify_start_auth(struct bcm_cfg80211 *cfg,
 +                                bcm_struct_cfgdev *cfgdev,
 +                                const wl_event_msg_t *e, void *data) {
@@ -419703,7 +419902,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_iw.c
 +  }
 +  return 0;
 +}
-+#define VAL_PSK(_val) (((_val)&WPA_AUTH_PSK) || ((_val)&WPA2_AUTH_PSK))
++#define VAL_PSK(_val) (((_val)&WPA_AUTH_PSK) || ((_val)&WPA2_AUTH_PSK) || ((_val)&WPA3_AUTH_SAE_PSK))
 +
 +static int wl_iw_get_wpaauth(struct net_device *dev,
 +                             struct iw_request_info *info,
@@ -426617,3 +426816,30 @@ Index: kernel-6_12/include/linux/of_gpio.h
  #endif /* CONFIG_OF_GPIO */
  
  #endif /* __LINUX_OF_GPIO_H */
+Index: kernel-6_12/Documentation/devicetree/bindings/net/wireless/brcm,bcm4329-fmac.yaml
+===================================================================
+--- kernel-6_12.orig/Documentation/devicetree/bindings/net/wireless/brcm,bcm4329-fmac.yaml
++++ kernel-6_12/Documentation/devicetree/bindings/net/wireless/brcm,bcm4329-fmac.yaml
+@@ -53,6 +53,7 @@ properties:
+           - pci14e4,4488  # BCM4377
+           - pci14e4,4425  # BCM4378
+           - pci14e4,4433  # BCM4387
++          - pci14e4,449d  # BCM43752
+ 
+   reg:
+     description: SDIO function number for the device (for most cases
+@@ -121,6 +122,14 @@ properties:
+       NVRAM. This would normally be filled in by the bootloader from platform
+       configuration data.
+ 
++  clocks:
++    items:
++      - description: External Low Power Clock input (32.768KHz)
++
++  clock-names:
++    items:
++      - const: lpo
++
+ required:
+   - compatible
+   - reg

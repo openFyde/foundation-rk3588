@@ -13576,14 +13576,13 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-samsung-dcphy.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/phy/rockchip/phy-rockchip-samsung-dcphy.c
-@@ -0,0 +1,2549 @@
+@@ -0,0 +1,2548 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + * Copyright (C) Rockchip Electronics Co.Ltd
 + * Author:
 + *      Guochun Huang <hero.huang@rock-chips.com>
 + */
-+#define DEBUG
 +#include <linux/clk.h>
 +#include <linux/init.h>
 +#include <linux/kernel.h>

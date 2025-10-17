@@ -1,0 +1,4436 @@
+Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+===================================================================
+--- kernel-6_12.orig/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+@@ -8,615 +8,1696 @@
+  * Author: Simon Xue <xxm@rock-chips.com>
+  */
+ 
++#include <dt-bindings/phy/phy.h>
+ #include <linux/clk.h>
+-#include <linux/gpio/consumer.h>
++#include <linux/gpio.h>
++#include <linux/iopoll.h>
+ #include <linux/irqchip/chained_irq.h>
+ #include <linux/irqdomain.h>
+-#include <linux/mfd/syscon.h>
+-#include <linux/module.h>
+-#include <linux/of.h>
++#include <linux/of_address.h>
+ #include <linux/of_irq.h>
++#include <linux/of_device.h>
++#include <linux/of_pci.h>
+ #include <linux/phy/phy.h>
+-#include <linux/platform_device.h>
++#include <linux/phy/pcie.h>
+ #include <linux/regmap.h>
+ #include <linux/reset.h>
++#include <linux/platform_device.h>
++#include <linux/rfkill-wlan.h>
++#include <linux/aspm_ext.h>
+ 
+ #include "pcie-designware.h"
++#include "rockchip-pcie-dma.h"
++#include "pcie-dw-dmatest.h"
+ 
+-/*
+- * The upper 16 bits of PCIE_CLIENT_CONFIG are a write
+- * mask for the lower 16 bits.
+- */
+-#define HIWORD_UPDATE(mask, val) (((mask) << 16) | (val))
+-#define HIWORD_UPDATE_BIT(val)	HIWORD_UPDATE(val, val)
+-#define HIWORD_DISABLE_BIT(val)	HIWORD_UPDATE(val, ~val)
+-
+-#define to_rockchip_pcie(x) dev_get_drvdata((x)->dev)
+-
+-#define PCIE_CLIENT_RC_MODE		HIWORD_UPDATE_BIT(0x40)
+-#define PCIE_CLIENT_EP_MODE		HIWORD_UPDATE(0xf0, 0x0)
+-#define PCIE_CLIENT_ENABLE_LTSSM	HIWORD_UPDATE_BIT(0xc)
+-#define PCIE_CLIENT_DISABLE_LTSSM	HIWORD_UPDATE(0x0c, 0x8)
++#define RK_PCIE_DBG			0
++
++#define PCIE_DMA_OFFSET			0x380000
++
++#define PCIE_DMA_CTRL_OFF		0x8
++#define PCIE_DMA_WR_ENB			0xc
++#define PCIE_DMA_WR_CTRL_LO		0x200
++#define PCIE_DMA_WR_CTRL_HI		0x204
++#define PCIE_DMA_WR_XFERSIZE		0x208
++#define PCIE_DMA_WR_SAR_PTR_LO		0x20c
++#define PCIE_DMA_WR_SAR_PTR_HI		0x210
++#define PCIE_DMA_WR_DAR_PTR_LO		0x214
++#define PCIE_DMA_WR_DAR_PTR_HI		0x218
++#define PCIE_DMA_WR_WEILO		0x18
++#define PCIE_DMA_WR_WEIHI		0x1c
++#define PCIE_DMA_WR_DOORBELL		0x10
++#define PCIE_DMA_WR_INT_STATUS		0x4c
++#define PCIE_DMA_WR_INT_MASK		0x54
++#define PCIE_DMA_WR_INT_CLEAR		0x58
++
++#define PCIE_DMA_RD_ENB			0x2c
++#define PCIE_DMA_RD_CTRL_LO		0x300
++#define PCIE_DMA_RD_CTRL_HI		0x304
++#define PCIE_DMA_RD_XFERSIZE		0x308
++#define PCIE_DMA_RD_SAR_PTR_LO		0x30c
++#define PCIE_DMA_RD_SAR_PTR_HI		0x310
++#define PCIE_DMA_RD_DAR_PTR_LO		0x314
++#define PCIE_DMA_RD_DAR_PTR_HI		0x318
++#define PCIE_DMA_RD_WEILO		0x38
++#define PCIE_DMA_RD_WEIHI		0x3c
++#define PCIE_DMA_RD_DOORBELL		0x30
++#define PCIE_DMA_RD_INT_STATUS		0xa0
++#define PCIE_DMA_RD_INT_MASK		0xa8
++#define PCIE_DMA_RD_INT_CLEAR		0xac
++
++#define PCIE_DMA_CHANEL_MAX_NUM		2
++
++#define PCIE_TYPE0_STATUS_COMMAND_REG	0x4
++#define PCIE_TYPE0_BAR0_REG		0x10
++
++#define PCIE_CAP_LINK_CONTROL2_LINK_STATUS	0xa0
++
++#define PCIE_CLIENT_INTR_STATUS_MSG_RX	0x04
++#define PME_TO_ACK			(BIT(9) | BIT(25))
++#define PCIE_CLIENT_INTR_STATUS_LEGACY	0x08
+ #define PCIE_CLIENT_INTR_STATUS_MISC	0x10
+-#define PCIE_CLIENT_INTR_MASK_MISC	0x24
+-#define PCIE_SMLH_LINKUP		BIT(16)
+-#define PCIE_RDLH_LINKUP		BIT(17)
+-#define PCIE_LINKUP			(PCIE_SMLH_LINKUP | PCIE_RDLH_LINKUP)
+-#define PCIE_RDLH_LINK_UP_CHGED		BIT(1)
+-#define PCIE_LINK_REQ_RST_NOT_INT	BIT(2)
+-#define PCIE_L0S_ENTRY			0x11
+-#define PCIE_CLIENT_GENERAL_CONTROL	0x0
+-#define PCIE_CLIENT_INTR_STATUS_LEGACY	0x8
+ #define PCIE_CLIENT_INTR_MASK_LEGACY	0x1c
++#define UNMASK_ALL_LEGACY_INT		0xffff0000
++#define MASK_LEGACY_INT(x)		(0x00110011 << x)
++#define UNMASK_LEGACY_INT(x)		(0x00110000 << x)
++#define PCIE_CLIENT_INTR_MASK		0x24
++#define PCIE_CLIENT_POWER		0x2c
++#define READY_ENTER_L23			BIT(3)
++#define PCIE_CLIENT_MSG_GEN		0x34
++#define PME_TURN_OFF			(BIT(4) | BIT(20))
+ #define PCIE_CLIENT_GENERAL_DEBUG	0x104
+ #define PCIE_CLIENT_HOT_RESET_CTRL	0x180
+-#define PCIE_CLIENT_LTSSM_STATUS	0x300
++#define PCIE_LTSSM_APP_DLY1_EN		BIT(0)
++#define PCIE_LTSSM_APP_DLY2_EN		BIT(1)
++#define PCIE_LTSSM_APP_DLY1_DONE	BIT(2)
++#define PCIE_LTSSM_APP_DLY2_DONE	BIT(3)
+ #define PCIE_LTSSM_ENABLE_ENHANCE	BIT(4)
+-#define PCIE_LTSSM_STATUS_MASK		GENMASK(5, 0)
+-
+-struct rockchip_pcie {
+-	struct dw_pcie pci;
+-	void __iomem *apb_base;
+-	struct phy *phy;
+-	struct clk_bulk_data *clks;
+-	unsigned int clk_cnt;
+-	struct reset_control *rst;
+-	struct gpio_desc *rst_gpio;
+-	struct regulator *vpcie3v3;
+-	struct irq_domain *irq_domain;
+-	const struct rockchip_pcie_of_data *data;
++#define PCIE_CLIENT_LTSSM_STATUS	0x300
++#define SMLH_LINKUP			BIT(16)
++#define RDLH_LINKUP			BIT(17)
++#define PCIE_CLIENT_CDM_RASDES_TBA_INFO_CMN 0x154
++#define PCIE_CLIENT_DBG_FIFO_MODE_CON	0x310
++#define PCIE_CLIENT_DBG_FIFO_PTN_HIT_D0 0x320
++#define PCIE_CLIENT_DBG_FIFO_PTN_HIT_D1 0x324
++#define PCIE_CLIENT_DBG_FIFO_TRN_HIT_D0 0x328
++#define PCIE_CLIENT_DBG_FIFO_TRN_HIT_D1 0x32c
++#define PCIE_CLIENT_DBG_FIFO_STATUS	0x350
++#define PCIE_CLIENT_DBG_TRANSITION_DATA	0xffff0000
++#define PCIE_CLIENT_DBF_EN		0xffff0007
++
++#define PCIE_TYPE0_HDR_DBI2_OFFSET	0x100000
++#define PCIE_SB_BAR0_MASK_REG		0x100010
++
++#define PCIE_PL_ORDER_RULE_CTRL_OFF	0x8B4
++#define RK_PCIE_L2_TMOUT_US		5000
++#define RK_PCIE_HOTRESET_TMOUT_US	10000
++#define PORT_LOGIC_LTSSM_STATE_L2(ltssm) \
++	((ltssm & PORT_LOGIC_LTSSM_STATE_MASK) == 0x15)
++#define RK_PCIE_ENUM_HW_RETRYIES	2
++
++#define	PORT_LOGIC_LTSSM_L2
++
++struct rk_pcie {
++	struct dw_pcie			*pci;
++	void __iomem			*dbi_base;
++	void __iomem			*apb_base;
++	struct phy			*phy;
++	struct clk_bulk_data		*clks;
++	struct reset_control		*rsts;
++	unsigned int			clk_cnt;
++	struct gpio_desc		*rst_gpio;
++	u32				perst_inactive_ms;
++	struct gpio_desc		*prsnt_gpio;
++	struct dma_trx_obj		*dma_obj;
++	bool				in_suspend;
++	bool				skip_scan_in_resume;
++	bool				is_signal_test;
++	bool				bifurcation;
++	bool				supports_clkreq;
++	struct regulator		*vpcie3v3;
++	struct irq_domain		*irq_domain;
++	raw_spinlock_t			intx_lock;
++	u16				aspm;
++	u32				l1ss_ctl1;
++	struct dentry			*debugfs;
++	u32				msi_vector_num;
++	struct workqueue_struct		*hot_rst_wq;
++	struct work_struct		hot_rst_work;
++	u32				comp_prst[2];
++	u32				intx;
+ };
+ 
+-struct rockchip_pcie_of_data {
+-	enum dw_pcie_device_mode mode;
+-	const struct pci_epc_features *epc_features;
++struct rk_pcie_of_data {
++	u32 msi_vector_num;
+ };
+ 
+-static int rockchip_pcie_readl_apb(struct rockchip_pcie *rockchip, u32 reg)
++#define to_rk_pcie(x)	dev_get_drvdata((x)->dev)
++static int rk_pcie_disable_power(struct rk_pcie *rk_pcie);
++static int rk_pcie_enable_power(struct rk_pcie *rk_pcie);
++
++static int rk_pcie_read(void __iomem *addr, int size, u32 *val)
++{
++	if ((uintptr_t)addr & (size - 1)) {
++		*val = 0;
++		return PCIBIOS_BAD_REGISTER_NUMBER;
++	}
++
++	if (size == 4) {
++		*val = readl(addr);
++	} else if (size == 2) {
++		*val = readw(addr);
++	} else if (size == 1) {
++		*val = readb(addr);
++	} else {
++		*val = 0;
++		return PCIBIOS_BAD_REGISTER_NUMBER;
++	}
++
++	return PCIBIOS_SUCCESSFUL;
++}
++
++static int rk_pcie_write(void __iomem *addr, int size, u32 val)
+ {
+-	return readl_relaxed(rockchip->apb_base + reg);
++	if ((uintptr_t)addr & (size - 1))
++		return PCIBIOS_BAD_REGISTER_NUMBER;
++
++	if (size == 4)
++		writel(val, addr);
++	else if (size == 2)
++		writew(val, addr);
++	else if (size == 1)
++		writeb(val, addr);
++	else
++		return PCIBIOS_BAD_REGISTER_NUMBER;
++
++	return PCIBIOS_SUCCESSFUL;
+ }
+ 
+-static void rockchip_pcie_writel_apb(struct rockchip_pcie *rockchip, u32 val,
+-				     u32 reg)
++static u32 __rk_pcie_read_apb(struct rk_pcie *rk_pcie, void __iomem *base,
++			u32 reg, size_t size)
+ {
+-	writel_relaxed(val, rockchip->apb_base + reg);
++	int ret;
++	u32 val;
++
++	ret = rk_pcie_read(base + reg, size, &val);
++	if (ret)
++		dev_err(rk_pcie->pci->dev, "Read APB address failed\n");
++
++	return val;
+ }
+ 
+-static void rockchip_pcie_intx_handler(struct irq_desc *desc)
++static void __rk_pcie_write_apb(struct rk_pcie *rk_pcie, void __iomem *base,
++			u32 reg, size_t size, u32 val)
+ {
+-	struct irq_chip *chip = irq_desc_get_chip(desc);
+-	struct rockchip_pcie *rockchip = irq_desc_get_handler_data(desc);
+-	unsigned long reg, hwirq;
++	int ret;
+ 
+-	chained_irq_enter(chip, desc);
++	ret = rk_pcie_write(base + reg, size, val);
++	if (ret)
++		dev_err(rk_pcie->pci->dev, "Write APB address failed\n");
++}
+ 
+-	reg = rockchip_pcie_readl_apb(rockchip, PCIE_CLIENT_INTR_STATUS_LEGACY);
++static inline u32 rk_pcie_readl_apb(struct rk_pcie *rk_pcie, u32 reg)
++{
++	return __rk_pcie_read_apb(rk_pcie, rk_pcie->apb_base, reg, 0x4);
++}
+ 
+-	for_each_set_bit(hwirq, &reg, 4)
+-		generic_handle_domain_irq(rockchip->irq_domain, hwirq);
++static inline void rk_pcie_writel_apb(struct rk_pcie *rk_pcie, u32 reg,
++					u32 val)
++{
++	__rk_pcie_write_apb(rk_pcie, rk_pcie->apb_base, reg, 0x4, val);
++}
+ 
+-	chained_irq_exit(chip, desc);
++#if defined(CONFIG_PCIEASPM)
++static void disable_aspm_l1ss(struct rk_pcie *rk_pcie)
++{
++	u32 val, cfg_link_cap_l1sub;
++
++	val = dw_pcie_find_ext_capability(rk_pcie->pci, PCI_EXT_CAP_ID_L1SS);
++	if (!val) {
++		dev_err(rk_pcie->pci->dev, "can't find l1ss cap\n");
++
++		return;
++	}
++
++	cfg_link_cap_l1sub = val + PCI_L1SS_CAP;
++
++	val = dw_pcie_readl_dbi(rk_pcie->pci, cfg_link_cap_l1sub);
++	val &= ~(PCI_L1SS_CAP_ASPM_L1_1 | PCI_L1SS_CAP_ASPM_L1_2 | PCI_L1SS_CAP_L1_PM_SS);
++	dw_pcie_writel_dbi(rk_pcie->pci, cfg_link_cap_l1sub, val);
+ }
++#else
++static inline void disable_aspm_l1ss(struct rk_pcie *rk_pcie) { return; }
++#endif
+ 
+-static void rockchip_intx_mask(struct irq_data *data)
++static inline void rk_pcie_set_mode(struct rk_pcie *rk_pcie)
+ {
+-	rockchip_pcie_writel_apb(irq_data_get_irq_chip_data(data),
+-				 HIWORD_UPDATE_BIT(BIT(data->hwirq)),
+-				 PCIE_CLIENT_INTR_MASK_LEGACY);
+-};
++	if (rk_pcie->supports_clkreq) {
++		/* Application is ready to have reference clock removed */
++		rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_POWER, 0x00010001);
++	} else {
++		/* Pull down CLKREQ# to assert the connecting CLOCK_GEN OE */
++		rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_POWER, 0x30011000);
++		disable_aspm_l1ss(rk_pcie);
++	}
++	rk_pcie_writel_apb(rk_pcie, 0x0, 0xf00040);
++}
+ 
+-static void rockchip_intx_unmask(struct irq_data *data)
++static inline void rk_pcie_link_status_clear(struct rk_pcie *rk_pcie)
+ {
+-	rockchip_pcie_writel_apb(irq_data_get_irq_chip_data(data),
+-				 HIWORD_DISABLE_BIT(BIT(data->hwirq)),
+-				 PCIE_CLIENT_INTR_MASK_LEGACY);
+-};
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_GENERAL_DEBUG, 0x0);
++}
+ 
+-static struct irq_chip rockchip_intx_irq_chip = {
+-	.name			= "INTx",
+-	.irq_mask		= rockchip_intx_mask,
+-	.irq_unmask		= rockchip_intx_unmask,
+-	.flags			= IRQCHIP_SKIP_SET_WAKE | IRQCHIP_MASK_ON_SUSPEND,
+-};
++static inline void rk_pcie_disable_ltssm(struct rk_pcie *rk_pcie)
++{
++	rk_pcie_writel_apb(rk_pcie, 0x0, 0xc0008);
++}
+ 
+-static int rockchip_pcie_intx_map(struct irq_domain *domain, unsigned int irq,
+-				  irq_hw_number_t hwirq)
++static inline void rk_pcie_enable_ltssm(struct rk_pcie *rk_pcie)
+ {
+-	irq_set_chip_and_handler(irq, &rockchip_intx_irq_chip, handle_level_irq);
+-	irq_set_chip_data(irq, domain->host_data);
++	rk_pcie_writel_apb(rk_pcie, 0x0, 0xC000C);
++}
+ 
+-	return 0;
++static void rk_pcie_enable_debug(struct rk_pcie *rk_pcie)
++{
++	if (!IS_ENABLED(CONFIG_DEBUG_FS))
++		return;
++
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_DBG_FIFO_PTN_HIT_D0,
++			   PCIE_CLIENT_DBG_TRANSITION_DATA);
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_DBG_FIFO_PTN_HIT_D1,
++			   PCIE_CLIENT_DBG_TRANSITION_DATA);
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_DBG_FIFO_TRN_HIT_D0,
++			   PCIE_CLIENT_DBG_TRANSITION_DATA);
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_DBG_FIFO_TRN_HIT_D1,
++			   PCIE_CLIENT_DBG_TRANSITION_DATA);
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_DBG_FIFO_MODE_CON,
++			   PCIE_CLIENT_DBF_EN);
+ }
+ 
+-static const struct irq_domain_ops intx_domain_ops = {
+-	.map = rockchip_pcie_intx_map,
+-};
++static void rk_pcie_debug_dump(struct rk_pcie *rk_pcie)
++{
++#if RK_PCIE_DBG
++	u32 loop;
++	struct dw_pcie *pci = rk_pcie->pci;
++
++	dev_info(pci->dev, "ltssm = 0x%x\n",
++		 rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
++	for (loop = 0; loop < 64; loop++)
++		dev_info(pci->dev, "fifo_status = 0x%x\n",
++			 rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_DBG_FIFO_STATUS));
++#endif
++}
+ 
+-static int rockchip_pcie_init_irq_domain(struct rockchip_pcie *rockchip)
++static int rk_pcie_establish_link(struct dw_pcie *pci)
+ {
+-	struct device *dev = rockchip->pci.dev;
+-	struct device_node *intc;
++	int retries, power;
++	struct rk_pcie *rk_pcie = to_rk_pcie(pci);
++	int hw_retries = 0;
++	u32 ltssm;
+ 
+-	intc = of_get_child_by_name(dev->of_node, "legacy-interrupt-controller");
+-	if (!intc) {
+-		dev_err(dev, "missing child interrupt-controller node\n");
+-		return -EINVAL;
++	/*
++	 * For standard RC, even if the link has been setup by firmware,
++	 * we still need to reset link as we need to remove all resource info
++	 * from devices, for instance BAR, as it wasn't assigned by kernel.
++	 */
++	if (dw_pcie_link_up(pci)) {
++		dev_err(pci->dev, "link is already up\n");
++		return 0;
+ 	}
+ 
+-	rockchip->irq_domain = irq_domain_add_linear(intc, PCI_NUM_INTX,
+-						    &intx_domain_ops, rockchip);
+-	of_node_put(intc);
+-	if (!rockchip->irq_domain) {
+-		dev_err(dev, "failed to get a INTx IRQ domain\n");
+-		return -EINVAL;
++	for (hw_retries = 0; hw_retries < RK_PCIE_ENUM_HW_RETRYIES; hw_retries++) {
++		/* Rest the device */
++		gpiod_set_value_cansleep(rk_pcie->rst_gpio, 0);
++
++		rk_pcie_disable_ltssm(rk_pcie);
++		rk_pcie_link_status_clear(rk_pcie);
++		rk_pcie_enable_debug(rk_pcie);
++
++		/* Enable client reset or link down interrupt */
++		rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK, 0x40000);
++
++		/* Enable LTSSM */
++		rk_pcie_enable_ltssm(rk_pcie);
++
++		/*
++		 * In resume routine, function devices' resume function must be late after
++		 * controllers'. Some devices, such as Wi-Fi, need special IO setting before
++		 * finishing training. So there must be timeout here. These kinds of devices
++		 * need rescan devices by its driver when used. So no need to waste time waiting
++		 * for training pass.
++		 */
++		if (rk_pcie->in_suspend && rk_pcie->skip_scan_in_resume) {
++			rfkill_get_wifi_power_state(&power);
++			if (!power) {
++				gpiod_set_value_cansleep(rk_pcie->rst_gpio, 1);
++				return 0;
++			}
++		}
++
++		/*
++		 * PCIe requires the refclk to be stable for 100µs prior to releasing
++		 * PERST and T_PVPERL (Power stable to PERST# inactive) should be a
++		 * minimum of 100ms.  See table 2-4 in section 2.6.2 AC, the PCI Express
++		 * Card Electromechanical Specification 3.0. So 100ms in total is the min
++		 * requuirement here. We add a 200ms by default for sake of hoping everthings
++		 * work fine. If it doesn't, please add more in DT node by add rockchip,perst-inactive-ms.
++		 */
++		msleep(rk_pcie->perst_inactive_ms);
++		gpiod_set_value_cansleep(rk_pcie->rst_gpio, 1);
++
++		/*
++		 * Add this 1ms delay because we observe link is always up stably after it and
++		 * could help us save 20ms for scanning devices.
++		 */
++		usleep_range(1000, 1100);
++
++		for (retries = 0; retries < 100; retries++) {
++			if (dw_pcie_link_up(pci)) {
++				/*
++				 * We may be here in case of L0 in Gen1. But if EP is capable
++				 * of Gen2 or Gen3, Gen switch may happen just in this time, but
++				 * we keep on accessing devices in unstable link status. Given
++				 * that LTSSM max timeout is 24ms per period, we can wait a bit
++				 * more for Gen switch.
++				 */
++				msleep(50);
++				/* In case link drop after linkup, double check it */
++				if (dw_pcie_link_up(pci)) {
++					dev_info(pci->dev, "PCIe Link up, LTSSM is 0x%x\n",
++						rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
++					rk_pcie_debug_dump(rk_pcie);
++					return 0;
++				}
++			}
++
++			dev_info_ratelimited(pci->dev, "PCIe Linking... LTSSM is 0x%x\n",
++					rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
++			rk_pcie_debug_dump(rk_pcie);
++			msleep(20);
++		}
++
++		/*
++		 * In response to the situation where PCIe peripherals cannot be
++		 * enumerated due tosignal abnormalities, reset PERST# and reset
++		 * the peripheral power supply, then restart the enumeration.
++		 */
++		ltssm = rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS);
++		dev_err(pci->dev, "PCIe Link Fail, LTSSM is 0x%x, hw_retries=%d\n", ltssm, hw_retries);
++		if (ltssm >= 3 && !rk_pcie->is_signal_test) {
++			rk_pcie_disable_power(rk_pcie);
++			msleep(1000);
++			rk_pcie_enable_power(rk_pcie);
++		} else {
++			break;
++		}
+ 	}
+ 
+-	return 0;
++	return rk_pcie->is_signal_test == true ? 0 : -EINVAL;
++}
++
++static bool rk_pcie_udma_enabled(struct rk_pcie *rk_pcie)
++{
++	return dw_pcie_readl_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
++				 PCIE_DMA_CTRL_OFF);
+ }
+ 
+-static u32 rockchip_pcie_get_ltssm(struct rockchip_pcie *rockchip)
++static int rk_pcie_init_dma_trx(struct rk_pcie *rk_pcie)
+ {
+-	return rockchip_pcie_readl_apb(rockchip, PCIE_CLIENT_LTSSM_STATUS);
++	if (!rk_pcie_udma_enabled(rk_pcie))
++		return 0;
++
++	rk_pcie->dma_obj = pcie_dw_dmatest_register(rk_pcie->pci->dev, true);
++	if (IS_ERR(rk_pcie->dma_obj)) {
++		dev_err(rk_pcie->pci->dev, "failed to prepare dmatest\n");
++		return -EINVAL;
++	}
++
++	/* Enable client write and read interrupt */
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK, 0xc000000);
++
++	/* Enable core write interrupt */
++	dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET + PCIE_DMA_WR_INT_MASK,
++			   0x0);
++	/* Enable core read interrupt */
++	dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET + PCIE_DMA_RD_INT_MASK,
++			   0x0);
++	return 0;
+ }
+ 
+-static void rockchip_pcie_enable_ltssm(struct rockchip_pcie *rockchip)
++#ifdef MODULE
++void dw_pcie_write_dbi2(struct dw_pcie *pci, u32 reg, size_t size, u32 val)
+ {
+-	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_ENABLE_LTSSM,
+-				 PCIE_CLIENT_GENERAL_CONTROL);
++	int ret;
++
++	if (pci->ops && pci->ops->write_dbi2) {
++		pci->ops->write_dbi2(pci, pci->dbi_base2, reg, size, val);
++		return;
++	}
++
++	ret = dw_pcie_write(pci->dbi_base2 + reg, size, val);
++	if (ret)
++		dev_err(pci->dev, "write DBI address failed\n");
+ }
++#endif
++
++static struct dw_pcie_host_ops rk_pcie_host_ops;
+ 
+-static void rockchip_pcie_disable_ltssm(struct rockchip_pcie *rockchip)
++static int rk_add_pcie_port(struct rk_pcie *rk_pcie, struct platform_device *pdev)
+ {
+-	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_DISABLE_LTSSM,
+-				 PCIE_CLIENT_GENERAL_CONTROL);
++	int ret;
++	struct dw_pcie *pci = rk_pcie->pci;
++	struct dw_pcie_rp *pp = &pci->pp;
++	struct device *dev = pci->dev;
++
++	pp->ops = &rk_pcie_host_ops;
++
++	if (IS_ENABLED(CONFIG_PCI_MSI)) {
++		if (rk_pcie->msi_vector_num > 0) {
++			dev_info(dev, "max MSI vector is %d\n", rk_pcie->msi_vector_num);
++			pp->num_vectors = rk_pcie->msi_vector_num;
++		}
++	}
++
++	ret = dw_pcie_host_init(pp);
++	if (ret) {
++		dev_err(dev, "failed to initialize host\n");
++		return ret;
++	}
++
++	/* Disable BAR0 BAR1 */
++	dw_pcie_writel_dbi2(pci, PCI_BASE_ADDRESS_0, 0x0);
++	dw_pcie_writel_dbi2(pci, PCI_BASE_ADDRESS_1, 0x0);
++
++	return 0;
+ }
+ 
+-static int rockchip_pcie_link_up(struct dw_pcie *pci)
++static int rk_pcie_clk_init(struct rk_pcie *rk_pcie)
+ {
+-	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
+-	u32 val = rockchip_pcie_get_ltssm(rockchip);
++	struct device *dev = rk_pcie->pci->dev;
++	int ret;
+ 
+-	if ((val & PCIE_LINKUP) == PCIE_LINKUP &&
+-	    (val & PCIE_LTSSM_STATUS_MASK) == PCIE_L0S_ENTRY)
+-		return 1;
++	rk_pcie->clk_cnt = devm_clk_bulk_get_all(dev, &rk_pcie->clks);
++	if (rk_pcie->clk_cnt < 1)
++		return -ENODEV;
++
++	ret = clk_bulk_prepare_enable(rk_pcie->clk_cnt, rk_pcie->clks);
++	if (ret) {
++		dev_err(dev, "failed to prepare enable pcie bulk clks: %d\n", ret);
++		return ret;
++	}
+ 
+ 	return 0;
+ }
+ 
+-static int rockchip_pcie_start_link(struct dw_pcie *pci)
++static int rk_pcie_resource_get(struct platform_device *pdev,
++					 struct rk_pcie *rk_pcie)
+ {
+-	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
++	struct resource *dbi_base;
++	struct resource *apb_base;
+ 
+-	/* Reset device */
+-	gpiod_set_value_cansleep(rockchip->rst_gpio, 0);
++	dbi_base = platform_get_resource_byname(pdev, IORESOURCE_MEM,
++						"pcie-dbi");
++	if (!dbi_base) {
++		dev_err(&pdev->dev, "get pcie-dbi failed\n");
++		return -ENODEV;
++	}
+ 
+-	rockchip_pcie_enable_ltssm(rockchip);
++	rk_pcie->dbi_base = devm_ioremap_resource(&pdev->dev, dbi_base);
++	if (IS_ERR(rk_pcie->dbi_base))
++		return PTR_ERR(rk_pcie->dbi_base);
++
++	rk_pcie->pci->dbi_base = rk_pcie->dbi_base;
++	rk_pcie->pci->dbi_base2 = rk_pcie->pci->dbi_base + PCIE_TYPE0_HDR_DBI2_OFFSET;
++
++	apb_base = platform_get_resource_byname(pdev, IORESOURCE_MEM,
++						"pcie-apb");
++	if (!apb_base) {
++		dev_err(&pdev->dev, "get pcie-apb failed\n");
++		return -ENODEV;
++	}
++	rk_pcie->apb_base = devm_ioremap_resource(&pdev->dev, apb_base);
++	if (IS_ERR(rk_pcie->apb_base))
++		return PTR_ERR(rk_pcie->apb_base);
+ 
+ 	/*
+-	 * PCIe requires the refclk to be stable for 100µs prior to releasing
+-	 * PERST. See table 2-4 in section 2.6.2 AC Specifications of the PCI
+-	 * Express Card Electromechanical Specification, 1.1. However, we don't
+-	 * know if the refclk is coming from RC's PHY or external OSC. If it's
+-	 * from RC, so enabling LTSSM is the just right place to release #PERST.
+-	 * We need more extra time as before, rather than setting just
+-	 * 100us as we don't know how long should the device need to reset.
++	 * Rest the device before enabling power because some of the
++	 * platforms may use external refclk input with the some power
++	 * rail connect to 100MHz OSC chip. So once the power is up for
++	 * the slot and the refclk is available, which isn't quite follow
++	 * the spec. We should make sure it is in reset state before
++	 * everthing's ready.
+ 	 */
+-	msleep(100);
+-	gpiod_set_value_cansleep(rockchip->rst_gpio, 1);
++	rk_pcie->rst_gpio = devm_gpiod_get_optional(&pdev->dev, "reset",
++						    GPIOD_OUT_LOW);
++	if (IS_ERR(rk_pcie->rst_gpio)) {
++		dev_err(&pdev->dev, "invalid reset-gpios property in node\n");
++		return PTR_ERR(rk_pcie->rst_gpio);
++	}
++
++	if (device_property_read_u32(&pdev->dev, "rockchip,perst-inactive-ms",
++				     &rk_pcie->perst_inactive_ms))
++		rk_pcie->perst_inactive_ms = 200;
++
++	rk_pcie->prsnt_gpio = devm_gpiod_get_optional(&pdev->dev, "prsnt", GPIOD_IN);
++	if (IS_ERR_OR_NULL(rk_pcie->prsnt_gpio))
++		dev_info(&pdev->dev, "invalid prsnt-gpios property in node\n");
+ 
+ 	return 0;
+ }
+ 
+-static void rockchip_pcie_stop_link(struct dw_pcie *pci)
++static int rk_pcie_phy_init(struct rk_pcie *rk_pcie)
+ {
+-	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
++	int ret;
++	struct device *dev = rk_pcie->pci->dev;
+ 
+-	rockchip_pcie_disable_ltssm(rockchip);
+-}
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: START\n");
+ 
+-static int rockchip_pcie_host_init(struct dw_pcie_rp *pp)
+-{
+-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+-	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
+-	struct device *dev = rockchip->pci.dev;
+-	int irq, ret;
++	rk_pcie->phy = devm_phy_optional_get(dev, "pcie-phy");
++	if (IS_ERR(rk_pcie->phy)) {
++		if (PTR_ERR(rk_pcie->phy) != -EPROBE_DEFER)
++			dev_info(dev, "missing phy\n");
++		dev_err(dev, "[DEBUG] rk_pcie_phy_init: devm_phy_optional_get FAILED, ret=%ld\n", PTR_ERR(rk_pcie->phy));
++		return PTR_ERR(rk_pcie->phy);
++	}
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: devm_phy_optional_get OK, phy=%px\n", rk_pcie->phy);
+ 
+-	irq = of_irq_get_byname(dev->of_node, "legacy");
+-	if (irq < 0)
+-		return irq;
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: calling phy_set_mode_ext(PHY_MODE_PCIE, PHY_MODE_PCIE_RC)\n");
++	ret = phy_set_mode_ext(rk_pcie->phy, PHY_MODE_PCIE, PHY_MODE_PCIE_RC);
++	if (ret) {
++		dev_err(dev, "fail to set phy to rc mode, err %d\n", ret);
++		dev_err(dev, "[DEBUG] rk_pcie_phy_init: phy_set_mode_ext FAILED, ret=%d\n", ret);
++		return ret;
++	}
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: phy_set_mode_ext OK (ret=%d)\n", ret);
+ 
+-	ret = rockchip_pcie_init_irq_domain(rockchip);
+-	if (ret < 0)
+-		dev_err(dev, "failed to init irq domain\n");
++	if (rk_pcie->bifurcation) {
++		dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: bifurcation mode, calling phy_set_mode_ext(PHY_MODE_PCIE_BIFURCATION)\n");
++		phy_set_mode_ext(rk_pcie->phy, PHY_MODE_PCIE, PHY_MODE_PCIE_BIFURCATION);
++	}
+ 
+-	irq_set_chained_handler_and_data(irq, rockchip_pcie_intx_handler,
+-					 rockchip);
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: calling phy_init()\n");
++	ret = phy_init(rk_pcie->phy);
++	if (ret < 0) {
++		dev_err(dev, "fail to init phy, err %d\n", ret);
++		dev_err(dev, "[DEBUG] rk_pcie_phy_init: phy_init FAILED, ret=%d\n", ret);
++		return ret;
++	}
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: phy_init OK\n");
+ 
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: calling phy_power_on()\n");
++	ret = phy_power_on(rk_pcie->phy);
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: phy_power_on returned %d\n", ret);
++
++	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: COMPLETE\n");
+ 	return 0;
+ }
+ 
+-static const struct dw_pcie_host_ops rockchip_pcie_host_ops = {
+-	.init = rockchip_pcie_host_init,
+-};
++static void rk_pcie_start_dma_rd(struct dma_trx_obj *obj, struct dma_table *cur, int ctr_off)
++{
++	struct rk_pcie *rk_pcie = dev_get_drvdata(obj->dev);
+ 
+-static void rockchip_pcie_ep_init(struct dw_pcie_ep *ep)
++	dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET + PCIE_DMA_RD_ENB,
++			   cur->enb.asdword);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_CTRL_LO,
++			   cur->ctx_reg.ctrllo.asdword);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_CTRL_HI,
++			   cur->ctx_reg.ctrlhi.asdword);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_XFERSIZE,
++			   cur->ctx_reg.xfersize);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_SAR_PTR_LO,
++			   cur->ctx_reg.sarptrlo);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_SAR_PTR_HI,
++			   cur->ctx_reg.sarptrhi);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_DAR_PTR_LO,
++			   cur->ctx_reg.darptrlo);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_DAR_PTR_HI,
++			   cur->ctx_reg.darptrhi);
++	dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET + PCIE_DMA_RD_DOORBELL,
++			   cur->start.asdword);
++}
++
++static void rk_pcie_start_dma_wr(struct dma_trx_obj *obj, struct dma_table *cur, int ctr_off)
++{
++	struct rk_pcie *rk_pcie = dev_get_drvdata(obj->dev);
++
++	dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET + PCIE_DMA_WR_ENB,
++			   cur->enb.asdword);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_CTRL_LO,
++			   cur->ctx_reg.ctrllo.asdword);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_CTRL_HI,
++			   cur->ctx_reg.ctrlhi.asdword);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_XFERSIZE,
++			   cur->ctx_reg.xfersize);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_SAR_PTR_LO,
++			   cur->ctx_reg.sarptrlo);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_SAR_PTR_HI,
++			   cur->ctx_reg.sarptrhi);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_DAR_PTR_LO,
++			   cur->ctx_reg.darptrlo);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_DAR_PTR_HI,
++			   cur->ctx_reg.darptrhi);
++	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_WR_WEILO,
++			   cur->weilo.asdword);
++	dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET + PCIE_DMA_WR_DOORBELL,
++			   cur->start.asdword);
++}
++
++static void rk_pcie_start_dma_dwc(struct dma_trx_obj *obj, struct dma_table *table)
++{
++	int dir = table->dir;
++	int chn = table->chn;
++
++	int ctr_off = PCIE_DMA_OFFSET + chn * 0x200;
++
++	if (dir == DMA_FROM_BUS)
++		rk_pcie_start_dma_rd(obj, table, ctr_off);
++	else if (dir == DMA_TO_BUS)
++		rk_pcie_start_dma_wr(obj, table, ctr_off);
++}
++
++static void rk_pcie_config_dma_dwc(struct dma_table *table)
++{
++	table->enb.enb = 0x1;
++	table->ctx_reg.ctrllo.lie = 0x1;
++	table->ctx_reg.ctrllo.rie = 0x0;
++	table->ctx_reg.ctrllo.td = 0x1;
++	table->ctx_reg.ctrlhi.asdword = 0x0;
++	table->ctx_reg.xfersize = table->buf_size;
++	if (table->dir == DMA_FROM_BUS) {
++		table->ctx_reg.sarptrlo = (u32)(table->bus & 0xffffffff);
++		table->ctx_reg.sarptrhi = (u32)(table->bus >> 32);
++		table->ctx_reg.darptrlo = (u32)(table->local & 0xffffffff);
++		table->ctx_reg.darptrhi = (u32)(table->local >> 32);
++	} else if (table->dir == DMA_TO_BUS) {
++		table->ctx_reg.sarptrlo = (u32)(table->local & 0xffffffff);
++		table->ctx_reg.sarptrhi = (u32)(table->local >> 32);
++		table->ctx_reg.darptrlo = (u32)(table->bus & 0xffffffff);
++		table->ctx_reg.darptrhi = (u32)(table->bus >> 32);
++	}
++	table->weilo.weight0 = 0x0;
++	table->start.stop = 0x0;
++	table->start.chnl = table->chn;
++}
++
++static void rk_pcie_hot_rst_work(struct work_struct *work)
+ {
+-	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
+-	enum pci_barno bar;
++	struct rk_pcie *rk_pcie = container_of(work, struct rk_pcie, hot_rst_work);
++	u32 val, status;
++	int ret;
+ 
+-	for (bar = 0; bar < PCI_STD_NUM_BARS; bar++)
+-		dw_pcie_ep_reset_bar(pci, bar);
+-};
++	/* Setup command register */
++	val = dw_pcie_readl_dbi(rk_pcie->pci, PCI_COMMAND);
++	val &= 0xffff0000;
++	val |= PCI_COMMAND_IO | PCI_COMMAND_MEMORY |
++		PCI_COMMAND_MASTER | PCI_COMMAND_SERR;
++	dw_pcie_writel_dbi(rk_pcie->pci, PCI_COMMAND, val);
++
++	if (rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_HOT_RESET_CTRL) & PCIE_LTSSM_APP_DLY2_EN) {
++		ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_LTSSM_STATUS,
++			 status, ((status & 0x3F) == 0), 100, RK_PCIE_HOTRESET_TMOUT_US);
++		if (ret)
++			dev_err(rk_pcie->pci->dev, "wait for detect quiet failed!\n");
++
++		rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_HOT_RESET_CTRL,
++			(PCIE_LTSSM_APP_DLY2_DONE) | ((PCIE_LTSSM_APP_DLY2_DONE) << 16));
++	}
++}
++
++static irqreturn_t rk_pcie_sys_irq_handler(int irq, void *arg)
++{
++	struct rk_pcie *rk_pcie = arg;
++	u32 chn;
++	union int_status status;
++	union int_clear clears;
++	u32 reg;
++
++	status.asdword = dw_pcie_readl_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
++					   PCIE_DMA_WR_INT_STATUS);
++	for (chn = 0; chn < PCIE_DMA_CHANEL_MAX_NUM; chn++) {
++		if (status.donesta & BIT(chn)) {
++			clears.doneclr = 0x1 << chn;
++			dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
++					PCIE_DMA_WR_INT_CLEAR, clears.asdword);
++			if (rk_pcie->dma_obj && rk_pcie->dma_obj->cb)
++				rk_pcie->dma_obj->cb(rk_pcie->dma_obj, chn, DMA_TO_BUS);
++		}
++
++		if (status.abortsta & BIT(chn)) {
++			dev_err(rk_pcie->pci->dev, "%s, abort\n", __func__);
++			clears.abortclr = 0x1 << chn;
++			dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
++					PCIE_DMA_WR_INT_CLEAR, clears.asdword);
++		}
++	}
++
++	status.asdword = dw_pcie_readl_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
++					   PCIE_DMA_RD_INT_STATUS);
++	for (chn = 0; chn < PCIE_DMA_CHANEL_MAX_NUM; chn++) {
++		if (status.donesta & BIT(chn)) {
++			clears.doneclr = 0x1 << chn;
++			dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
++					PCIE_DMA_RD_INT_CLEAR, clears.asdword);
++			if (rk_pcie->dma_obj && rk_pcie->dma_obj->cb)
++				rk_pcie->dma_obj->cb(rk_pcie->dma_obj, chn, DMA_FROM_BUS);
++		}
+ 
+-static int rockchip_pcie_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
+-				   unsigned int type, u16 interrupt_num)
++		if (status.abortsta & BIT(chn)) {
++			dev_err(rk_pcie->pci->dev, "%s, abort\n", __func__);
++			clears.abortclr = 0x1 << chn;
++			dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
++					PCIE_DMA_RD_INT_CLEAR, clears.asdword);
++		}
++	}
++
++	reg = rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_INTR_STATUS_MISC);
++  if (reg & BIT(2)) {
++    queue_work(rk_pcie->hot_rst_wq, &rk_pcie->hot_rst_work);
++  }
++
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_STATUS_MISC, reg);
++
++	return IRQ_HANDLED;
++}
++
++static int rk_pcie_request_sys_irq(struct rk_pcie *rk_pcie,
++					struct platform_device *pdev)
+ {
+-	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
++	int irq;
++	int ret;
+ 
+-	switch (type) {
+-	case PCI_IRQ_INTX:
+-		return dw_pcie_ep_raise_intx_irq(ep, func_no);
+-	case PCI_IRQ_MSI:
+-		return dw_pcie_ep_raise_msi_irq(ep, func_no, interrupt_num);
+-	case PCI_IRQ_MSIX:
+-		return dw_pcie_ep_raise_msix_irq(ep, func_no, interrupt_num);
+-	default:
+-		dev_err(pci->dev, "UNKNOWN IRQ type\n");
++	irq = platform_get_irq_byname(pdev, "sys");
++	if (irq < 0) {
++		dev_err(rk_pcie->pci->dev, "missing sys IRQ resource\n");
++		return -EINVAL;
++	}
++
++	ret = devm_request_irq(rk_pcie->pci->dev, irq, rk_pcie_sys_irq_handler,
++			       IRQF_SHARED, "pcie-sys", rk_pcie);
++	if (ret) {
++		dev_err(rk_pcie->pci->dev, "failed to request PCIe subsystem IRQ\n");
++		return ret;
+ 	}
+ 
+ 	return 0;
+ }
+ 
+-static const struct pci_epc_features rockchip_pcie_epc_features_rk3568 = {
+-	.linkup_notifier = true,
+-	.msi_capable = true,
+-	.msix_capable = true,
+-	.align = SZ_64K,
+-	.bar[BAR_0] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_1] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_2] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_3] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_4] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_5] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
++static const struct rk_pcie_of_data rk3528_pcie_rc_of_data = {
++	.msi_vector_num = 32,
+ };
+ 
+-/*
+- * BAR4 on rk3588 exposes the ATU Port Logic Structure to the host regardless of
+- * iATU settings for BAR4. This means that BAR4 cannot be used by an EPF driver,
+- * so mark it as RESERVED. (rockchip_pcie_ep_init() will disable all BARs by
+- * default.) If the host could write to BAR4, the iATU settings (for all other
+- * BARs) would be overwritten, resulting in (all other BARs) no longer working.
+- */
+-static const struct pci_epc_features rockchip_pcie_epc_features_rk3588 = {
+-	.linkup_notifier = true,
+-	.msi_capable = true,
+-	.msix_capable = true,
+-	.align = SZ_64K,
+-	.bar[BAR_0] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_1] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_2] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_3] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
+-	.bar[BAR_4] = { .type = BAR_RESERVED, },
+-	.bar[BAR_5] = { .type = BAR_FIXED, .fixed_size = SZ_1M, },
++static const struct of_device_id rk_pcie_of_match[] = {
++	{
++		.compatible = "rockchip,rk3528-pcie",
++		.data = &rk3528_pcie_rc_of_data,
++	},
++	{
++		.compatible = "rockchip,rk3562-pcie",
++		.data = &rk3528_pcie_rc_of_data,
++	},
++	{
++		.compatible = "rockchip,rk3568-pcie",
++		.data = NULL,
++	},
++	{
++		.compatible = "rockchip,rk3576-pcie",
++		.data = &rk3528_pcie_rc_of_data,
++	},
++	{
++		.compatible = "rockchip,rk3588-pcie",
++		.data = NULL,
++	},
++	{},
++};
++
++MODULE_DEVICE_TABLE(of, rk_pcie_of_match);
++
++static const struct dw_pcie_ops dw_pcie_ops = {
++	.start_link = rk_pcie_establish_link,
++};
++
++static void rk_pcie_fast_link_setup(struct rk_pcie *rk_pcie)
++{
++	u32 val;
++
++	/* LTSSM EN ctrl mode */
++	val = rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_HOT_RESET_CTRL);
++	val |= (PCIE_LTSSM_ENABLE_ENHANCE | PCIE_LTSSM_APP_DLY2_EN)
++		| ((PCIE_LTSSM_APP_DLY2_EN | PCIE_LTSSM_ENABLE_ENHANCE) << 16);
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_HOT_RESET_CTRL, val);
++}
++
++static void rk_pcie_legacy_irq_mask(struct irq_data *d)
++{
++	struct rk_pcie *rk_pcie = irq_data_get_irq_chip_data(d);
++	unsigned long flags;
++
++	raw_spin_lock_irqsave(&rk_pcie->intx_lock, flags);
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK_LEGACY,
++			   MASK_LEGACY_INT(d->hwirq));
++	raw_spin_unlock_irqrestore(&rk_pcie->intx_lock, flags);
++}
++
++static void rk_pcie_legacy_irq_unmask(struct irq_data *d)
++{
++	struct rk_pcie *rk_pcie = irq_data_get_irq_chip_data(d);
++	unsigned long flags;
++
++	raw_spin_lock_irqsave(&rk_pcie->intx_lock, flags);
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK_LEGACY,
++			   UNMASK_LEGACY_INT(d->hwirq));
++	raw_spin_unlock_irqrestore(&rk_pcie->intx_lock, flags);
++}
++
++static struct irq_chip rk_pcie_legacy_irq_chip = {
++	.name		= "rk-pcie-legacy-int",
++	.irq_enable	= rk_pcie_legacy_irq_unmask,
++	.irq_disable	= rk_pcie_legacy_irq_mask,
++	.irq_mask	= rk_pcie_legacy_irq_mask,
++	.irq_unmask	= rk_pcie_legacy_irq_unmask,
++	.flags		= IRQCHIP_SKIP_SET_WAKE | IRQCHIP_MASK_ON_SUSPEND,
+ };
+ 
+-static const struct pci_epc_features *
+-rockchip_pcie_get_features(struct dw_pcie_ep *ep)
++static int rk_pcie_intx_map(struct irq_domain *domain, unsigned int irq,
++			    irq_hw_number_t hwirq)
+ {
+-	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
+-	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
++	irq_set_chip_and_handler(irq, &rk_pcie_legacy_irq_chip, handle_level_irq);
++	irq_set_chip_data(irq, domain->host_data);
+ 
+-	return rockchip->data->epc_features;
++	return 0;
+ }
+ 
+-static const struct dw_pcie_ep_ops rockchip_pcie_ep_ops = {
+-	.init = rockchip_pcie_ep_init,
+-	.raise_irq = rockchip_pcie_raise_irq,
+-	.get_features = rockchip_pcie_get_features,
++static const struct irq_domain_ops intx_domain_ops = {
++	.map = rk_pcie_intx_map,
+ };
+ 
+-static int rockchip_pcie_clk_init(struct rockchip_pcie *rockchip)
++static void rk_pcie_legacy_int_handler(struct irq_desc *desc)
+ {
+-	struct device *dev = rockchip->pci.dev;
++	struct irq_chip *chip = irq_desc_get_chip(desc);
++	struct rk_pcie *rockchip = irq_desc_get_handler_data(desc);
++	struct device *dev = rockchip->pci->dev;
++	u32 reg;
++	u32 hwirq;
+ 	int ret;
+ 
+-	ret = devm_clk_bulk_get_all(dev, &rockchip->clks);
+-	if (ret < 0)
+-		return dev_err_probe(dev, ret, "failed to get clocks\n");
++	chained_irq_enter(chip, desc);
++
++	reg = rk_pcie_readl_apb(rockchip, PCIE_CLIENT_INTR_STATUS_LEGACY);
++	reg = reg & 0xf;
+ 
+-	rockchip->clk_cnt = ret;
++	while (reg) {
++		hwirq = ffs(reg) - 1;
++		reg &= ~BIT(hwirq);
+ 
+-	ret = clk_bulk_prepare_enable(rockchip->clk_cnt, rockchip->clks);
+-	if (ret)
+-		return dev_err_probe(dev, ret, "failed to enable clocks\n");
++		ret = generic_handle_domain_irq(rockchip->irq_domain, hwirq);
++		if (ret)
++			dev_err(dev, "unexpected IRQ, INT%d\n", hwirq);
++	}
+ 
+-	return 0;
++	chained_irq_exit(chip, desc);
+ }
+ 
+-static int rockchip_pcie_resource_get(struct platform_device *pdev,
+-				      struct rockchip_pcie *rockchip)
++static int rk_pcie_init_irq_domain(struct rk_pcie *rockchip)
+ {
+-	rockchip->apb_base = devm_platform_ioremap_resource_byname(pdev, "apb");
+-	if (IS_ERR(rockchip->apb_base))
+-		return dev_err_probe(&pdev->dev, PTR_ERR(rockchip->apb_base),
+-				     "failed to map apb registers\n");
++	struct device *dev = rockchip->pci->dev;
++	struct device_node *intc = of_get_next_child(dev->of_node, NULL);
+ 
+-	rockchip->rst_gpio = devm_gpiod_get_optional(&pdev->dev, "reset",
+-						     GPIOD_OUT_LOW);
+-	if (IS_ERR(rockchip->rst_gpio))
+-		return dev_err_probe(&pdev->dev, PTR_ERR(rockchip->rst_gpio),
+-				     "failed to get reset gpio\n");
++	if (!intc) {
++		dev_err(dev, "missing child interrupt-controller node\n");
++		return -EINVAL;
++	}
+ 
+-	rockchip->rst = devm_reset_control_array_get_exclusive(&pdev->dev);
+-	if (IS_ERR(rockchip->rst))
+-		return dev_err_probe(&pdev->dev, PTR_ERR(rockchip->rst),
+-				     "failed to get reset lines\n");
++	raw_spin_lock_init(&rockchip->intx_lock);
++	rockchip->irq_domain = irq_domain_add_linear(intc, PCI_NUM_INTX,
++						     &intx_domain_ops, rockchip);
++	if (!rockchip->irq_domain) {
++		dev_err(dev, "failed to get a INTx IRQ domain\n");
++		return -EINVAL;
++	}
+ 
+ 	return 0;
+ }
+ 
+-static int rockchip_pcie_phy_init(struct rockchip_pcie *rockchip)
++static int rk_pcie_enable_power(struct rk_pcie *rk_pcie)
+ {
+-	struct device *dev = rockchip->pci.dev;
+-	int ret;
+-
+-	rockchip->phy = devm_phy_get(dev, "pcie-phy");
+-	if (IS_ERR(rockchip->phy))
+-		return dev_err_probe(dev, PTR_ERR(rockchip->phy),
+-				     "missing PHY\n");
++	int ret = 0;
++	struct device *dev = rk_pcie->pci->dev;
+ 
+-	ret = phy_init(rockchip->phy);
+-	if (ret < 0)
++	if (IS_ERR(rk_pcie->vpcie3v3))
+ 		return ret;
+ 
+-	ret = phy_power_on(rockchip->phy);
++	ret = regulator_enable(rk_pcie->vpcie3v3);
+ 	if (ret)
+-		phy_exit(rockchip->phy);
++		dev_err(dev, "fail to enable vpcie3v3 regulator\n");
+ 
+ 	return ret;
+ }
+ 
+-static void rockchip_pcie_phy_deinit(struct rockchip_pcie *rockchip)
++static int rk_pcie_disable_power(struct rk_pcie *rk_pcie)
+ {
+-	phy_exit(rockchip->phy);
+-	phy_power_off(rockchip->phy);
++	int ret = 0;
++	struct device *dev = rk_pcie->pci->dev;
++
++	if (IS_ERR(rk_pcie->vpcie3v3))
++		return ret;
++
++	ret = regulator_disable(rk_pcie->vpcie3v3);
++	if (ret)
++		dev_err(dev, "fail to disable vpcie3v3 regulator\n");
++
++	return ret;
+ }
+ 
+-static const struct dw_pcie_ops dw_pcie_ops = {
+-	.link_up = rockchip_pcie_link_up,
+-	.start_link = rockchip_pcie_start_link,
+-	.stop_link = rockchip_pcie_stop_link,
+-};
++#define RAS_DES_EVENT(ss, v) \
++do { \
++	dw_pcie_writel_dbi(pcie->pci, cap_base + 8, v); \
++	seq_printf(s, ss "0x%x\n", dw_pcie_readl_dbi(pcie->pci, cap_base + 0xc)); \
++} while (0)
++
++static int rockchip_pcie_rasdes_show(struct seq_file *s, void *unused)
++{
++	struct rk_pcie *pcie = s->private;
++	int cap_base;
++	u32 val = rk_pcie_readl_apb(pcie, PCIE_CLIENT_CDM_RASDES_TBA_INFO_CMN);
++	char *pm;
++
++	if (val & BIT(6))
++		pm = "In training";
++	else if (val & BIT(5))
++		pm = "L1.2";
++	else if (val & BIT(4))
++		pm = "L1.1";
++	else if (val & BIT(3))
++		pm = "L1";
++	else if (val & BIT(2))
++		pm = "L0";
++	else if (val & 0x3)
++		pm = (val == 0x3) ? "L0s" : (val & BIT(1) ? "RX L0s" : "TX L0s");
++	else
++		pm = "Invalid";
++
++	seq_printf(s, "Common event signal status: 0x%s\n", pm);
++
++	cap_base = dw_pcie_find_ext_capability(pcie->pci, PCI_EXT_CAP_ID_VNDR);
++	if (!cap_base) {
++		dev_err(pcie->pci->dev, "Not able to find RASDES CAP!\n");
++		return 0;
++	}
++
++	RAS_DES_EVENT("EBUF Overflow: ", 0);
++	RAS_DES_EVENT("EBUF Under-run: ", 0x0010000);
++	RAS_DES_EVENT("Decode Error: ", 0x0020000);
++	RAS_DES_EVENT("Running Disparity Error: ", 0x0030000);
++	RAS_DES_EVENT("SKP OS Parity Error: ", 0x0040000);
++	RAS_DES_EVENT("SYNC Header Error: ", 0x0050000);
++	RAS_DES_EVENT("CTL SKP OS Parity Error: ", 0x0060000);
++	RAS_DES_EVENT("Detect EI Infer: ", 0x1050000);
++	RAS_DES_EVENT("Receiver Error: ", 0x1060000);
++	RAS_DES_EVENT("Rx Recovery Request: ", 0x1070000);
++	RAS_DES_EVENT("N_FTS Timeout: ", 0x1080000);
++	RAS_DES_EVENT("Framing Error: ", 0x1090000);
++	RAS_DES_EVENT("Deskew Error: ", 0x10a0000);
++	RAS_DES_EVENT("BAD TLP: ", 0x2000000);
++	RAS_DES_EVENT("LCRC Error: ", 0x2010000);
++	RAS_DES_EVENT("BAD DLLP: ", 0x2020000);
++	RAS_DES_EVENT("Replay Number Rollover: ", 0x2030000);
++	RAS_DES_EVENT("Replay Timeout: ", 0x2040000);
++	RAS_DES_EVENT("Rx Nak DLLP: ", 0x2050000);
++	RAS_DES_EVENT("Tx Nak DLLP: ", 0x2060000);
++	RAS_DES_EVENT("Retry TLP: ", 0x2070000);
++	RAS_DES_EVENT("FC Timeout: ", 0x3000000);
++	RAS_DES_EVENT("Poisoned TLP: ", 0x3010000);
++	RAS_DES_EVENT("ECRC Error: ", 0x3020000);
++	RAS_DES_EVENT("Unsupported Request: ", 0x3030000);
++	RAS_DES_EVENT("Completer Abort: ", 0x3040000);
++	RAS_DES_EVENT("Completion Timeout: ", 0x3050000);
+ 
+-static irqreturn_t rockchip_pcie_ep_sys_irq_thread(int irq, void *arg)
++	return 0;
++}
++static int rockchip_pcie_rasdes_open(struct inode *inode, struct file *file)
+ {
+-	struct rockchip_pcie *rockchip = arg;
+-	struct dw_pcie *pci = &rockchip->pci;
+-	struct device *dev = pci->dev;
+-	u32 reg, val;
++	return single_open(file, rockchip_pcie_rasdes_show,
++			   inode->i_private);
++}
+ 
+-	reg = rockchip_pcie_readl_apb(rockchip, PCIE_CLIENT_INTR_STATUS_MISC);
+-	rockchip_pcie_writel_apb(rockchip, reg, PCIE_CLIENT_INTR_STATUS_MISC);
++static ssize_t rockchip_pcie_rasdes_write(struct file *file,
++				       const char __user *ubuf,
++				       size_t count, loff_t *ppos)
++{
++	struct seq_file *s = file->private_data;
++	struct rk_pcie *pcie = s->private;
++	char buf[32];
++	int cap_base;
+ 
+-	dev_dbg(dev, "PCIE_CLIENT_INTR_STATUS_MISC: %#x\n", reg);
+-	dev_dbg(dev, "LTSSM_STATUS: %#x\n", rockchip_pcie_get_ltssm(rockchip));
++	if (copy_from_user(&buf, ubuf, min_t(size_t, sizeof(buf) - 1, count)))
++		return -EFAULT;
+ 
+-	if (reg & PCIE_LINK_REQ_RST_NOT_INT) {
+-		dev_dbg(dev, "hot reset or link-down reset\n");
+-		dw_pcie_ep_linkdown(&pci->ep);
++	cap_base = dw_pcie_find_ext_capability(pcie->pci, PCI_EXT_CAP_ID_VNDR);
++	if (!cap_base) {
++		dev_err(pcie->pci->dev, "Not able to find RASDES CAP!\n");
++		return 0;
+ 	}
+ 
+-	if (reg & PCIE_RDLH_LINK_UP_CHGED) {
+-		val = rockchip_pcie_get_ltssm(rockchip);
+-		if ((val & PCIE_LINKUP) == PCIE_LINKUP) {
+-			dev_dbg(dev, "link up\n");
+-			dw_pcie_ep_linkup(&pci->ep);
+-		}
++	if (!strncmp(buf, "enable", 6))	{
++		dev_info(pcie->pci->dev, "RAS DES Event: Enable ALL!\n");
++		dw_pcie_writel_dbi(pcie->pci, cap_base + 8, 0x1c);
++		dw_pcie_writel_dbi(pcie->pci, cap_base + 8, 0x3);
++	} else if (!strncmp(buf, "disable", 7)) {
++		dev_info(pcie->pci->dev, "RAS DES Event: disable ALL!\n");
++		dw_pcie_writel_dbi(pcie->pci, cap_base + 8, 0x14);
++	} else if (!strncmp(buf, "clear", 5)) {
++		dev_info(pcie->pci->dev, "RAS DES Event: Clear ALL!\n");
++		dw_pcie_writel_dbi(pcie->pci, cap_base + 8, 0x3);
++	} else {
++		dev_info(pcie->pci->dev, "Not support command!\n");
+ 	}
+ 
+-	return IRQ_HANDLED;
++	return count;
+ }
+ 
+-static int rockchip_pcie_configure_rc(struct rockchip_pcie *rockchip)
++static const struct file_operations rockchip_pcie_rasdes_ops = {
++	.owner = THIS_MODULE,
++	.open = rockchip_pcie_rasdes_open,
++	.read = seq_read,
++	.write = rockchip_pcie_rasdes_write,
++};
++
++static int rockchip_pcie_fifo_show(struct seq_file *s, void *data)
+ {
+-	struct dw_pcie_rp *pp;
+-	u32 val;
++	struct rk_pcie *pcie = (struct rk_pcie *)dev_get_drvdata(s->private);
++	u32 loop;
+ 
+-	if (!IS_ENABLED(CONFIG_PCIE_ROCKCHIP_DW_HOST))
+-		return -ENODEV;
++	seq_printf(s, "ltssm = 0x%x\n",
++		   rk_pcie_readl_apb(pcie, PCIE_CLIENT_LTSSM_STATUS));
++	for (loop = 0; loop < 64; loop++)
++		seq_printf(s, "fifo_status = 0x%x\n",
++			   rk_pcie_readl_apb(pcie, PCIE_CLIENT_DBG_FIFO_STATUS));
++
++	return 0;
++}
++
++static void rockchip_pcie_debugfs_exit(struct rk_pcie *pcie)
++{
++	debugfs_remove_recursive(pcie->debugfs);
++	pcie->debugfs = NULL;
++}
++
++static int rockchip_pcie_debugfs_init(struct rk_pcie *pcie)
++{
++	struct dentry *file;
++
++	pcie->debugfs = debugfs_create_dir(dev_name(pcie->pci->dev), NULL);
++	if (!pcie->debugfs)
++		return -ENOMEM;
+ 
+-	/* LTSSM enable control mode */
+-	val = HIWORD_UPDATE_BIT(PCIE_LTSSM_ENABLE_ENHANCE);
+-	rockchip_pcie_writel_apb(rockchip, val, PCIE_CLIENT_HOT_RESET_CTRL);
++	debugfs_create_devm_seqfile(pcie->pci->dev, "dumpfifo",
++				    pcie->debugfs,
++				    rockchip_pcie_fifo_show);
++	file = debugfs_create_file("err_event", 0644, pcie->debugfs,
++				   pcie, &rockchip_pcie_rasdes_ops);
++	if (!file)
++		goto remove;
+ 
+-	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_RC_MODE,
+-				 PCIE_CLIENT_GENERAL_CONTROL);
++	return 0;
+ 
+-	pp = &rockchip->pci.pp;
+-	pp->ops = &rockchip_pcie_host_ops;
++remove:
++	rockchip_pcie_debugfs_exit(pcie);
+ 
+-	return dw_pcie_host_init(pp);
++	return -ENOMEM;
+ }
+ 
+-static int rockchip_pcie_configure_ep(struct platform_device *pdev,
+-				      struct rockchip_pcie *rockchip)
++static int rk_pcie_really_probe(void *p)
+ {
++	struct platform_device *pdev = p;
+ 	struct device *dev = &pdev->dev;
+-	int irq, ret;
+-	u32 val;
++	struct rk_pcie *rk_pcie;
++	struct dw_pcie *pci;
++	int ret;
++	const struct of_device_id *match;
++	const struct rk_pcie_of_data *data;
++	u32 val = 0;
++	int irq;
+ 
+-	if (!IS_ENABLED(CONFIG_PCIE_ROCKCHIP_DW_EP))
+-		return -ENODEV;
++	match = of_match_device(rk_pcie_of_match, dev);
++	if (!match) {
++		ret = -EINVAL;
++		goto release_driver;
++	}
+ 
+-	irq = platform_get_irq_byname(pdev, "sys");
+-	if (irq < 0) {
+-		dev_err(dev, "missing sys IRQ resource\n");
+-		return irq;
++	data = (struct rk_pcie_of_data *)match->data;
++
++	rk_pcie = devm_kzalloc(dev, sizeof(*rk_pcie), GFP_KERNEL);
++	if (!rk_pcie) {
++		ret = -ENOMEM;
++		goto release_driver;
++	}
++
++	pci = devm_kzalloc(dev, sizeof(*pci), GFP_KERNEL);
++	if (!pci) {
++		ret = -ENOMEM;
++		goto release_driver;
+ 	}
+ 
+-	ret = devm_request_threaded_irq(dev, irq, NULL,
+-					rockchip_pcie_ep_sys_irq_thread,
+-					IRQF_ONESHOT, "pcie-sys", rockchip);
++	pci->dev = dev;
++	pci->ops = &dw_pcie_ops;
++
++	if (data)
++		rk_pcie->msi_vector_num = data->msi_vector_num;
++	rk_pcie->pci = pci;
++
++	if (device_property_read_bool(dev, "rockchip,bifurcation"))
++		rk_pcie->bifurcation = true;
++
++	ret = rk_pcie_resource_get(pdev, rk_pcie);
+ 	if (ret) {
+-		dev_err(dev, "failed to request PCIe sys IRQ\n");
+-		return ret;
++		dev_err(dev, "resource init failed\n");
++		goto release_driver;
+ 	}
+ 
+-	/* LTSSM enable control mode */
+-	val = HIWORD_UPDATE_BIT(PCIE_LTSSM_ENABLE_ENHANCE);
+-	rockchip_pcie_writel_apb(rockchip, val, PCIE_CLIENT_HOT_RESET_CTRL);
++	if (!IS_ERR_OR_NULL(rk_pcie->prsnt_gpio)) {
++		if (!gpiod_get_value(rk_pcie->prsnt_gpio)) {
++			dev_info(dev, "device isn't present\n");
++			ret = -ENODEV;
++			goto release_driver;
++		}
++	}
+ 
+-	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_EP_MODE,
+-				 PCIE_CLIENT_GENERAL_CONTROL);
++	rk_pcie->supports_clkreq = device_property_read_bool(dev, "supports-clkreq");
+ 
+-	rockchip->pci.ep.ops = &rockchip_pcie_ep_ops;
+-	rockchip->pci.ep.page_size = SZ_64K;
++retry_regulator:
++	/* DON'T MOVE ME: must be enable before phy init */
++	rk_pcie->vpcie3v3 = devm_regulator_get_optional(dev, "vpcie3v3");
++	if (IS_ERR(rk_pcie->vpcie3v3)) {
++		if (PTR_ERR(rk_pcie->vpcie3v3) != -ENODEV) {
++			if (IS_ENABLED(CONFIG_PCIE_RK_THREADED_INIT)) {
++				/* Deferred but in threaded context for most 10s */
++				msleep(20);
++				if (++val < 500)
++					goto retry_regulator;
++			}
+ 
+-	dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64));
++			ret = PTR_ERR(rk_pcie->vpcie3v3);
++			goto release_driver;
++		}
+ 
+-	ret = dw_pcie_ep_init(&rockchip->pci.ep);
++		dev_info(dev, "no vpcie3v3 regulator found\n");
++	}
++
++	ret = rk_pcie_enable_power(rk_pcie);
++	if (ret)
++		goto release_driver;
++
++	ret = rk_pcie_phy_init(rk_pcie);
+ 	if (ret) {
+-		dev_err(dev, "failed to initialize endpoint\n");
+-		return ret;
++		dev_err(dev, "phy init failed\n");
++		goto disable_vpcie3v3;
++	}
++
++	rk_pcie->rsts = devm_reset_control_array_get_exclusive(dev);
++	if (IS_ERR(rk_pcie->rsts)) {
++		ret = PTR_ERR(rk_pcie->rsts);
++		dev_err(dev, "failed to get reset lines\n");
++		goto disable_phy;
+ 	}
+ 
+-	ret = dw_pcie_ep_init_registers(&rockchip->pci.ep);
++	reset_control_deassert(rk_pcie->rsts);
++
++	ret = rk_pcie_clk_init(rk_pcie);
+ 	if (ret) {
+-		dev_err(dev, "failed to initialize DWC endpoint registers\n");
+-		dw_pcie_ep_deinit(&rockchip->pci.ep);
+-		return ret;
++		dev_err(dev, "clock init failed\n");
++		goto disable_phy;
++	}
++
++	/*
++	 * Misc interrupts was masked by default. However, they will be
++	 * unmasked by FW before jumpping into kernel. Mask all misc interrupts,
++	 * as we don't need to ack them before registering irq. And they will be
++	 * unmasked later.
++	 */
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK, 0xffffffff);
++
++	rk_pcie->hot_rst_wq = create_singlethread_workqueue("rk_pcie_hot_rst_wq");
++	if (!rk_pcie->hot_rst_wq) {
++		dev_err(dev, "failed to create hot_rst workqueue\n");
++		ret = -ENOMEM;
++		goto remove_irq_domain;
++	}
++	INIT_WORK(&rk_pcie->hot_rst_work, rk_pcie_hot_rst_work);
++
++	ret = rk_pcie_request_sys_irq(rk_pcie, pdev);
++	if (ret) {
++		dev_err(dev, "pcie irq init failed\n");
++		goto disable_clk;
++	}
++
++	platform_set_drvdata(pdev, rk_pcie);
++
++	dw_pcie_dbi_ro_wr_en(pci);
++
++	rk_pcie_fast_link_setup(rk_pcie);
++
++	/* Legacy interrupt is optional */
++	ret = rk_pcie_init_irq_domain(rk_pcie);
++	if (!ret) {
++		irq = platform_get_irq_byname(pdev, "legacy");
++		if (irq >= 0) {
++			irq_set_chained_handler_and_data(irq, rk_pcie_legacy_int_handler,
++							 rk_pcie);
++			/* Unmask all legacy interrupt from INTA~INTD  */
++			rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK_LEGACY,
++					   UNMASK_ALL_LEGACY_INT);
++		} else {
++			dev_info(dev, "missing legacy IRQ resource\n");
++		}
++	}
++
++	/* Set PCIe RC mode */
++	rk_pcie_set_mode(rk_pcie);
++
++	/* Force into loopback master mode */
++	if (device_property_read_bool(dev, "rockchip,lpbk-master")) {
++		val = dw_pcie_readl_dbi(pci, PCIE_PORT_LINK_CONTROL);
++		val |= PORT_LINK_LPBK_ENABLE;
++		dw_pcie_writel_dbi(pci, PCIE_PORT_LINK_CONTROL, val);
++		rk_pcie->is_signal_test = true;
++	}
++
++	/*
++	 * Force into compliance mode
++	 * comp_prst is a two dimensional array of which the first element
++	 * stands for speed mode, and the second one is preset value encoding:
++	 * [0] 0->SMA tool control the signal switch, 1/2/3 is for manual Gen setting
++	 * [1] transmitter setting for manual Gen setting, valid only if [0] isn't zero.
++	 */
++	if (!device_property_read_u32_array(dev, "rockchip,compliance-mode",
++					    rk_pcie->comp_prst, 2)) {
++		BUG_ON(rk_pcie->comp_prst[0] > 3 || rk_pcie->comp_prst[1] > 10);
++		if (!rk_pcie->comp_prst[0]) {
++			dev_info(dev, "Auto compliance mode for SMA tool.\n");
++		} else {
++			dev_info(dev, "compliance mode for soldered board Gen%d, P%d.\n",
++				 rk_pcie->comp_prst[0], rk_pcie->comp_prst[1]);
++			val = dw_pcie_readl_dbi(pci, PCIE_CAP_LINK_CONTROL2_LINK_STATUS);
++			val |= BIT(4) | rk_pcie->comp_prst[0] | (rk_pcie->comp_prst[1] << 12);
++			dw_pcie_writel_dbi(pci, PCIE_CAP_LINK_CONTROL2_LINK_STATUS, val);
++		}
++		rk_pcie->is_signal_test = true;
++	}
++
++	/* Skip waiting for training to pass in system PM routine */
++	if (device_property_read_bool(dev, "rockchip,skip-scan-in-resume"))
++		rk_pcie->skip_scan_in_resume = true;
++
++	rk_pcie->hot_rst_wq = create_singlethread_workqueue("rk_pcie_hot_rst_wq");
++	if (!rk_pcie->hot_rst_wq) {
++		dev_err(dev, "failed to create hot_rst workqueue\n");
++		ret = -ENOMEM;
++		goto remove_irq_domain;
+ 	}
++	INIT_WORK(&rk_pcie->hot_rst_work, rk_pcie_hot_rst_work);
+ 
+-	pci_epc_init_notify(rockchip->pci.ep.epc);
++	ret = rk_add_pcie_port(rk_pcie, pdev);
+ 
+-	/* unmask DLL up/down indicator and hot reset/link-down reset */
+-	rockchip_pcie_writel_apb(rockchip, 0x60000, PCIE_CLIENT_INTR_MASK_MISC);
++	if (rk_pcie->is_signal_test == true)
++		return 0;
++
++	if (ret)
++		goto remove_rst_wq;
++
++	ret = rk_pcie_init_dma_trx(rk_pcie);
++	if (ret) {
++		dev_err(dev, "failed to add dma extension\n");
++		goto remove_rst_wq;
++	}
++
++	if (rk_pcie->dma_obj) {
++		rk_pcie->dma_obj->start_dma_func = rk_pcie_start_dma_dwc;
++		rk_pcie->dma_obj->config_dma_func = rk_pcie_config_dma_dwc;
++	}
++
++	dw_pcie_dbi_ro_wr_dis(pci);
++
++	device_init_wakeup(dev, true);
++
++	/* Enable async system PM for multiports SoC */
++	device_enable_async_suspend(dev);
++
++	if (IS_ENABLED(CONFIG_DEBUG_FS)) {
++		ret = rockchip_pcie_debugfs_init(rk_pcie);
++		if (ret < 0)
++			dev_err(dev, "failed to setup debugfs: %d\n", ret);
++
++		/* Enable RASDES Error event by default */
++		val = dw_pcie_find_ext_capability(rk_pcie->pci, PCI_EXT_CAP_ID_VNDR);
++		if (!val) {
++			dev_err(dev, "Not able to find RASDES CAP!\n");
++			return 0;
++		}
++
++		dw_pcie_writel_dbi(rk_pcie->pci, val + 8, 0x1c);
++		dw_pcie_writel_dbi(rk_pcie->pci, val + 8, 0x3);
++	}
++
++	return 0;
++
++remove_rst_wq:
++	destroy_workqueue(rk_pcie->hot_rst_wq);
++remove_irq_domain:
++	if (rk_pcie->irq_domain)
++		irq_domain_remove(rk_pcie->irq_domain);
++disable_clk:
++	clk_bulk_disable_unprepare(rk_pcie->clk_cnt, rk_pcie->clks);
++disable_phy:
++	phy_power_off(rk_pcie->phy);
++	phy_exit(rk_pcie->phy);
++disable_vpcie3v3:
++	rk_pcie_disable_power(rk_pcie);
++release_driver:
++	if (IS_ENABLED(CONFIG_PCIE_RK_THREADED_INIT))
++		device_release_driver(dev);
+ 
+ 	return ret;
+ }
+ 
+-static int rockchip_pcie_probe(struct platform_device *pdev)
++static int rk_pcie_probe(struct platform_device *pdev)
+ {
+-	struct device *dev = &pdev->dev;
+-	struct rockchip_pcie *rockchip;
+-	const struct rockchip_pcie_of_data *data;
+-	int ret;
++	if (IS_ENABLED(CONFIG_PCIE_RK_THREADED_INIT)) {
++		struct task_struct *tsk;
+ 
+-	data = of_device_get_match_data(dev);
+-	if (!data)
+-		return -EINVAL;
++		tsk = kthread_run(rk_pcie_really_probe, pdev, "rk-pcie");
++		if (IS_ERR(tsk)) {
++			dev_err(&pdev->dev, "start rk-pcie thread failed\n");
++			return PTR_ERR(tsk);
++		}
+ 
+-	rockchip = devm_kzalloc(dev, sizeof(*rockchip), GFP_KERNEL);
+-	if (!rockchip)
+-		return -ENOMEM;
++		return 0;
++	}
+ 
+-	platform_set_drvdata(pdev, rockchip);
++	return rk_pcie_really_probe(pdev);
++}
+ 
+-	rockchip->pci.dev = dev;
+-	rockchip->pci.ops = &dw_pcie_ops;
+-	rockchip->data = data;
++#ifdef CONFIG_PCIEASPM
++static void rk_pcie_downstream_dev_to_d0(struct rk_pcie *rk_pcie, bool enable)
++{
++	struct dw_pcie_rp *pp = &rk_pcie->pci->pp;
++	struct pci_bus *child, *root_bus = NULL;
++	struct pci_dev *pdev, *bridge;
++	u32 val;
+ 
+-	ret = rockchip_pcie_resource_get(pdev, rockchip);
++	list_for_each_entry(child, &pp->bridge->bus->children, node) {
++		/* Bring downstream devices to D3 if they are not already in */
++		if (child->parent == pp->bridge->bus) {
++			root_bus = child;
++			bridge = root_bus->self;
++			break;
++		}
++	}
++
++	if (!root_bus) {
++		dev_err(rk_pcie->pci->dev, "Failed to find downstream devices\n");
++		return;
++	}
++
++	/* Save and restore root bus ASPM */
++	if (enable) {
++		if (rk_pcie->l1ss_ctl1)
++			dw_pcie_writel_dbi(rk_pcie->pci, bridge->l1ss + PCI_L1SS_CTL1, rk_pcie->l1ss_ctl1);
++
++		/* rk_pcie->aspm woule be saved in advance when enable is false */
++		dw_pcie_writel_dbi(rk_pcie->pci, bridge->pcie_cap + PCI_EXP_LNKCTL, rk_pcie->aspm);
++	} else {
++		val = dw_pcie_readl_dbi(rk_pcie->pci, bridge->l1ss + PCI_L1SS_CTL1);
++		if (val & PCI_L1SS_CTL1_L1SS_MASK)
++			rk_pcie->l1ss_ctl1 = val;
++		else
++			rk_pcie->l1ss_ctl1 = 0;
++
++		val = dw_pcie_readl_dbi(rk_pcie->pci, bridge->pcie_cap + PCI_EXP_LNKCTL);
++		rk_pcie->aspm = val & PCI_EXP_LNKCTL_ASPMC;
++		val &= ~(PCI_EXP_LNKCAP_ASPM_L1 | PCI_EXP_LNKCAP_ASPM_L0S);
++		dw_pcie_writel_dbi(rk_pcie->pci, bridge->pcie_cap + PCI_EXP_LNKCTL, val);
++	}
++
++	list_for_each_entry(pdev, &root_bus->devices, bus_list) {
++		if (PCI_SLOT(pdev->devfn) == 0) {
++			if (pci_set_power_state(pdev, PCI_D0))
++				dev_err(rk_pcie->pci->dev,
++					"Failed to transition %s to D3hot state\n",
++					dev_name(&pdev->dev));
++			if (enable) {
++				if (rk_pcie->l1ss_ctl1) {
++					pci_read_config_dword(pdev, pdev->l1ss + PCI_L1SS_CTL1, &val);
++					val &= ~PCI_L1SS_CTL1_L1SS_MASK;
++					val |= (rk_pcie->l1ss_ctl1 & PCI_L1SS_CTL1_L1SS_MASK);
++					pci_write_config_dword(pdev, pdev->l1ss + PCI_L1SS_CTL1, val);
++				}
++
++				pcie_capability_clear_and_set_word(pdev, PCI_EXP_LNKCTL,
++								   PCI_EXP_LNKCTL_ASPMC, rk_pcie->aspm);
++			} else {
++				pci_disable_link_state(pdev, PCIE_LINK_STATE_L0S | PCIE_LINK_STATE_L1);
++			}
++		}
++	}
++}
++#endif
++
++static int __maybe_unused rockchip_dw_pcie_suspend(struct device *dev)
++{
++	struct rk_pcie *rk_pcie = dev_get_drvdata(dev);
++	int ret = 0, power;
++	struct dw_pcie *pci = rk_pcie->pci;
++	u32 status;
++
++	/*
++	 * This is as per PCI Express Base r5.0 r1.0 May 22-2019,
++	 * 5.2 Link State Power Management (Page #440).
++	 *
++	 * L2/L3 Ready entry negotiations happen while in the L0 state.
++	 * L2/L3 Ready are entered only after the negotiation completes.
++	 *
++	 * The following example sequence illustrates the multi-step Link state
++	 * transition process leading up to entering a system sleep state:
++	 * 1. System software directs all Functions of a Downstream component to D3Hot.
++	 * 2. The Downstream component then initiates the transition of the Link to L1
++	 *    as required.
++	 * 3. System software then causes the Root Complex to broadcast the PME_Turn_Off
++	 *    Message in preparation for removing the main power source.
++	 * 4. This Message causes the subject Link to transition back to L0 in order to
++	 *    send it and to enable the Downstream component to respond with PME_TO_Ack.
++	 * 5. After sending the PME_TO_Ack, the Downstream component initiates the L2/L3
++	 *    Ready transition protocol.
++	 */
++
++	/* 1. All sub-devices are in D3hot by PCIe stack */
++	dw_pcie_dbi_ro_wr_dis(rk_pcie->pci);
++
++	rk_pcie_link_status_clear(rk_pcie);
++
++	/*
++	 * Wlan devices will be shutdown from function driver now, so doing L2 here
++	 * must fail. Skip L2 routine.
++	 */
++	if (rk_pcie->skip_scan_in_resume) {
++		rfkill_get_wifi_power_state(&power);
++		if (!power)
++			goto no_l2;
++	}
++
++	/* 2. Broadcast PME_Turn_Off Message */
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_MSG_GEN, PME_TURN_OFF);
++	ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_MSG_GEN,
++				 status, !(status & BIT(4)), 20, RK_PCIE_L2_TMOUT_US);
++	if (ret) {
++		dev_err(dev, "Failed to send PME_Turn_Off\n");
++		goto no_l2;
++	}
++
++	/* 3. Wait for PME_TO_Ack */
++	ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_INTR_STATUS_MSG_RX,
++				 status, status & BIT(9), 20, RK_PCIE_L2_TMOUT_US);
++	if (ret) {
++		dev_err(dev, "Failed to receive PME_TO_Ack\n");
++		goto no_l2;
++	}
++
++	/* 4. Clear PME_TO_Ack and Wait for ready to enter L23 message */
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_STATUS_MSG_RX, PME_TO_ACK);
++	ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_POWER,
++				 status, status & READY_ENTER_L23, 20, RK_PCIE_L2_TMOUT_US);
++	if (ret) {
++		dev_err(dev, "Failed to ready to enter L23\n");
++		goto no_l2;
++	}
++
++	/* 5. Check we are in L2 */
++	ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_LTSSM_STATUS,
++				 status, PORT_LOGIC_LTSSM_STATE_L2(status), 20, RK_PCIE_L2_TMOUT_US);
+ 	if (ret)
++		dev_err(pci->dev, "Link isn't in L2 idle!\n");
++
++no_l2:
++	rk_pcie_disable_ltssm(rk_pcie);
++
++	ret = phy_validate(rk_pcie->phy, PHY_TYPE_PCIE, 0, NULL);
++	if (ret && ret != -EOPNOTSUPP) {
++		dev_err(dev, "PHY is reused by other controller, check the dts!\n");
+ 		return ret;
++	}
++
++	/* make sure assert phy success */
++	usleep_range(200, 300);
++
++	phy_power_off(rk_pcie->phy);
++	phy_exit(rk_pcie->phy);
++
++	rk_pcie->intx = rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_INTR_MASK_LEGACY);
++
++	clk_bulk_disable_unprepare(rk_pcie->clk_cnt, rk_pcie->clks);
++
++	rk_pcie->in_suspend = true;
++
++	gpiod_set_value_cansleep(rk_pcie->rst_gpio, 0);
++	ret = rk_pcie_disable_power(rk_pcie);
+ 
+-	ret = reset_control_assert(rockchip->rst);
++	return ret;
++}
++
++static int __maybe_unused rockchip_dw_pcie_resume(struct device *dev)
++{
++	struct rk_pcie *rk_pcie = dev_get_drvdata(dev);
++	int ret;
++
++	reset_control_assert(rk_pcie->rsts);
++	udelay(10);
++	reset_control_deassert(rk_pcie->rsts);
++
++	ret = rk_pcie_enable_power(rk_pcie);
+ 	if (ret)
+ 		return ret;
+ 
+-	/* DON'T MOVE ME: must be enable before PHY init */
+-	rockchip->vpcie3v3 = devm_regulator_get_optional(dev, "vpcie3v3");
+-	if (IS_ERR(rockchip->vpcie3v3)) {
+-		if (PTR_ERR(rockchip->vpcie3v3) != -ENODEV)
+-			return dev_err_probe(dev, PTR_ERR(rockchip->vpcie3v3),
+-					"failed to get vpcie3v3 regulator\n");
+-		rockchip->vpcie3v3 = NULL;
+-	} else {
+-		ret = regulator_enable(rockchip->vpcie3v3);
+-		if (ret)
+-			return dev_err_probe(dev, ret,
+-					     "failed to enable vpcie3v3 regulator\n");
++	ret = clk_bulk_prepare_enable(rk_pcie->clk_cnt, rk_pcie->clks);
++	if (ret) {
++		dev_err(dev, "failed to prepare enable pcie bulk clks: %d\n", ret);
++		return ret;
+ 	}
+ 
+-	ret = rockchip_pcie_phy_init(rockchip);
+-	if (ret)
+-		goto disable_regulator;
++	ret = phy_set_mode_ext(rk_pcie->phy, PHY_MODE_PCIE, PHY_MODE_PCIE_RC);
++	if (ret) {
++		dev_err(dev, "fail to set phy to rc mode, err %d\n", ret);
++		return ret;
++	}
+ 
+-	ret = reset_control_deassert(rockchip->rst);
+-	if (ret)
+-		goto deinit_phy;
++	ret = phy_init(rk_pcie->phy);
++	if (ret < 0) {
++		dev_err(dev, "fail to init phy, err %d\n", ret);
++		return ret;
++	}
+ 
+-	ret = rockchip_pcie_clk_init(rockchip);
+-	if (ret)
+-		goto deinit_phy;
++	phy_power_on(rk_pcie->phy);
+ 
+-	switch (data->mode) {
+-	case DW_PCIE_RC_TYPE:
+-		ret = rockchip_pcie_configure_rc(rockchip);
+-		if (ret)
+-			goto deinit_clk;
+-		break;
+-	case DW_PCIE_EP_TYPE:
+-		ret = rockchip_pcie_configure_ep(pdev, rockchip);
+-		if (ret)
+-			goto deinit_clk;
+-		break;
+-	default:
+-		dev_err(dev, "INVALID device type %d\n", data->mode);
+-		ret = -EINVAL;
+-		goto deinit_clk;
++	dw_pcie_dbi_ro_wr_en(rk_pcie->pci);
++
++	rk_pcie_fast_link_setup(rk_pcie);
++
++	/* Set PCIe RC mode */
++	rk_pcie_set_mode(rk_pcie);
++
++	dw_pcie_setup_rc(&rk_pcie->pci->pp);
++
++	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK_LEGACY,
++			   rk_pcie->intx | 0xffff0000);
++
++	ret = rk_pcie_establish_link(rk_pcie->pci);
++	if (ret) {
++		dev_err(dev, "failed to establish pcie link\n");
++		goto err;
+ 	}
+ 
+-	return 0;
++	dw_pcie_dbi_ro_wr_dis(rk_pcie->pci);
++	rk_pcie->in_suspend = false;
+ 
+-deinit_clk:
+-	clk_bulk_disable_unprepare(rockchip->clk_cnt, rockchip->clks);
+-deinit_phy:
+-	rockchip_pcie_phy_deinit(rockchip);
+-disable_regulator:
+-	if (rockchip->vpcie3v3)
+-		regulator_disable(rockchip->vpcie3v3);
++	return 0;
++err:
++	rk_pcie_disable_power(rk_pcie);
+ 
+ 	return ret;
+ }
+ 
+-static const struct rockchip_pcie_of_data rockchip_pcie_rc_of_data_rk3568 = {
+-	.mode = DW_PCIE_RC_TYPE,
+-};
++int rockchip_dw_pcie_pm_ctrl_for_user(struct pci_dev *dev, enum rockchip_pcie_pm_ctrl_flag flag)
++{
++	struct dw_pcie_rp *pp;
++	struct dw_pcie *pci;
++	struct rk_pcie *rk_pcie;
+ 
+-static const struct rockchip_pcie_of_data rockchip_pcie_ep_of_data_rk3568 = {
+-	.mode = DW_PCIE_EP_TYPE,
+-	.epc_features = &rockchip_pcie_epc_features_rk3568,
+-};
++	if (!dev || !dev->bus || !dev->bus->sysdata) {
++		pr_err("%s input invalid\n", __func__);
++		return -EINVAL;
++	}
+ 
+-static const struct rockchip_pcie_of_data rockchip_pcie_ep_of_data_rk3588 = {
+-	.mode = DW_PCIE_EP_TYPE,
+-	.epc_features = &rockchip_pcie_epc_features_rk3588,
+-};
++	pp = dev->bus->sysdata;
++	pci = to_dw_pcie_from_pp(pp);
++	rk_pcie = to_rk_pcie(pci);
++
++	switch (flag) {
++	case ROCKCHIP_PCIE_PM_CTRL_RESET:
++		rockchip_dw_pcie_suspend(rk_pcie->pci->dev);
++		rockchip_dw_pcie_resume(rk_pcie->pci->dev);
++		break;
++	default:
++		dev_err(rk_pcie->pci->dev, "%s flag=%d invalid\n", __func__, flag);
++		return -EINVAL;
++	}
+ 
+-static const struct of_device_id rockchip_pcie_of_match[] = {
+-	{
+-		.compatible = "rockchip,rk3568-pcie",
+-		.data = &rockchip_pcie_rc_of_data_rk3568,
+-	},
+-	{
+-		.compatible = "rockchip,rk3568-pcie-ep",
+-		.data = &rockchip_pcie_ep_of_data_rk3568,
+-	},
+-	{
+-		.compatible = "rockchip,rk3588-pcie-ep",
+-		.data = &rockchip_pcie_ep_of_data_rk3588,
+-	},
+-	{},
++	dev_info(rk_pcie->pci->dev, "%s ltssm=%x\n", __func__,
++		 rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
++
++	return 0;
++}
++EXPORT_SYMBOL(rockchip_dw_pcie_pm_ctrl_for_user);
++
++#ifdef CONFIG_PCIEASPM
++static int rockchip_dw_pcie_prepare(struct device *dev)
++{
++	struct rk_pcie *rk_pcie = dev_get_drvdata(dev);
++
++	dw_pcie_dbi_ro_wr_en(rk_pcie->pci);
++	rk_pcie_downstream_dev_to_d0(rk_pcie, false);
++	dw_pcie_dbi_ro_wr_dis(rk_pcie->pci);
++
++	return 0;
++}
++
++static void rockchip_dw_pcie_complete(struct device *dev)
++{
++	struct rk_pcie *rk_pcie = dev_get_drvdata(dev);
++
++	dw_pcie_dbi_ro_wr_en(rk_pcie->pci);
++	rk_pcie_downstream_dev_to_d0(rk_pcie, true);
++	dw_pcie_dbi_ro_wr_dis(rk_pcie->pci);
++}
++#endif
++
++static const struct dev_pm_ops rockchip_dw_pcie_pm_ops = {
++#ifdef CONFIG_PCIEASPM
++	.prepare = rockchip_dw_pcie_prepare,
++	.complete = rockchip_dw_pcie_complete,
++#endif
++	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(rockchip_dw_pcie_suspend,
++				      rockchip_dw_pcie_resume)
+ };
+ 
+-static struct platform_driver rockchip_pcie_driver = {
++static struct platform_driver rk_plat_pcie_driver = {
+ 	.driver = {
+-		.name	= "rockchip-dw-pcie",
+-		.of_match_table = rockchip_pcie_of_match,
++		.name	= "rk-pcie",
++		.of_match_table = rk_pcie_of_match,
+ 		.suppress_bind_attrs = true,
++		.pm = &rockchip_dw_pcie_pm_ops,
+ 	},
+-	.probe = rockchip_pcie_probe,
++	.probe = rk_pcie_probe,
+ };
+-builtin_platform_driver(rockchip_pcie_driver);
++
++module_platform_driver(rk_plat_pcie_driver);
++
++MODULE_AUTHOR("Simon Xue <xxm@rock-chips.com>");
++MODULE_DESCRIPTION("RockChip PCIe Controller driver");
++MODULE_LICENSE("GPL v2");
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+@@ -89,11 +89,13 @@
+     drm_logo: drm-logo@0 {
+       compatible = "rockchip,drm-logo";
+       reg = <0x0 0x0 0x0 0x0>;
++      status = "disabled";
+     };
+ 
+     drm_cubic_lut: drm-cubic-lut@0 {
+       compatible = "rockchip,drm-cubic-lut";
+       reg = <0x0 0x0 0x0 0x0>;
++      status = "disabled";
+     };
+ 
+     ramoops: ramoops@110000 {
+@@ -570,6 +572,7 @@
+ };
+ 
+ &i2s0_8ch {
++  assigned-clock-parents = <&cru PLL_GPLL>, <&cru PLL_GPLL>;
+   status = "okay";
+   pinctrl-0 = <&i2s0_lrck
+          &i2s0_sclk
+@@ -848,6 +851,12 @@
+       <850000000>, <1188000000>,
+       <702000000>,
+       <400000000>, <500000000>,
++			<800000000>, <100000000>,
++      <400000000>, <100000000>,
++      <200000000>, <500000000>,
++      <375000000>, <150000000>,
++      <200000000>;
++#if 0
+       <750000000>, <100000000>,
+       <400000000>, <100000000>,
+       <200000000>,
+@@ -855,6 +864,7 @@
+       <200000000>, <12000000>,
+       <12000000>, <99000000>,
+       <20000000>;
++#endif
+ };
+ 
+ &wdt {
+@@ -1208,25 +1218,19 @@
+   pinctrl-0 = <&i2c8m2_xfer>;
+ };
+ 
+-&i2s0_8ch {
+-  assigned-clock-parents = <&cru PLL_GPLL>, <&cru PLL_GPLL>;
+-};
+-
+ &pcie2x1l2 {
+-	ranges = <0x81000000 0x0 0xf4100000 0x0 0xf4100000 0x0 0x100000
+-        0x82000000 0x0 0xf4200000 0x0 0xf4200000 0x0 0xe00000
+-        0xc3000000 0xa 0x00000000 0xa 0x00000000 0x0 0x40000000>;
++	rockchip,pipe-grf = <&php_grf>;
+   pinctrl-names = "default";
+   pinctrl-0 = <&pcie20x1_2_perstn>;
+   reset-gpios = <&gpio3 RK_PD1 GPIO_ACTIVE_HIGH>;
+   status = "okay";
+ };
+-
++#if 0
+ &display_subsystem {
+   memory-region = <&drm_logo>;
+   memory-region-names = "drm-logo";
+ };
+-
++#endif
+ &dfi {
+   status = "okay";
+ };
+Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
+===================================================================
+--- kernel-6_12.orig/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
++++ kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
+@@ -5,85 +5,26 @@
+  * Copyright (C) 2021 Rockchip Electronics Co., Ltd.
+  */
+ 
+-#include <dt-bindings/phy/phy.h>
+ #include <linux/clk.h>
++#include <linux/delay.h>
++#include <linux/io.h>
++#include <linux/platform_device.h>
++#include <linux/iopoll.h>
++#include <linux/kernel.h>
+ #include <linux/mfd/syscon.h>
+-#include <linux/of.h>
++#include <linux/module.h>
++#include <linux/of_device.h>
+ #include <linux/phy/phy.h>
+-#include <linux/platform_device.h>
+ #include <linux/regmap.h>
+ #include <linux/reset.h>
+-#include <linux/units.h>
++#include <dt-bindings/phy/phy.h>
+ 
+ #define BIT_WRITEABLE_SHIFT		16
+-#define REF_CLOCK_24MHz			(24 * HZ_PER_MHZ)
+-#define REF_CLOCK_25MHz			(25 * HZ_PER_MHZ)
+-#define REF_CLOCK_100MHz		(100 * HZ_PER_MHZ)
+-
+-/* COMBO PHY REG */
+-#define PHYREG6				0x14
+-#define PHYREG6_PLL_DIV_MASK		GENMASK(7, 6)
+-#define PHYREG6_PLL_DIV_SHIFT		6
+-#define PHYREG6_PLL_DIV_2		1
+-
+-#define PHYREG7				0x18
+-#define PHYREG7_TX_RTERM_MASK		GENMASK(7, 4)
+-#define PHYREG7_TX_RTERM_SHIFT		4
+-#define PHYREG7_TX_RTERM_50OHM		8
+-#define PHYREG7_RX_RTERM_MASK		GENMASK(3, 0)
+-#define PHYREG7_RX_RTERM_SHIFT		0
+-#define PHYREG7_RX_RTERM_44OHM		15
+-
+-#define PHYREG8				0x1C
+-#define PHYREG8_SSC_EN			BIT(4)
+-
+-#define PHYREG11			0x28
+-#define PHYREG11_SU_TRIM_0_7		0xF0
+-
+-#define PHYREG12			0x2C
+-#define PHYREG12_PLL_LPF_ADJ_VALUE	4
+-
+-#define PHYREG13			0x30
+-#define PHYREG13_RESISTER_MASK		GENMASK(5, 4)
+-#define PHYREG13_RESISTER_SHIFT		0x4
+-#define PHYREG13_RESISTER_HIGH_Z	3
+-#define PHYREG13_CKRCV_AMP0		BIT(7)
+-
+-#define PHYREG14			0x34
+-#define PHYREG14_CKRCV_AMP1		BIT(0)
+-
+-#define PHYREG15			0x38
+-#define PHYREG15_CTLE_EN		BIT(0)
+-#define PHYREG15_SSC_CNT_MASK		GENMASK(7, 6)
+-#define PHYREG15_SSC_CNT_SHIFT		6
+-#define PHYREG15_SSC_CNT_VALUE		1
+-
+-#define PHYREG16			0x3C
+-#define PHYREG16_SSC_CNT_VALUE		0x5f
+-
+-#define PHYREG18			0x44
+-#define PHYREG18_PLL_LOOP		0x32
+-
+-#define PHYREG27			0x6C
+-#define PHYREG27_RX_TRIM_RK3588		0x4C
+-
+-#define PHYREG32			0x7C
+-#define PHYREG32_SSC_MASK		GENMASK(7, 4)
+-#define PHYREG32_SSC_DIR_SHIFT		4
+-#define PHYREG32_SSC_UPWARD		0
+-#define PHYREG32_SSC_DOWNWARD		1
+-#define PHYREG32_SSC_OFFSET_SHIFT	6
+-#define PHYREG32_SSC_OFFSET_500PPM	1
+-
+-#define PHYREG33			0x80
+-#define PHYREG33_PLL_KVCO_MASK		GENMASK(4, 2)
+-#define PHYREG33_PLL_KVCO_SHIFT		2
+-#define PHYREG33_PLL_KVCO_VALUE		2
+ 
+ struct rockchip_combphy_priv;
+ 
+ struct combphy_reg {
+-	u16 offset;
++	u32 offset;
+ 	u16 bitend;
+ 	u16 bitstart;
+ 	u16 disable;
+@@ -98,6 +39,7 @@ struct rockchip_combphy_grfcfg {
+ 	struct combphy_reg pipe_rxterm_set;
+ 	struct combphy_reg pipe_txelec_set;
+ 	struct combphy_reg pipe_txcomp_set;
++	struct combphy_reg pipe_clk_24m;
+ 	struct combphy_reg pipe_clk_25m;
+ 	struct combphy_reg pipe_clk_100m;
+ 	struct combphy_reg pipe_phymode_sel;
+@@ -119,21 +61,23 @@ struct rockchip_combphy_grfcfg {
+ 	struct combphy_reg con3_for_sata;
+ 	struct combphy_reg pipe_con0_for_sata;
+ 	struct combphy_reg pipe_con1_for_sata;
++	struct combphy_reg pipe_sgmii_mac_sel;
+ 	struct combphy_reg pipe_xpcs_phy_ready;
+-	struct combphy_reg pipe_pcie1l0_sel;
+-	struct combphy_reg pipe_pcie1l1_sel;
++	struct combphy_reg u3otg0_port_en;
++	struct combphy_reg u3otg1_port_en;
++	struct combphy_reg pipe_phy_grf_reset;
+ };
+ 
+ struct rockchip_combphy_cfg {
+-	unsigned int num_phys;
+-	unsigned int phy_ids[3];
++	const int num_clks;
++	const struct clk_bulk_data *clks;
+ 	const struct rockchip_combphy_grfcfg *grfcfg;
++	bool force_det_out; /* Tx detect Rx errata */
+ 	int (*combphy_cfg)(struct rockchip_combphy_priv *priv);
+ };
+ 
+ struct rockchip_combphy_priv {
+-	u8 type;
+-	int id;
++	u8 mode;
+ 	void __iomem *mmio;
+ 	int num_clks;
+ 	struct clk_bulk_data *clks;
+@@ -141,11 +85,9 @@ struct rockchip_combphy_priv {
+ 	struct regmap *pipe_grf;
+ 	struct regmap *phy_grf;
+ 	struct phy *phy;
++	struct reset_control *apb_rst;
+ 	struct reset_control *phy_rst;
+ 	const struct rockchip_combphy_cfg *cfg;
+-	bool enable_ssc;
+-	bool ext_refclk;
+-	struct clk *refclk;
+ };
+ 
+ static void rockchip_combphy_updatel(struct rockchip_combphy_priv *priv,
+@@ -184,44 +126,133 @@ static u32 rockchip_combphy_is_ready(str
+ 	return val;
+ }
+ 
+-static int rockchip_combphy_init(struct phy *phy)
++static int rockchip_combphy_pcie_init(struct rockchip_combphy_priv *priv)
++{
++	int ret = 0;
++
++	if (priv->cfg->combphy_cfg) {
++		ret = priv->cfg->combphy_cfg(priv);
++		if (ret) {
++			dev_err(priv->dev, "failed to init phy for pcie\n");
++			return ret;
++		}
++	}
++
++	if (priv->cfg->force_det_out)
++		rockchip_combphy_updatel(priv, GENMASK(5, 5), BIT(5), 0x19 << 2);
++
++	return ret;
++}
++
++static int rockchip_combphy_usb3_init(struct rockchip_combphy_priv *priv)
+ {
+-	struct rockchip_combphy_priv *priv = phy_get_drvdata(phy);
+ 	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
+-	u32 val;
+-	int ret;
++	int ret = 0;
+ 
+-	ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
+-	if (ret) {
+-		dev_err(priv->dev, "failed to enable clks\n");
++	if (device_property_present(priv->dev, "rockchip,dis-u3otg0-port")) {
++		ret = rockchip_combphy_param_write(priv->pipe_grf,
++						   &cfg->u3otg0_port_en, false);
++		return ret;
++	} else if (device_property_present(priv->dev, "rockchip,dis-u3otg1-port")) {
++		ret = rockchip_combphy_param_write(priv->pipe_grf,
++						   &cfg->u3otg1_port_en, false);
++		if (of_device_is_compatible(priv->dev->of_node, "rockchip,rk3576-naneng-combphy"))
++			rockchip_combphy_param_write(priv->phy_grf,
++						     &cfg->usb_mode_set, true);
+ 		return ret;
+ 	}
+ 
+-	switch (priv->type) {
++	if (priv->cfg->combphy_cfg) {
++		ret = priv->cfg->combphy_cfg(priv);
++		if (ret) {
++			dev_err(priv->dev, "failed to init phy for usb3\n");
++			return ret;
++		}
++	}
++
++	return ret;
++}
++
++static int rockchip_combphy_sata_init(struct rockchip_combphy_priv *priv)
++{
++	int ret = 0;
++
++	if (priv->cfg->combphy_cfg) {
++		ret = priv->cfg->combphy_cfg(priv);
++		if (ret) {
++			dev_err(priv->dev, "failed to init phy for sata\n");
++			return ret;
++		}
++	}
++
++	return ret;
++}
++
++static int rockchip_combphy_sgmii_init(struct rockchip_combphy_priv *priv)
++{
++	int ret = 0;
++
++	if (priv->cfg->combphy_cfg) {
++		ret = priv->cfg->combphy_cfg(priv);
++		if (ret) {
++			dev_err(priv->dev, "failed to init phy for sgmii\n");
++			return ret;
++		}
++	}
++
++	return ret;
++}
++
++static int rockchip_combphy_set_mode(struct rockchip_combphy_priv *priv)
++{
++	switch (priv->mode) {
+ 	case PHY_TYPE_PCIE:
++		rockchip_combphy_pcie_init(priv);
++		break;
+ 	case PHY_TYPE_USB3:
++		rockchip_combphy_usb3_init(priv);
++		break;
+ 	case PHY_TYPE_SATA:
++		rockchip_combphy_sata_init(priv);
++		break;
+ 	case PHY_TYPE_SGMII:
+ 	case PHY_TYPE_QSGMII:
+-		if (priv->cfg->combphy_cfg)
+-			ret = priv->cfg->combphy_cfg(priv);
+-		break;
++		return rockchip_combphy_sgmii_init(priv);
+ 	default:
+ 		dev_err(priv->dev, "incompatible PHY type\n");
+-		ret = -EINVAL;
+-		break;
++		return -EINVAL;
+ 	}
+ 
++	return 0;
++}
++
++static int rockchip_combphy_init(struct phy *phy)
++{
++	struct rockchip_combphy_priv *priv = phy_get_drvdata(phy);
++	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++	u32 val;
++	int ret;
++
++	ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
+ 	if (ret) {
+-		dev_err(priv->dev, "failed to init phy for phy type %x\n", priv->type);
+-		goto err_clk;
++		dev_err(priv->dev, "failed to enable clks\n");
++		return ret;
+ 	}
+ 
++	ret = rockchip_combphy_set_mode(priv);
++	if (ret)
++		goto err_clk;
++
+ 	ret = reset_control_deassert(priv->phy_rst);
+ 	if (ret)
+ 		goto err_clk;
+ 
+-	if (priv->type == PHY_TYPE_USB3) {
++	if (cfg->pipe_phy_grf_reset.enable)
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_phy_grf_reset, false);
++
++	if (priv->mode == PHY_TYPE_USB3 &&
++	    !device_property_present(priv->dev, "rockchip,dis-u3otg0-port") &&
++	    !device_property_present(priv->dev, "rockchip,dis-u3otg1-port")) {
+ 		ret = readx_poll_timeout_atomic(rockchip_combphy_is_ready,
+ 						priv, val,
+ 						val == cfg->pipe_phy_status.enable,
+@@ -241,6 +272,10 @@ err_clk:
+ static int rockchip_combphy_exit(struct phy *phy)
+ {
+ 	struct rockchip_combphy_priv *priv = phy_get_drvdata(phy);
++	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++
++	if (cfg->pipe_phy_grf_reset.enable)
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_phy_grf_reset, true);
+ 
+ 	clk_bulk_disable_unprepare(priv->num_clks, priv->clks);
+ 	reset_control_assert(priv->phy_rst);
+@@ -248,13 +283,47 @@ static int rockchip_combphy_exit(struct
+ 	return 0;
+ }
+ 
++static const char *rockchip_combphy_mode2str(enum phy_mode mode)
++{
++	switch (mode) {
++	case PHY_TYPE_SATA:
++		return "SATA";
++	case PHY_TYPE_PCIE:
++		return "PCIe";
++	case PHY_TYPE_USB3:
++		return "USB3";
++	case PHY_TYPE_SGMII:
++	case PHY_TYPE_QSGMII:
++		return "GMII";
++	default:
++		return "Unknown";
++	}
++}
++
++static int rockchip_combphy_validate(struct phy *phy, enum phy_mode mode, int submode,
++			      union phy_configure_opts *opts)
++{
++	struct rockchip_combphy_priv *priv = phy_get_drvdata(phy);
++
++	if (mode != priv->mode) {
++		dev_err(priv->dev, "expected mode is %s, but current mode is %s\n",
++			rockchip_combphy_mode2str(mode),
++			rockchip_combphy_mode2str(priv->mode));
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
+ static const struct phy_ops rockchip_combphy_ops = {
+ 	.init = rockchip_combphy_init,
+ 	.exit = rockchip_combphy_exit,
++	.validate = rockchip_combphy_validate,
+ 	.owner = THIS_MODULE,
+ };
+ 
+-static struct phy *rockchip_combphy_xlate(struct device *dev, const struct of_phandle_args *args)
++static struct phy *rockchip_combphy_xlate(struct device *dev,
++					  const struct of_phandle_args *args)
+ {
+ 	struct rockchip_combphy_priv *priv = dev_get_drvdata(dev);
+ 
+@@ -263,57 +332,84 @@ static struct phy *rockchip_combphy_xlat
+ 		return ERR_PTR(-EINVAL);
+ 	}
+ 
+-	if (priv->type != PHY_NONE && priv->type != args->args[0])
++	if (priv->mode != PHY_NONE && priv->mode != args->args[0])
+ 		dev_warn(dev, "phy type select %d overwriting type %d\n",
+-			 args->args[0], priv->type);
++			 args->args[0], priv->mode);
+ 
+-	priv->type = args->args[0];
++	priv->mode = args->args[0];
+ 
+ 	return priv->phy;
+ }
+ 
+-static int rockchip_combphy_parse_dt(struct device *dev, struct rockchip_combphy_priv *priv)
++static int rockchip_combphy_parse_dt(struct device *dev,
++				     struct rockchip_combphy_priv *priv)
+ {
+-	int i;
+-
+-	priv->num_clks = devm_clk_bulk_get_all(dev, &priv->clks);
+-	if (priv->num_clks < 1)
+-		return -EINVAL;
+-
+-	priv->refclk = NULL;
+-	for (i = 0; i < priv->num_clks; i++) {
+-		if (!strncmp(priv->clks[i].id, "ref", 3)) {
+-			priv->refclk = priv->clks[i].clk;
+-			break;
+-		}
+-	}
++	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++	int ret, mac_id;
++	u32 vals[4];
+ 
+-	if (!priv->refclk) {
+-		dev_err(dev, "no refclk found\n");
+-		return -EINVAL;
+-	}
++	ret = devm_clk_bulk_get(dev, priv->num_clks, priv->clks);
++	if (ret == -EPROBE_DEFER)
++		return -EPROBE_DEFER;
++	if (ret)
++		priv->num_clks = 0;
+ 
+-	priv->pipe_grf = syscon_regmap_lookup_by_phandle(dev->of_node, "rockchip,pipe-grf");
++	priv->pipe_grf = syscon_regmap_lookup_by_phandle(dev->of_node,
++							 "rockchip,pipe-grf");
+ 	if (IS_ERR(priv->pipe_grf)) {
+ 		dev_err(dev, "failed to find peri_ctrl pipe-grf regmap\n");
+ 		return PTR_ERR(priv->pipe_grf);
+ 	}
+ 
+-	priv->phy_grf = syscon_regmap_lookup_by_phandle(dev->of_node, "rockchip,pipe-phy-grf");
++	priv->phy_grf = syscon_regmap_lookup_by_phandle(dev->of_node,
++							"rockchip,pipe-phy-grf");
+ 	if (IS_ERR(priv->phy_grf)) {
+ 		dev_err(dev, "failed to find peri_ctrl pipe-phy-grf regmap\n");
+ 		return PTR_ERR(priv->phy_grf);
+ 	}
+ 
+-	priv->enable_ssc = device_property_present(dev, "rockchip,enable-ssc");
++	if (device_property_present(dev, "rockchip,dis-u3otg0-port")) {
++		rockchip_combphy_param_write(priv->pipe_grf,
++					     &cfg->u3otg0_port_en, false);
++	} else if (device_property_present(dev, "rockchip,dis-u3otg1-port")) {
++		rockchip_combphy_param_write(priv->pipe_grf,
++					     &cfg->u3otg1_port_en, false);
++		if (of_device_is_compatible(dev->of_node, "rockchip,rk3576-naneng-combphy"))
++			rockchip_combphy_param_write(priv->phy_grf,
++						     &cfg->usb_mode_set, true);
++	}
++
++	if (!device_property_read_u32(dev, "rockchip,sgmii-mac-sel", &mac_id) &&
++	    (mac_id > 0))
++		rockchip_combphy_param_write(priv->pipe_grf,
++					     &cfg->pipe_sgmii_mac_sel, true);
++
++	if (!device_property_read_u32_array(dev, "rockchip,pcie1ln-sel-bits",
++					    vals, ARRAY_SIZE(vals)))
++		regmap_write(priv->pipe_grf, vals[0],
++			     (GENMASK(vals[2], vals[1]) << 16) | (vals[3] << vals[1]));
++
++	priv->apb_rst = devm_reset_control_get_optional(dev, "combphy-apb");
++	if (IS_ERR(priv->apb_rst)) {
++		ret = PTR_ERR(priv->apb_rst);
+ 
+-	priv->ext_refclk = device_property_present(dev, "rockchip,ext-refclk");
++		if (ret != -EPROBE_DEFER)
++			dev_warn(dev, "failed to get apb reset\n");
+ 
+-	priv->phy_rst = devm_reset_control_get(dev, "phy");
+-	if (IS_ERR(priv->phy_rst))
+-		return dev_err_probe(dev, PTR_ERR(priv->phy_rst), "failed to get phy reset\n");
++		return ret;
++	}
+ 
+-	return 0;
++	priv->phy_rst = devm_reset_control_get_optional(dev, "combphy");
++	if (IS_ERR(priv->phy_rst)) {
++		ret = PTR_ERR(priv->phy_rst);
++
++		if (ret != -EPROBE_DEFER)
++			dev_warn(dev, "failed to get phy reset\n");
++
++		return ret;
++	}
++
++	return reset_control_assert(priv->phy_rst);
+ }
+ 
+ static int rockchip_combphy_probe(struct platform_device *pdev)
+@@ -323,11 +419,11 @@ static int rockchip_combphy_probe(struct
+ 	struct rockchip_combphy_priv *priv;
+ 	const struct rockchip_combphy_cfg *phy_cfg;
+ 	struct resource *res;
+-	int ret, id;
++	int ret;
+ 
+ 	phy_cfg = of_device_get_match_data(dev);
+ 	if (!phy_cfg) {
+-		dev_err(dev, "no OF match data provided\n");
++		dev_err(dev, "No OF match data provided\n");
+ 		return -EINVAL;
+ 	}
+ 
+@@ -335,35 +431,30 @@ static int rockchip_combphy_probe(struct
+ 	if (!priv)
+ 		return -ENOMEM;
+ 
+-	priv->mmio = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	priv->mmio = devm_ioremap_resource(dev, res);
+ 	if (IS_ERR(priv->mmio)) {
+ 		ret = PTR_ERR(priv->mmio);
+ 		return ret;
+ 	}
+ 
+-	/* find the phy-id from the io address */
+-	priv->id = -ENODEV;
+-	for (id = 0; id < phy_cfg->num_phys; id++) {
+-		if (res->start == phy_cfg->phy_ids[id]) {
+-			priv->id = id;
+-			break;
+-		}
+-	}
++	priv->num_clks = phy_cfg->num_clks;
++
++	priv->clks = devm_kmemdup(dev, phy_cfg->clks,
++				  phy_cfg->num_clks * sizeof(struct clk_bulk_data),
++				  GFP_KERNEL);
++
++	if (!priv->clks)
++		return -ENOMEM;
+ 
+ 	priv->dev = dev;
+-	priv->type = PHY_NONE;
++	priv->mode = PHY_NONE;
+ 	priv->cfg = phy_cfg;
+ 
+ 	ret = rockchip_combphy_parse_dt(dev, priv);
+ 	if (ret)
+ 		return ret;
+ 
+-	ret = reset_control_assert(priv->phy_rst);
+-	if (ret) {
+-		dev_err(dev, "failed to reset phy\n");
+-		return ret;
+-	}
+-
+ 	priv->phy = devm_phy_create(dev, NULL, &rockchip_combphy_ops);
+ 	if (IS_ERR(priv->phy)) {
+ 		dev_err(dev, "failed to create combphy\n");
+@@ -378,85 +469,358 @@ static int rockchip_combphy_probe(struct
+ 	return PTR_ERR_OR_ZERO(phy_provider);
+ }
+ 
+-static int rk3568_combphy_cfg(struct rockchip_combphy_priv *priv)
++static int rk3528_combphy_cfg(struct rockchip_combphy_priv *priv)
+ {
+ 	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++	struct clk *refclk = NULL;
+ 	unsigned long rate;
+-	u32 val;
++	int i;
++
++	/* Configure PHY reference clock frequency */
++	for (i = 0; i < priv->num_clks; i++) {
++		if (!strncmp(priv->clks[i].id, "refclk", 6)) {
++			refclk = priv->clks[i].clk;
++			break;
++		}
++	}
+ 
+-	switch (priv->type) {
++	if (!refclk) {
++		dev_err(priv->dev, "No refclk found\n");
++		return -EINVAL;
++	}
++
++	switch (priv->mode) {
+ 	case PHY_TYPE_PCIE:
+-		/* Set SSC downward spread spectrum. */
+-		rockchip_combphy_updatel(priv, PHYREG32_SSC_MASK,
+-					 PHYREG32_SSC_DOWNWARD << PHYREG32_SSC_DIR_SHIFT,
+-					 PHYREG32);
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x18);
+ 
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_pcie, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_pcie, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_pcie, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_pcie, true);
+ 		break;
++	case PHY_TYPE_USB3:
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x18);
++
++		/* Enable adaptive CTLE for USB3.0 Rx */
++		rockchip_combphy_updatel(priv, GENMASK(17, 17), BIT(17), 0x200);
++
++		/* Set slow slew rate control for PI */
++		rockchip_combphy_updatel(priv, GENMASK(2, 0), 0x07, 0x204);
++
++		/* Set CDR phase path with 2x gain */
++		rockchip_combphy_updatel(priv, GENMASK(5, 5), BIT(5), 0x204);
++
++		/* Set Rx squelch input filler bandwidth */
++		rockchip_combphy_updatel(priv, GENMASK(2, 0), 0x06, 0x20c);
++
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txcomp_sel, false);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txelec_sel, false);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->usb_mode_set, true);
++		break;
++	default:
++		dev_err(priv->dev, "incompatible PHY type\n");
++		return -EINVAL;
++	}
++
++	rate = clk_get_rate(refclk);
++
++	switch (rate) {
++	case 24000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_24m, true);
++		if (priv->mode == PHY_TYPE_USB3)
++			/* Set ssc_cnt[10:0]=00101111101 & 31.5KHz */
++			rockchip_combphy_updatel(priv, GENMASK(10, 0), 0x17d, 0x100);
++		else if (priv->mode == PHY_TYPE_PCIE)
++			/* tx_trim[14]=1, Enable the counting clock of the rterm detect */
++			rockchip_combphy_updatel(priv, GENMASK(14, 14), BIT(14), 0x218);
++		break;
++	case 100000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_100m, true);
++		if (priv->mode == PHY_TYPE_PCIE) {
++			/* PLL KVCO tuning fine */
++			rockchip_combphy_updatel(priv, GENMASK(12, 10), 0x2 << 10, 0x18);
++
++			/* su_trim[6:4]=111, [10:7]=1001, [2:0]=000, swing 650mv */
++			writel(0x570804f0, priv->mmio + 0x108);
++		}
++		break;
++	default:
++		dev_err(priv->dev, "Unsupported rate: %lu\n", rate);
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static const struct rockchip_combphy_grfcfg rk3528_combphy_grfcfgs = {
++	/* pipe-phy-grf */
++	.pcie_mode_set		= { 0x48000, 5, 0, 0x00, 0x11 },
++	.usb_mode_set		= { 0x48000, 5, 0, 0x00, 0x04 },
++	.pipe_rxterm_set	= { 0x48000, 12, 12, 0x00, 0x01 },
++	.pipe_txelec_set	= { 0x48004, 1, 1, 0x00, 0x01 },
++	.pipe_txcomp_set	= { 0x48004, 4, 4, 0x00, 0x01 },
++	.pipe_clk_24m		= { 0x48004, 14, 13, 0x00, 0x00 },
++	.pipe_clk_100m		= { 0x48004, 14, 13, 0x00, 0x02 },
++	.pipe_rxterm_sel	= { 0x48008, 8, 8, 0x00, 0x01 },
++	.pipe_txelec_sel	= { 0x48008, 12, 12, 0x00, 0x01 },
++	.pipe_txcomp_sel	= { 0x48008, 15, 15, 0x00, 0x01 },
++	.pipe_clk_ext		= { 0x4800c, 9, 8, 0x02, 0x01 },
++	.pipe_phy_status	= { 0x48034, 6, 6, 0x01, 0x00 },
++	.con0_for_pcie		= { 0x48000, 15, 0, 0x00, 0x110 },
++	.con1_for_pcie		= { 0x48004, 15, 0, 0x00, 0x00 },
++	.con2_for_pcie		= { 0x48008, 15, 0, 0x00, 0x101 },
++	.con3_for_pcie		= { 0x4800c, 15, 0, 0x00, 0x0200 },
++	/* pipe-grf */
++	.u3otg0_port_en		= { 0x40044, 15, 0, 0x0181, 0x1100 },
++};
++
++static const struct clk_bulk_data rk3528_clks[] = {
++	{ .id = "refclk" },
++	{ .id = "apbclk" },
++	{ .id = "pipe_clk" },
++};
++
++static const struct rockchip_combphy_cfg rk3528_combphy_cfgs = {
++	.num_clks	= ARRAY_SIZE(rk3528_clks),
++	.clks		= rk3528_clks,
++	.grfcfg		= &rk3528_combphy_grfcfgs,
++	.combphy_cfg	= rk3528_combphy_cfg,
++};
+ 
++static int rk3562_combphy_cfg(struct rockchip_combphy_priv *priv)
++{
++	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++	struct clk *refclk = NULL;
++	unsigned long rate;
++	int i;
++
++	/* Configure PHY reference clock frequency */
++	for (i = 0; i < priv->num_clks; i++) {
++		if (!strncmp(priv->clks[i].id, "refclk", 6)) {
++			refclk = priv->clks[i].clk;
++			break;
++		}
++	}
++
++	if (!refclk) {
++		dev_err(priv->dev, "No refclk found\n");
++		return -EINVAL;
++	}
++
++	switch (priv->mode) {
++	case PHY_TYPE_PCIE:
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_pcie, true);
++		break;
+ 	case PHY_TYPE_USB3:
+-		/* Set SSC downward spread spectrum. */
+-		rockchip_combphy_updatel(priv, PHYREG32_SSC_MASK,
+-					 PHYREG32_SSC_DOWNWARD << PHYREG32_SSC_DIR_SHIFT,
+-					 PHYREG32);
+-
+-		/* Enable adaptive CTLE for USB3.0 Rx. */
+-		val = readl(priv->mmio + PHYREG15);
+-		val |= PHYREG15_CTLE_EN;
+-		writel(val, priv->mmio + PHYREG15);
+-
+-		/* Set PLL KVCO fine tuning signals. */
+-		rockchip_combphy_updatel(priv, PHYREG33_PLL_KVCO_MASK,
+-					 PHYREG33_PLL_KVCO_VALUE << PHYREG33_PLL_KVCO_SHIFT,
+-					 PHYREG33);
+-
+-		/* Enable controlling random jitter. */
+-		writel(PHYREG12_PLL_LPF_ADJ_VALUE, priv->mmio + PHYREG12);
+-
+-		/* Set PLL input clock divider 1/2. */
+-		rockchip_combphy_updatel(priv, PHYREG6_PLL_DIV_MASK,
+-					 PHYREG6_PLL_DIV_2 << PHYREG6_PLL_DIV_SHIFT,
+-					 PHYREG6);
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
++		/* Enable adaptive CTLE for USB3.0 Rx */
++		rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0x0e << 2);
++
++		/* Set PLL KVCO fine tuning signals */
++		rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x2 << 2, 0x20 << 2);
++
++		/* Set PLL LPF R1 to su_trim[10:7]=1001 */
++		writel(0x4, priv->mmio + (0xb << 2));
++
++		/* Set PLL input clock divider 1/2 */
++		rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0x5 << 2);
++
++		/* Set PLL loop divider */
++		writel(0x32, priv->mmio + (0x11 << 2));
++
++		/* Set PLL KVCO to min and set PLL charge pump current to max */
++		writel(0xf0, priv->mmio + (0xa << 2));
+ 
+-		writel(PHYREG18_PLL_LOOP, priv->mmio + PHYREG18);
+-		writel(PHYREG11_SU_TRIM_0_7, priv->mmio + PHYREG11);
++		/* Set Rx squelch input filler bandwidth */
++		writel(0x0e, priv->mmio + (0x14 << 2));
+ 
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_sel_usb, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txcomp_sel, false);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txelec_sel, false);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->usb_mode_set, true);
+ 		break;
++	default:
++		dev_err(priv->dev, "incompatible PHY type\n");
++		return -EINVAL;
++	}
+ 
+-	case PHY_TYPE_SATA:
+-		/* Enable adaptive CTLE for SATA Rx. */
+-		val = readl(priv->mmio + PHYREG15);
+-		val |= PHYREG15_CTLE_EN;
+-		writel(val, priv->mmio + PHYREG15);
+-		/*
+-		 * Set tx_rterm=50ohm and rx_rterm=44ohm for SATA.
+-		 * 0: 60ohm, 8: 50ohm 15: 44ohm (by step abort 1ohm)
+-		 */
+-		val = PHYREG7_TX_RTERM_50OHM << PHYREG7_TX_RTERM_SHIFT;
+-		val |= PHYREG7_RX_RTERM_44OHM << PHYREG7_RX_RTERM_SHIFT;
+-		writel(val, priv->mmio + PHYREG7);
++	rate = clk_get_rate(refclk);
++
++	switch (rate) {
++	case 24000000:
++		if (priv->mode == PHY_TYPE_USB3) {
++			/* Set ssc_cnt[9:0]=0101111101 & 31.5KHz */
++			rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0x0e << 2);
++			rockchip_combphy_updatel(priv, GENMASK(7, 0), 0x5f, 0x0f << 2);
++		}
++		break;
++	case 25000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_25m, true);
++		break;
++	case 100000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_100m, true);
++		if (priv->mode == PHY_TYPE_PCIE) {
++			/* PLL KVCO tuning fine */
++			rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x2 << 2, 0x20 << 2);
++
++			/* Enable controlling random jitter, aka RMJ */
++			writel(0x4, priv->mmio + (0xb << 2));
++
++			rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0x5 << 2);
++
++			writel(0x32, priv->mmio + (0x11 << 2));
++			writel(0xf0, priv->mmio + (0xa << 2));
++
++			/* CKDRV output swing adjust to 650mv */
++			rockchip_combphy_updatel(priv, GENMASK(4, 1), 0xb << 1, 0xd << 2);
++		}
++		break;
++	default:
++		dev_err(priv->dev, "Unsupported rate: %lu\n", rate);
++		return -EINVAL;
++	}
++
++	if (device_property_read_bool(priv->dev, "rockchip,ext-refclk")) {
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_ext, true);
++		if (priv->mode == PHY_TYPE_PCIE && rate == 100000000) {
++			rockchip_combphy_updatel(priv, 0x3 << 4 | 0x1 << 7,
++						 0x3 << 4 | 0x1 << 7, 0xc << 2);
++
++			rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0xd << 2);
++		}
++	}
++
++	if (device_property_read_bool(priv->dev, "rockchip,enable-ssc"))
++		rockchip_combphy_updatel(priv, GENMASK(4, 4), BIT(4), 0x7 << 2);
+ 
++	return 0;
++}
++
++static const struct rockchip_combphy_grfcfg rk3562_combphy_grfcfgs = {
++	/* pipe-phy-grf */
++	.pcie_mode_set		= { 0x0000, 5, 0, 0x00, 0x11 },
++	.usb_mode_set		= { 0x0000, 5, 0, 0x00, 0x04 },
++	.pipe_rxterm_set	= { 0x0000, 12, 12, 0x00, 0x01 },
++	.pipe_txelec_set	= { 0x0004, 1, 1, 0x00, 0x01 },
++	.pipe_txcomp_set	= { 0x0004, 4, 4, 0x00, 0x01 },
++	.pipe_clk_25m		= { 0x0004, 14, 13, 0x00, 0x01 },
++	.pipe_clk_100m		= { 0x0004, 14, 13, 0x00, 0x02 },
++	.pipe_phymode_sel	= { 0x0008, 1, 1, 0x00, 0x01 },
++	.pipe_rate_sel		= { 0x0008, 2, 2, 0x00, 0x01 },
++	.pipe_rxterm_sel	= { 0x0008, 8, 8, 0x00, 0x01 },
++	.pipe_txelec_sel	= { 0x0008, 12, 12, 0x00, 0x01 },
++	.pipe_txcomp_sel	= { 0x0008, 15, 15, 0x00, 0x01 },
++	.pipe_clk_ext		= { 0x000c, 9, 8, 0x02, 0x01 },
++	.pipe_sel_usb		= { 0x000c, 14, 13, 0x00, 0x01 },
++	.pipe_phy_status	= { 0x0034, 6, 6, 0x01, 0x00 },
++	.con0_for_pcie		= { 0x0000, 15, 0, 0x00, 0x1000 },
++	.con1_for_pcie		= { 0x0004, 15, 0, 0x00, 0x0000 },
++	.con2_for_pcie		= { 0x0008, 15, 0, 0x00, 0x0101 },
++	.con3_for_pcie		= { 0x000c, 15, 0, 0x00, 0x0200 },
++	.pipe_phy_grf_reset	= { 0x0014, 1, 0, 0x3, 0x1 },
++	/* peri-grf */
++	.u3otg0_port_en		= { 0x0094, 15, 0, 0x0181, 0x1100 },
++};
++
++static const struct clk_bulk_data rk3562_clks[] = {
++	{ .id = "refclk" },
++	{ .id = "apbclk" },
++	{ .id = "pipe_clk" },
++};
++
++static const struct rockchip_combphy_cfg rk3562_combphy_cfgs = {
++	.num_clks	= ARRAY_SIZE(rk3562_clks),
++	.clks		= rk3562_clks,
++	.grfcfg		= &rk3562_combphy_grfcfgs,
++	.combphy_cfg	= rk3562_combphy_cfg,
++	.force_det_out	= true,
++};
++
++static int rk3568_combphy_cfg(struct rockchip_combphy_priv *priv)
++{
++	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++	struct clk *refclk = NULL;
++	unsigned long rate;
++	int i;
++
++	/* Configure PHY reference clock frequency */
++	for (i = 0; i < priv->num_clks; i++) {
++		if (!strncmp(priv->clks[i].id, "refclk", 6)) {
++			refclk = priv->clks[i].clk;
++			break;
++		}
++	}
++
++	if (!refclk) {
++		dev_err(priv->dev, "No refclk found\n");
++		return -EINVAL;
++	}
++
++	switch (priv->mode) {
++	case PHY_TYPE_PCIE:
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_pcie, true);
++		break;
++	case PHY_TYPE_USB3:
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
++		/* Enable adaptive CTLE for USB3.0 Rx */
++		rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0xe << 2);
++
++		/* Set PLL KVCO fine tuning signals */
++		rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x2 << 2, 0x20 << 2);
++
++		/* Set PLL LPF R1 to su_trim[10:7]=1001 */
++		writel(0x4, priv->mmio + (0xb << 2));
++
++		/* Set PLL input clock divider 1/2 */
++		rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0x5 << 2);
++
++		/* Set PLL loop divider */
++		writel(0x32, priv->mmio + (0x11 << 2));
++
++		/* Set PLL KVCO to min and set PLL charge pump current to max */
++		writel(0xf0, priv->mmio + (0xa << 2));
++
++		/* Set Rx squelch input filler bandwidth */
++		writel(0x0e, priv->mmio + (0x14 << 2));
++
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_sel_usb, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txcomp_sel, false);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txelec_sel, false);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->usb_mode_set, true);
++		break;
++	case PHY_TYPE_SATA:
++		writel(0x41, priv->mmio + 0x38);
++		writel(0x8F, priv->mmio + 0x18);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_sata, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_sata, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_sata, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_sata, true);
+ 		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_con0_for_sata, true);
+ 		break;
+-
+ 	case PHY_TYPE_SGMII:
+ 		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_xpcs_phy_ready, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_phymode_sel, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_sel_qsgmii, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->sgmii_mode_set, true);
+ 		break;
+-
+ 	case PHY_TYPE_QSGMII:
+ 		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_xpcs_phy_ready, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_phymode_sel, true);
+@@ -464,78 +828,60 @@ static int rk3568_combphy_cfg(struct roc
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_sel_qsgmii, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->qsgmii_mode_set, true);
+ 		break;
+-
+ 	default:
+ 		dev_err(priv->dev, "incompatible PHY type\n");
+ 		return -EINVAL;
+ 	}
+ 
+-	rate = clk_get_rate(priv->refclk);
++	rate = clk_get_rate(refclk);
+ 
+ 	switch (rate) {
+-	case REF_CLOCK_24MHz:
+-		if (priv->type == PHY_TYPE_USB3 || priv->type == PHY_TYPE_SATA) {
+-			/* Set ssc_cnt[9:0]=0101111101 & 31.5KHz. */
+-			val = PHYREG15_SSC_CNT_VALUE << PHYREG15_SSC_CNT_SHIFT;
+-			rockchip_combphy_updatel(priv, PHYREG15_SSC_CNT_MASK,
+-						 val, PHYREG15);
++	case 24000000:
++		if (priv->mode == PHY_TYPE_USB3 || priv->mode == PHY_TYPE_SATA) {
++			/* Set ssc_cnt[9:0]=0101111101 & 31.5KHz */
++			rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0xe << 2);
+ 
+-			writel(PHYREG16_SSC_CNT_VALUE, priv->mmio + PHYREG16);
++			rockchip_combphy_updatel(priv, GENMASK(7, 0), 0x5f, 0xf << 2);
+ 		}
+ 		break;
+-
+-	case REF_CLOCK_25MHz:
++	case 25000000:
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_25m, true);
+ 		break;
+-
+-	case REF_CLOCK_100MHz:
++	case 100000000:
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_100m, true);
+-		if (priv->type == PHY_TYPE_PCIE) {
+-			/* PLL KVCO  fine tuning. */
+-			val = PHYREG33_PLL_KVCO_VALUE << PHYREG33_PLL_KVCO_SHIFT;
+-			rockchip_combphy_updatel(priv, PHYREG33_PLL_KVCO_MASK,
+-						 val, PHYREG33);
+-
+-			/* Enable controlling random jitter. */
+-			writel(PHYREG12_PLL_LPF_ADJ_VALUE, priv->mmio + PHYREG12);
+-
+-			val = PHYREG6_PLL_DIV_2 << PHYREG6_PLL_DIV_SHIFT;
+-			rockchip_combphy_updatel(priv, PHYREG6_PLL_DIV_MASK,
+-						 val, PHYREG6);
+-
+-			writel(PHYREG18_PLL_LOOP, priv->mmio + PHYREG18);
+-			writel(PHYREG11_SU_TRIM_0_7, priv->mmio + PHYREG11);
+-		} else if (priv->type == PHY_TYPE_SATA) {
++		if (priv->mode == PHY_TYPE_PCIE) {
++			/* PLL KVCO tuning fine */
++			rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x2 << 2, 0x20 << 2);
++
++			/* Enable controlling random jitter, aka RMJ */
++			writel(0x4, priv->mmio + (0xb << 2));
++
++			rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0x5 << 2);
++
++			writel(0x32, priv->mmio + (0x11 << 2));
++			writel(0xf0, priv->mmio + (0xa << 2));
++		} else if (priv->mode == PHY_TYPE_SATA) {
+ 			/* downward spread spectrum +500ppm */
+-			val = PHYREG32_SSC_DOWNWARD << PHYREG32_SSC_DIR_SHIFT;
+-			val |= PHYREG32_SSC_OFFSET_500PPM << PHYREG32_SSC_OFFSET_SHIFT;
+-			rockchip_combphy_updatel(priv, PHYREG32_SSC_MASK, val, PHYREG32);
++			rockchip_combphy_updatel(priv, GENMASK(7, 4), 0x50, 0x1f << 2);
+ 		}
+ 		break;
+-
+ 	default:
+-		dev_err(priv->dev, "unsupported rate: %lu\n", rate);
++		dev_err(priv->dev, "Unsupported rate: %lu\n", rate);
+ 		return -EINVAL;
+ 	}
+ 
+-	if (priv->ext_refclk) {
++	if (device_property_read_bool(priv->dev, "rockchip,ext-refclk")) {
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_ext, true);
+-		if (priv->type == PHY_TYPE_PCIE && rate == REF_CLOCK_100MHz) {
+-			val = PHYREG13_RESISTER_HIGH_Z << PHYREG13_RESISTER_SHIFT;
+-			val |= PHYREG13_CKRCV_AMP0;
+-			rockchip_combphy_updatel(priv, PHYREG13_RESISTER_MASK, val, PHYREG13);
++		if (priv->mode == PHY_TYPE_PCIE && rate == 100000000) {
++			rockchip_combphy_updatel(priv, 0x3 << 4 | 0x1 << 7,
++						 0x3 << 4 | 0x1 << 7, 0xc << 2);
+ 
+-			val = readl(priv->mmio + PHYREG14);
+-			val |= PHYREG14_CKRCV_AMP1;
+-			writel(val, priv->mmio + PHYREG14);
++			rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0xd << 2);
+ 		}
+ 	}
+ 
+-	if (priv->enable_ssc) {
+-		val = readl(priv->mmio + PHYREG8);
+-		val |= PHYREG8_SSC_EN;
+-		writel(val, priv->mmio + PHYREG8);
+-	}
++	if (device_property_read_bool(priv->dev, "rockchip,enable-ssc"))
++		rockchip_combphy_updatel(priv, GENMASK(4, 4), BIT(4), 0x7 << 2);
+ 
+ 	return 0;
+ }
+@@ -570,84 +916,309 @@ static const struct rockchip_combphy_grf
+ 	.con3_for_sata		= { 0x000c, 15, 0, 0x00, 0x4407 },
+ 	/* pipe-grf */
+ 	.pipe_con0_for_sata	= { 0x0000, 15, 0, 0x00, 0x2220 },
++	.pipe_sgmii_mac_sel	= { 0x0040, 1, 1, 0x00, 0x01 },
+ 	.pipe_xpcs_phy_ready	= { 0x0040, 2, 2, 0x00, 0x01 },
++	.u3otg0_port_en		= { 0x0104, 15, 0, 0x0181, 0x1100 },
++	.u3otg1_port_en		= { 0x0144, 15, 0, 0x0181, 0x1100 },
++};
++
++static const struct clk_bulk_data rk3568_clks[] = {
++	{ .id = "refclk" },
++	{ .id = "apbclk" },
++	{ .id = "pipe_clk" },
+ };
+ 
+ static const struct rockchip_combphy_cfg rk3568_combphy_cfgs = {
+-	.num_phys = 3,
+-	.phy_ids = {
+-		0xfe820000,
+-		0xfe830000,
+-		0xfe840000,
+-	},
++	.num_clks	= ARRAY_SIZE(rk3568_clks),
++	.clks		= rk3568_clks,
+ 	.grfcfg		= &rk3568_combphy_grfcfgs,
+ 	.combphy_cfg	= rk3568_combphy_cfg,
++	.force_det_out	= true,
+ };
+ 
+-static int rk3588_combphy_cfg(struct rockchip_combphy_priv *priv)
++static int rk3576_combphy_cfg(struct rockchip_combphy_priv *priv)
+ {
+ 	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++	struct clk *refclk = NULL;
+ 	unsigned long rate;
+-	u32 val;
++	int i;
++
++	/* Configure PHY reference clock frequency */
++	for (i = 0; i < priv->num_clks; i++) {
++		if (!strncmp(priv->clks[i].id, "refclk", 6)) {
++			refclk = priv->clks[i].clk;
++			break;
++		}
++	}
++
++	if (!refclk) {
++		dev_err(priv->dev, "No refclk found\n");
++		return -EINVAL;
++	}
+ 
+-	switch (priv->type) {
++	switch (priv->mode) {
+ 	case PHY_TYPE_PCIE:
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_pcie, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_pcie, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_pcie, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_pcie, true);
+-		switch (priv->id) {
+-		case 1:
+-			rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_pcie1l0_sel, true);
+-			break;
+-		case 2:
+-			rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_pcie1l1_sel, true);
++		break;
++	case PHY_TYPE_USB3:
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
++		/* Enable adaptive CTLE for USB3.0 Rx */
++		rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0x38);
++
++		/* Set PLL KVCO fine tuning signals */
++		rockchip_combphy_updatel(priv, GENMASK(4, 2), BIT(3), 0x80);
++
++		/* Set PLL LPF R1 to su_trim[10:7]=1001 */
++		writel(0x4, priv->mmio + (0xb << 2));
++
++		/* Set PLL input clock divider 1/2 */
++		rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0x14);
++
++		/* Set PLL loop divider */
++		writel(0x32, priv->mmio + (0x11 << 2));
++
++		/* Set PLL KVCO to min and set PLL charge pump current to max */
++		writel(0xf0, priv->mmio + (0xa << 2));
++
++		/* Set Rx squelch input filler bandwidth */
++		writel(0x0d, priv->mmio + (0x14 << 2));
++
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txcomp_sel, false);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txelec_sel, false);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->usb_mode_set, true);
++		break;
++	case PHY_TYPE_SATA:
++		/* Enable adaptive CTLE for SATA Rx */
++		rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0x38);
++
++		/* Set tx_rterm = 50 ohm and rx_rterm = 43.5 ohm */
++		writel(0x8F, priv->mmio + (0x06 << 2));
++
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_sata, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_sata, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_sata, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_sata, true);
++		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_con0_for_sata, true);
++		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_con1_for_sata, true);
++		break;
++	default:
++		dev_err(priv->dev, "incompatible PHY type\n");
++		return -EINVAL;
++	}
++
++	rate = clk_get_rate(refclk);
++
++	switch (rate) {
++	case 24000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_24m, true);
++		if (priv->mode == PHY_TYPE_USB3 || priv->mode == PHY_TYPE_SATA) {
++			/* Set ssc_cnt[9:0]=0101111101 & 31.5KHz */
++			rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0xe << 2);
++
++			rockchip_combphy_updatel(priv, GENMASK(7, 0), 0x5f, 0xf << 2);
++		} else if (priv->mode == PHY_TYPE_PCIE) {
++			/* PLL KVCO tuning fine */
++			rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x4 << 2, 0x20 << 2);
++
++			/* Set up rx_trim */
++			writel(0x0, priv->mmio + (0x1b << 2));
++
++			/* Set up su_trim: T0_1 */
++			writel(0x90, priv->mmio + (0xa << 2));
++			writel(0x02, priv->mmio + (0xb << 2));
++			writel(0x57, priv->mmio + (0xd << 2));
++
++			writel(0x5f, priv->mmio + (0xf << 2));
++		}
++		break;
++	case 25000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_25m, true);
++		break;
++	case 100000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_100m, true);
++		if (priv->mode == PHY_TYPE_PCIE) {
++			/* gate_tx_pck_sel length select work for L1SS */
++			writel(0xc0, priv->mmio + 0x74);
++
++			/* PLL KVCO tuning fine */
++			rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x4 << 2, 0x20 << 2);
++
++			/* Set up rx_trim: PLL LPF C1 85pf R1 1.25kohm */
++			writel(0x4c, priv->mmio + (0x1b << 2));
++
++			/* Set up su_trim: T3_P1 650mv */
++			writel(0x90, priv->mmio + (0xa << 2));
++			writel(0x43, priv->mmio + (0xb << 2));
++			writel(0x88, priv->mmio + (0xc << 2));
++			writel(0x56, priv->mmio + (0xd << 2));
++		} else if (priv->mode == PHY_TYPE_SATA) {
++			/* downward spread spectrum +500ppm */
++			rockchip_combphy_updatel(priv, GENMASK(7, 4), 0x50, 0x1f << 2);
++
++			/* ssc ppm adjust to 3500ppm */
++			rockchip_combphy_updatel(priv, GENMASK(3, 0), 0x7, 0x9 << 2);
++		}
++		break;
++	default:
++		dev_err(priv->dev, "Unsupported rate: %lu\n", rate);
++		return -EINVAL;
++	}
++
++	if (device_property_read_bool(priv->dev, "rockchip,ext-refclk")) {
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_ext, true);
++		if (priv->mode == PHY_TYPE_PCIE && rate == 100000000) {
++			writel(0x10, priv->mmio + (0x20 << 2));
++
++			writel(0x0c, priv->mmio + (0x1b << 2));
++
++			/* Set up su_trim: T3_P1 650mv */
++			writel(0x90, priv->mmio + (0xa << 2));
++			writel(0x43, priv->mmio + (0xb << 2));
++			writel(0x88, priv->mmio + (0xc << 2));
++			writel(0x56, priv->mmio + (0xd << 2));
++		}
++	}
++
++	if (device_property_read_bool(priv->dev, "rockchip,enable-ssc")) {
++		rockchip_combphy_updatel(priv, GENMASK(4, 4), BIT(4), 0x7 << 2);
++
++		if (priv->mode == PHY_TYPE_PCIE && rate == 24000000) {
++			/* Xin24M T0_1 650mV */
++			writel(0x00, priv->mmio + (0x10 << 2));
++			writel(0x32, priv->mmio + (0x11 << 2));
++			writel(0x00, priv->mmio + (0x1b << 2));
++			writel(0x90, priv->mmio + (0x0a << 2));
++			writel(0x02, priv->mmio + (0x0b << 2));
++			writel(0x08, priv->mmio + (0x0c << 2));
++			writel(0x57, priv->mmio + (0x0d << 2));
++			writel(0x40, priv->mmio + (0x0e << 2));
++			writel(0x5f, priv->mmio + (0x0f << 2));
++			writel(0x10, priv->mmio + (0x20 << 2));
++		}
++	}
++
++	return 0;
++}
++
++static const struct rockchip_combphy_grfcfg rk3576_combphy_grfcfgs = {
++	/* pipe-phy-grf */
++	.pcie_mode_set		= { 0x0000, 5, 0, 0x00, 0x11 },
++	.usb_mode_set		= { 0x0000, 5, 0, 0x00, 0x04 },
++	.pipe_rxterm_set	= { 0x0000, 12, 12, 0x00, 0x01 },
++	.pipe_txelec_set	= { 0x0004, 1, 1, 0x00, 0x01 },
++	.pipe_txcomp_set	= { 0x0004, 4, 4, 0x00, 0x01 },
++	.pipe_clk_24m		= { 0x0004, 14, 13, 0x00, 0x00 },
++	.pipe_clk_25m		= { 0x0004, 14, 13, 0x00, 0x01 },
++	.pipe_clk_100m		= { 0x0004, 14, 13, 0x00, 0x02 },
++	.pipe_phymode_sel	= { 0x0008, 1, 1, 0x00, 0x01 },
++	.pipe_rate_sel		= { 0x0008, 2, 2, 0x00, 0x01 },
++	.pipe_rxterm_sel	= { 0x0008, 8, 8, 0x00, 0x01 },
++	.pipe_txelec_sel	= { 0x0008, 12, 12, 0x00, 0x01 },
++	.pipe_txcomp_sel	= { 0x0008, 15, 15, 0x00, 0x01 },
++	.pipe_clk_ext		= { 0x000c, 9, 8, 0x02, 0x01 },
++	.pipe_phy_status	= { 0x0034, 6, 6, 0x01, 0x00 },
++	.con0_for_pcie		= { 0x0000, 15, 0, 0x00, 0x1000 },
++	.con1_for_pcie		= { 0x0004, 15, 0, 0x00, 0x0000 },
++	.con2_for_pcie		= { 0x0008, 15, 0, 0x00, 0x0101 },
++	.con3_for_pcie		= { 0x000c, 15, 0, 0x00, 0x0200 },
++	.con0_for_sata		= { 0x0000, 15, 0, 0x00, 0x0129 },
++	.con1_for_sata		= { 0x0004, 15, 0, 0x00, 0x0000 },
++	.con2_for_sata		= { 0x0008, 15, 0, 0x00, 0x80c1 },
++	.con3_for_sata		= { 0x000c, 15, 0, 0x00, 0x0407 },
++	.pipe_phy_grf_reset	= { 0x0014, 1, 0, 0x3, 0x1 },
++	/* php-grf */
++	.pipe_con0_for_sata	= { 0x001C, 2, 0, 0x00, 0x2 },
++	.pipe_con1_for_sata	= { 0x0020, 2, 0, 0x00, 0x2 },
++	.u3otg1_port_en		= { 0x0038, 15, 0, 0x0189, 0x1100 },
++};
++
++static const struct clk_bulk_data rk3576_clks[] = {
++	{ .id = "refclk" },
++	{ .id = "apbclk" },
++	{ .id = "pipe_clk" },
++};
++
++static const struct rockchip_combphy_cfg rk3576_combphy_cfgs = {
++	.num_clks	= ARRAY_SIZE(rk3576_clks),
++	.clks		= rk3576_clks,
++	.grfcfg		= &rk3576_combphy_grfcfgs,
++	.combphy_cfg	= rk3576_combphy_cfg,
++	.force_det_out	= true,
++};
++
++static int rk3588_combphy_cfg(struct rockchip_combphy_priv *priv)
++{
++	const struct rockchip_combphy_grfcfg *cfg = priv->cfg->grfcfg;
++	struct clk *refclk = NULL;
++	unsigned long rate;
++	int i;
++	u32 val;
++
++	/* Configure PHY reference clock frequency */
++	for (i = 0; i < priv->num_clks; i++) {
++		if (!strncmp(priv->clks[i].id, "refclk", 6)) {
++			refclk = priv->clks[i].clk;
+ 			break;
+ 		}
++	}
++
++	if (!refclk) {
++		dev_err(priv->dev, "No refclk found\n");
++		return -EINVAL;
++	}
++
++	switch (priv->mode) {
++	case PHY_TYPE_PCIE:
++		/* Set SSC downward spread spectrum */
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con2_for_pcie, true);
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->con3_for_pcie, true);
+ 		break;
+ 	case PHY_TYPE_USB3:
+ 		/* Set SSC downward spread spectrum */
+-		rockchip_combphy_updatel(priv, PHYREG32_SSC_MASK,
+-					 PHYREG32_SSC_DOWNWARD << PHYREG32_SSC_DIR_SHIFT,
+-					 PHYREG32);
+-
+-		/* Enable adaptive CTLE for USB3.0 Rx. */
+-		val = readl(priv->mmio + PHYREG15);
+-		val |= PHYREG15_CTLE_EN;
+-		writel(val, priv->mmio + PHYREG15);
+-
+-		/* Set PLL KVCO fine tuning signals. */
+-		rockchip_combphy_updatel(priv, PHYREG33_PLL_KVCO_MASK,
+-					 PHYREG33_PLL_KVCO_VALUE << PHYREG33_PLL_KVCO_SHIFT,
+-					 PHYREG33);
+-
+-		/* Enable controlling random jitter. */
+-		writel(PHYREG12_PLL_LPF_ADJ_VALUE, priv->mmio + PHYREG12);
+-
+-		/* Set PLL input clock divider 1/2. */
+-		rockchip_combphy_updatel(priv, PHYREG6_PLL_DIV_MASK,
+-					 PHYREG6_PLL_DIV_2 << PHYREG6_PLL_DIV_SHIFT,
+-					 PHYREG6);
++		rockchip_combphy_updatel(priv, GENMASK(5, 4), BIT(4), 0x7c);
++
++		/* Enable adaptive CTLE for USB3.0 Rx */
++		rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0xe << 2);
++
++		/* Set PLL KVCO fine tuning signals */
++		rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x2 << 2, 0x20 << 2);
++
++		/* Set PLL LPF R1 to su_trim[10:7]=1001 */
++		writel(0x4, priv->mmio + (0xb << 2));
++
++		/* Set PLL input clock divider 1/2 */
++		rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0x5 << 2);
++
++		/* Set PLL loop divider */
++		writel(0x32, priv->mmio + (0x11 << 2));
++
++		/* Set PLL KVCO to min and set PLL charge pump current to max */
++		writel(0xf0, priv->mmio + (0xa << 2));
+ 
+-		writel(PHYREG18_PLL_LOOP, priv->mmio + PHYREG18);
+-		writel(PHYREG11_SU_TRIM_0_7, priv->mmio + PHYREG11);
++		/* Set Rx squelch input filler bandwidth */
++		writel(0x0d, priv->mmio + (0x14 << 2));
+ 
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txcomp_sel, false);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_txelec_sel, false);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->usb_mode_set, true);
+ 		break;
+ 	case PHY_TYPE_SATA:
+-		/* Enable adaptive CTLE for SATA Rx. */
+-		val = readl(priv->mmio + PHYREG15);
+-		val |= PHYREG15_CTLE_EN;
+-		writel(val, priv->mmio + PHYREG15);
+-		/*
+-		 * Set tx_rterm=50ohm and rx_rterm=44ohm for SATA.
+-		 * 0: 60ohm, 8: 50ohm 15: 44ohm (by step abort 1ohm)
+-		 */
+-		val = PHYREG7_TX_RTERM_50OHM << PHYREG7_TX_RTERM_SHIFT;
+-		val |= PHYREG7_RX_RTERM_44OHM << PHYREG7_RX_RTERM_SHIFT;
+-		writel(val, priv->mmio + PHYREG7);
++		/* Enable adaptive CTLE for SATA Rx */
++		rockchip_combphy_updatel(priv, GENMASK(0, 0), BIT(0), 0xe << 2);
++		/* Set tx_rterm = 50 ohm and rx_rterm = 43.5 ohm */
++		writel(0x8F, priv->mmio + (0x06 << 2));
+ 
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_sata, true);
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_sata, true);
+@@ -663,44 +1234,68 @@ static int rk3588_combphy_cfg(struct roc
+ 		return -EINVAL;
+ 	}
+ 
+-	rate = clk_get_rate(priv->refclk);
++	rate = clk_get_rate(refclk);
+ 
+ 	switch (rate) {
+-	case REF_CLOCK_24MHz:
+-		if (priv->type == PHY_TYPE_USB3 || priv->type == PHY_TYPE_SATA) {
+-			/* Set ssc_cnt[9:0]=0101111101 & 31.5KHz. */
+-			val = PHYREG15_SSC_CNT_VALUE << PHYREG15_SSC_CNT_SHIFT;
+-			rockchip_combphy_updatel(priv, PHYREG15_SSC_CNT_MASK,
+-						 val, PHYREG15);
++	case 24000000:
++		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_24m, true);
++		if (priv->mode == PHY_TYPE_USB3 || priv->mode == PHY_TYPE_SATA) {
++			/* Set ssc_cnt[9:0]=0101111101 & 31.5KHz */
++			rockchip_combphy_updatel(priv, GENMASK(7, 6), BIT(6), 0xe << 2);
++
++			rockchip_combphy_updatel(priv, GENMASK(7, 0), 0x5f, 0xf << 2);
++		} else if (priv->mode == PHY_TYPE_PCIE) {
++			/* PLL KVCO tuning fine */
++			rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x4 << 2, 0x20 << 2);
++
++			/* Set up rx_trim */
++			val = 0x0;
++			writel(val, priv->mmio + (0x1b << 2));
++
++			/* Set up su_trim: T0_1 */
++			val = 0x90;
++			writel(val, priv->mmio + (0xa << 2));
++			val = 0x02;
++			writel(val, priv->mmio + (0xb << 2));
++			val = 0x57;
++			writel(val, priv->mmio + (0xd << 2));
+ 
+-			writel(PHYREG16_SSC_CNT_VALUE, priv->mmio + PHYREG16);
++			val = 0x5f;
++			writel(val, priv->mmio + (0xf << 2));
+ 		}
+ 		break;
+-
+-	case REF_CLOCK_25MHz:
++	case 25000000:
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_25m, true);
+ 		break;
+-	case REF_CLOCK_100MHz:
++	case 100000000:
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_100m, true);
+-		if (priv->type == PHY_TYPE_PCIE) {
+-			/* PLL KVCO fine tuning. */
+-			val = 4 << PHYREG33_PLL_KVCO_SHIFT;
+-			rockchip_combphy_updatel(priv, PHYREG33_PLL_KVCO_MASK,
+-						 val, PHYREG33);
++		if (priv->mode == PHY_TYPE_PCIE) {
++			/* gate_tx_pck_sel length select work for L1SS */
++			val = 0xc0;
++			writel(val, priv->mmio + 0x74);
+ 
+-			/* Enable controlling random jitter. */
+-			writel(PHYREG12_PLL_LPF_ADJ_VALUE, priv->mmio + PHYREG12);
++			/* PLL KVCO tuning fine */
++			rockchip_combphy_updatel(priv, GENMASK(4, 2), 0x4 << 2, 0x20 << 2);
+ 
+ 			/* Set up rx_trim: PLL LPF C1 85pf R1 1.25kohm */
+-			writel(PHYREG27_RX_TRIM_RK3588, priv->mmio + PHYREG27);
++			val = 0x4c;
++			writel(val, priv->mmio + (0x1b << 2));
+ 
+-			/* Set up su_trim:  */
+-			writel(PHYREG11_SU_TRIM_0_7, priv->mmio + PHYREG11);
+-		} else if (priv->type == PHY_TYPE_SATA) {
++			/* Set up su_trim: T3_P1 650mv */
++			val = 0x90;
++			writel(val, priv->mmio + (0xa << 2));
++			val = 0x43;
++			writel(val, priv->mmio + (0xb << 2));
++			val = 0x88;
++			writel(val, priv->mmio + (0xc << 2));
++			val = 0x56;
++			writel(val, priv->mmio + (0xd << 2));
++		} else if (priv->mode == PHY_TYPE_SATA) {
+ 			/* downward spread spectrum +500ppm */
+-			val = PHYREG32_SSC_DOWNWARD << PHYREG32_SSC_DIR_SHIFT;
+-			val |= PHYREG32_SSC_OFFSET_500PPM << PHYREG32_SSC_OFFSET_SHIFT;
+-			rockchip_combphy_updatel(priv, PHYREG32_SSC_MASK, val, PHYREG32);
++			rockchip_combphy_updatel(priv, GENMASK(7, 4), 0x50, 0x1f << 2);
++
++			/* ssc ppm adjust to 3500ppm */
++			rockchip_combphy_updatel(priv, GENMASK(3, 0), 0x7, 0x9 << 2);
+ 		}
+ 		break;
+ 	default:
+@@ -708,23 +1303,43 @@ static int rk3588_combphy_cfg(struct roc
+ 		return -EINVAL;
+ 	}
+ 
+-	if (priv->ext_refclk) {
++	if (device_property_read_bool(priv->dev, "rockchip,ext-refclk")) {
+ 		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_clk_ext, true);
+-		if (priv->type == PHY_TYPE_PCIE && rate == REF_CLOCK_100MHz) {
+-			val = PHYREG13_RESISTER_HIGH_Z << PHYREG13_RESISTER_SHIFT;
+-			val |= PHYREG13_CKRCV_AMP0;
+-			rockchip_combphy_updatel(priv, PHYREG13_RESISTER_MASK, val, PHYREG13);
+-
+-			val = readl(priv->mmio + PHYREG14);
+-			val |= PHYREG14_CKRCV_AMP1;
+-			writel(val, priv->mmio + PHYREG14);
++		if (priv->mode == PHY_TYPE_PCIE && rate == 100000000) {
++			val = 0x10;
++			writel(val, priv->mmio + (0x20 << 2));
++
++			val = 0x0c;
++			writel(val, priv->mmio + (0x1b << 2));
++
++			/* Set up su_trim: T3_P1 650mv */
++			val = 0x90;
++			writel(val, priv->mmio + (0xa << 2));
++			val = 0x43;
++			writel(val, priv->mmio + (0xb << 2));
++			val = 0x88;
++			writel(val, priv->mmio + (0xc << 2));
++			val = 0x56;
++			writel(val, priv->mmio + (0xd << 2));
+ 		}
+ 	}
+ 
+-	if (priv->enable_ssc) {
+-		val = readl(priv->mmio + PHYREG8);
+-		val |= PHYREG8_SSC_EN;
+-		writel(val, priv->mmio + PHYREG8);
++	if (device_property_read_bool(priv->dev, "rockchip,enable-ssc")) {
++		rockchip_combphy_updatel(priv, GENMASK(4, 4), BIT(4), 0x7 << 2);
++
++		if (priv->mode == PHY_TYPE_PCIE && rate == 24000000) {
++			/* Xin24M T0_1 650mV */
++			writel(0x00, priv->mmio + (0x10 << 2));
++			writel(0x32, priv->mmio + (0x11 << 2));
++			writel(0x00, priv->mmio + (0x1b << 2));
++			writel(0x90, priv->mmio + (0x0a << 2));
++			writel(0x02, priv->mmio + (0x0b << 2));
++			writel(0x08, priv->mmio + (0x0c << 2));
++			writel(0x57, priv->mmio + (0x0d << 2));
++			writel(0x40, priv->mmio + (0x0e << 2));
++			writel(0x5f, priv->mmio + (0x0f << 2));
++			writel(0x10, priv->mmio + (0x20 << 2));
++		}
+ 	}
+ 
+ 	return 0;
+@@ -737,6 +1352,7 @@ static const struct rockchip_combphy_grf
+ 	.pipe_rxterm_set	= { 0x0000, 12, 12, 0x00, 0x01 },
+ 	.pipe_txelec_set	= { 0x0004, 1, 1, 0x00, 0x01 },
+ 	.pipe_txcomp_set	= { 0x0004, 4, 4, 0x00, 0x01 },
++	.pipe_clk_24m		= { 0x0004, 14, 13, 0x00, 0x00 },
+ 	.pipe_clk_25m		= { 0x0004, 14, 13, 0x00, 0x01 },
+ 	.pipe_clk_100m		= { 0x0004, 14, 13, 0x00, 0x02 },
+ 	.pipe_rxterm_sel	= { 0x0008, 8, 8, 0x00, 0x01 },
+@@ -754,28 +1370,41 @@ static const struct rockchip_combphy_grf
+ 	.con3_for_sata		= { 0x000c, 15, 0, 0x00, 0x0407 },
+ 	/* pipe-grf */
+ 	.pipe_con0_for_sata	= { 0x0000, 11, 5, 0x00, 0x22 },
+-	.pipe_con1_for_sata	= { 0x0000, 2, 0, 0x00, 0x2 },
+-	.pipe_pcie1l0_sel	= { 0x0100, 0, 0, 0x01, 0x0 },
+-	.pipe_pcie1l1_sel	= { 0x0100, 1, 1, 0x01, 0x0 },
++	.pipe_con1_for_sata	= { 0x0004, 2, 0, 0x00, 0x2 },
++};
++
++static const struct clk_bulk_data rk3588_clks[] = {
++	{ .id = "refclk" },
++	{ .id = "apbclk" },
++	{ .id = "phpclk" },
+ };
+ 
+ static const struct rockchip_combphy_cfg rk3588_combphy_cfgs = {
+-	.num_phys = 3,
+-	.phy_ids = {
+-		0xfee00000,
+-		0xfee10000,
+-		0xfee20000,
+-	},
++	.num_clks	= ARRAY_SIZE(rk3588_clks),
++	.clks		= rk3588_clks,
+ 	.grfcfg		= &rk3588_combphy_grfcfgs,
+ 	.combphy_cfg	= rk3588_combphy_cfg,
++	.force_det_out	= true,
+ };
+ 
+ static const struct of_device_id rockchip_combphy_of_match[] = {
+ 	{
++		.compatible = "rockchip,rk3528-naneng-combphy",
++		.data = &rk3528_combphy_cfgs,
++	},
++	{
++		.compatible = "rockchip,rk3562-naneng-combphy",
++		.data = &rk3562_combphy_cfgs,
++	},
++	{
+ 		.compatible = "rockchip,rk3568-naneng-combphy",
+ 		.data = &rk3568_combphy_cfgs,
+ 	},
+ 	{
++		.compatible = "rockchip,rk3576-naneng-combphy",
++		.data = &rk3576_combphy_cfgs,
++	},
++	{
+ 		.compatible = "rockchip,rk3588-naneng-combphy",
+ 		.data = &rk3588_combphy_cfgs,
+ 	},
+@@ -786,7 +1415,7 @@ MODULE_DEVICE_TABLE(of, rockchip_combphy
+ static struct platform_driver rockchip_combphy_driver = {
+ 	.probe	= rockchip_combphy_probe,
+ 	.driver = {
+-		.name = "rockchip-naneng-combphy",
++		.name = "naneng-combphy",
+ 		.of_match_table = rockchip_combphy_of_match,
+ 	},
+ };
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -1620,107 +1620,113 @@
+ 		rockchip,pmu = <&pmu1grf>;
+ 	};
+ 
+-	pcie2x1l1: pcie@fe180000 {
+-		compatible = "rockchip,rk3588-pcie", "rockchip,rk3568-pcie";
+-		bus-range = <0x30 0x3f>;
+-		clocks = <&cru ACLK_PCIE_1L1_MSTR>, <&cru ACLK_PCIE_1L1_SLV>,
+-			 <&cru ACLK_PCIE_1L1_DBI>, <&cru PCLK_PCIE_1L1>,
+-			 <&cru CLK_PCIE_AUX3>, <&cru CLK_PCIE1L1_PIPE>;
+-		clock-names = "aclk_mst", "aclk_slv",
+-			      "aclk_dbi", "pclk",
+-			      "aux", "pipe";
+-		device_type = "pci";
+-		interrupts = <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 246 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 245 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH 0>;
+-		interrupt-names = "sys", "pmc", "msg", "legacy", "err";
+-		#interrupt-cells = <1>;
+-		interrupt-map-mask = <0 0 0 7>;
+-		interrupt-map = <0 0 0 1 &pcie2x1l1_intc 0>,
+-				<0 0 0 2 &pcie2x1l1_intc 1>,
+-				<0 0 0 3 &pcie2x1l1_intc 2>,
+-				<0 0 0 4 &pcie2x1l1_intc 3>;
+-		linux,pci-domain = <3>;
+-		max-link-speed = <2>;
+-		msi-map = <0x3000 &its0 0x3000 0x1000>;
+-		num-lanes = <1>;
+-		phys = <&combphy2_psu PHY_TYPE_PCIE>;
+-		phy-names = "pcie-phy";
+-		power-domains = <&power RK3588_PD_PCIE>;
+-		ranges = <0x01000000 0x0 0xf3100000 0x0 0xf3100000 0x0 0x00100000>,
+-			 <0x02000000 0x0 0xf3200000 0x0 0xf3200000 0x0 0x00e00000>,
+-			 <0x03000000 0x0 0x40000000 0x9 0xc0000000 0x0 0x40000000>;
+-		reg = <0xa 0x40c00000 0x0 0x00400000>,
+-		      <0x0 0xfe180000 0x0 0x00010000>,
+-		      <0x0 0xf3000000 0x0 0x00100000>;
+-		reg-names = "dbi", "apb", "config";
+-		resets = <&cru SRST_PCIE3_POWER_UP>, <&cru SRST_P_PCIE3>;
+-		reset-names = "pwr", "pipe";
+-		#address-cells = <3>;
+-		#size-cells = <2>;
+-		status = "disabled";
+-
+-		pcie2x1l1_intc: legacy-interrupt-controller {
+-			interrupt-controller;
+-			#address-cells = <0>;
+-			#interrupt-cells = <1>;
+-			interrupt-parent = <&gic>;
+-			interrupts = <GIC_SPI 245 IRQ_TYPE_EDGE_RISING 0>;
+-		};
+-	};
+-
+-	pcie2x1l2: pcie@fe190000 {
+-		compatible = "rockchip,rk3588-pcie", "rockchip,rk3568-pcie";
+-		bus-range = <0x40 0x4f>;
+-		clocks = <&cru ACLK_PCIE_1L2_MSTR>, <&cru ACLK_PCIE_1L2_SLV>,
+-			 <&cru ACLK_PCIE_1L2_DBI>, <&cru PCLK_PCIE_1L2>,
+-			 <&cru CLK_PCIE_AUX4>, <&cru CLK_PCIE1L2_PIPE>;
+-		clock-names = "aclk_mst", "aclk_slv",
+-			      "aclk_dbi", "pclk",
+-			      "aux", "pipe";
+-		device_type = "pci";
+-		interrupts = <GIC_SPI 253 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH 0>,
+-			     <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH 0>;
+-		interrupt-names = "sys", "pmc", "msg", "legacy", "err";
+-		#interrupt-cells = <1>;
+-		interrupt-map-mask = <0 0 0 7>;
+-		interrupt-map = <0 0 0 1 &pcie2x1l2_intc 0>,
+-				<0 0 0 2 &pcie2x1l2_intc 1>,
+-				<0 0 0 3 &pcie2x1l2_intc 2>,
+-				<0 0 0 4 &pcie2x1l2_intc 3>;
+-		linux,pci-domain = <4>;
+-		max-link-speed = <2>;
+-		msi-map = <0x4000 &its0 0x4000 0x1000>;
+-		num-lanes = <1>;
+-		phys = <&combphy0_ps PHY_TYPE_PCIE>;
+-		phy-names = "pcie-phy";
+-		power-domains = <&power RK3588_PD_PCIE>;
+-		ranges = <0x01000000 0x0 0xf4100000 0x0 0xf4100000 0x0 0x00100000>,
+-			 <0x02000000 0x0 0xf4200000 0x0 0xf4200000 0x0 0x00e00000>,
+-			 <0x03000000 0x0 0x40000000 0xa 0x00000000 0x0 0x40000000>;
+-		reg = <0xa 0x41000000 0x0 0x00400000>,
+-		      <0x0 0xfe190000 0x0 0x00010000>,
+-		      <0x0 0xf4000000 0x0 0x00100000>;
+-		reg-names = "dbi", "apb", "config";
+-		resets = <&cru SRST_PCIE4_POWER_UP>, <&cru SRST_P_PCIE4>;
+-		reset-names = "pwr", "pipe";
+-		#address-cells = <3>;
+-		#size-cells = <2>;
+-		status = "disabled";
+-
+-		pcie2x1l2_intc: legacy-interrupt-controller {
+-			interrupt-controller;
+-			#address-cells = <0>;
+-			#interrupt-cells = <1>;
+-			interrupt-parent = <&gic>;
+-			interrupts = <GIC_SPI 250 IRQ_TYPE_EDGE_RISING 0>;
+-		};
+-	};
++  pcie2x1l1: pcie@fe180000 {
++    compatible = "rockchip,rk3588-pcie", "snps,dw-pcie";
++    #address-cells = <3>;
++    #size-cells = <2>;
++    bus-range = <0x30 0x3f>;
++    clocks = <&cru ACLK_PCIE_1L1_MSTR>, <&cru ACLK_PCIE_1L1_SLV>,
++       <&cru ACLK_PCIE_1L1_DBI>, <&cru PCLK_PCIE_1L1>,
++       <&cru CLK_PCIE_AUX3>, <&cru CLK_PCIE1L1_PIPE>;
++    clock-names = "aclk_mst", "aclk_slv",
++            "aclk_dbi", "pclk",
++            "aux", "pipe";
++    device_type = "pci";
++    interrupts = <GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 246 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 245 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH 0>;
++    interrupt-names = "sys", "pmc", "msg", "legacy", "err";
++    #interrupt-cells = <1>;
++    interrupt-map-mask = <0 0 0 7>;
++    interrupt-map = <0 0 0 1 &pcie2x1l1_intc 0>,
++        <0 0 0 2 &pcie2x1l1_intc 1>,
++        <0 0 0 3 &pcie2x1l1_intc 2>,
++        <0 0 0 4 &pcie2x1l1_intc 3>;
++    linux,pci-domain = <3>;
++    num-ib-windows = <8>;
++    num-ob-windows = <8>;
++    num-viewport = <4>;
++    max-link-speed = <2>;
++    msi-map = <0x3000 &its0 0x3000 0x1000>;
++    num-lanes = <1>;
++    phys = <&combphy2_psu PHY_TYPE_PCIE>;
++    phy-names = "pcie-phy";
++    ranges = <0x81000000 0x0 0xf3100000 0x0 0xf3100000 0x0 0x100000
++        0x82000000 0x0 0xf3200000 0x0 0xf3200000 0x0 0xe00000
++        0xc3000000 0x9 0xc0000000 0x9 0xc0000000 0x0 0x40000000>;
++    reg = <0x0 0xfe180000 0x0 0x10000>,
++          <0xa 0x40c00000 0x0 0x400000>,
++          <0x0 0xf3000000 0x0 0x100000>;
++    reg-names = "pcie-apb", "pcie-dbi", "config";
++    resets = <&cru SRST_PCIE3_POWER_UP>, <&cru SRST_P_PCIE3>;
++    reset-names = "pcie", "periph";
++    rockchip,pipe-grf = <&php_grf>;
++    status = "disabled";
++
++    pcie2x1l1_intc: legacy-interrupt-controller {
++      interrupt-controller;
++      #address-cells = <0>;
++      #interrupt-cells = <1>;
++      interrupt-parent = <&gic>;
++      interrupts = <GIC_SPI 245 IRQ_TYPE_EDGE_RISING 0>;
++    };
++  };
++
++  pcie2x1l2: pcie@fe190000 {
++    compatible = "rockchip,rk3588-pcie", "snps,dw-pcie";
++    #address-cells = <3>;
++    #size-cells = <2>;
++    bus-range = <0x40 0x4f>;
++    clocks = <&cru ACLK_PCIE_1L2_MSTR>, <&cru ACLK_PCIE_1L2_SLV>,
++       <&cru ACLK_PCIE_1L2_DBI>, <&cru PCLK_PCIE_1L2>,
++       <&cru CLK_PCIE_AUX4>, <&cru CLK_PCIE1L2_PIPE>;
++    clock-names = "aclk_mst", "aclk_slv",
++            "aclk_dbi", "pclk",
++            "aux", "pipe";
++    device_type = "pci";
++    interrupts = <GIC_SPI 253 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH 0>,
++           <GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH 0>;
++    interrupt-names = "sys", "pmc", "msg", "legacy", "err";
++    #interrupt-cells = <1>;
++    interrupt-map-mask = <0 0 0 7>;
++    interrupt-map = <0 0 0 1 &pcie2x1l2_intc 0>,
++        <0 0 0 2 &pcie2x1l2_intc 1>,
++        <0 0 0 3 &pcie2x1l2_intc 2>,
++        <0 0 0 4 &pcie2x1l2_intc 3>;
++    linux,pci-domain = <4>;
++    num-ib-windows = <8>;
++    num-ob-windows = <8>;
++    num-viewport = <4>;
++    max-link-speed = <2>;
++    msi-map = <0x4000 &its0 0x4000 0x1000>;
++    num-lanes = <1>;
++    phys = <&combphy0_ps PHY_TYPE_PCIE>;
++    phy-names = "pcie-phy";
++    ranges = <0x81000000 0x0 0xf4100000 0x0 0xf4100000 0x0 0x100000
++        0x82000000 0x0 0xf4200000 0x0 0xf4200000 0x0 0xe00000
++        0xc3000000 0xa 0x00000000 0xa 0x00000000 0x0 0x40000000>;
++    reg = <0x0 0xfe190000 0x0 0x10000>,
++          <0xa 0x41000000 0x0 0x400000>,
++          <0x0 0xf4000000 0x0 0x100000>;
++    reg-names = "pcie-apb", "pcie-dbi", "config";
++    resets = <&cru SRST_PCIE4_POWER_UP>, <&cru SRST_P_PCIE4>;
++    reset-names = "pcie", "periph";
++    rockchip,pipe-grf = <&php_grf>;
++    status = "disabled";
++
++    pcie2x1l2_intc: legacy-interrupt-controller {
++      interrupt-controller;
++      #address-cells = <0>;
++      #interrupt-cells = <1>;
++      interrupt-parent = <&gic>;
++      interrupts = <GIC_SPI 250 IRQ_TYPE_EDGE_RISING 0>;
++    };
++  };
+ 
+ 	gmac1: ethernet@fe1c0000 {
+ 		compatible = "rockchip,rk3588-gmac", "snps,dwmac-4.20a";
+@@ -2808,12 +2814,12 @@
+ 		reg = <0x0 0xfee00000 0x0 0x100>;
+ 		clocks = <&cru CLK_REF_PIPE_PHY0>, <&cru PCLK_PCIE_COMBO_PIPE_PHY0>,
+ 			 <&cru PCLK_PHP_ROOT>;
+-		clock-names = "ref", "apb", "pipe";
++		clock-names = "refclk", "apbclk", "phpclk";
+ 		assigned-clocks = <&cru CLK_REF_PIPE_PHY0>;
+ 		assigned-clock-rates = <100000000>;
+ 		#phy-cells = <1>;
+ 		resets = <&cru SRST_REF_PIPE_PHY0>, <&cru SRST_P_PCIE2_PHY0>;
+-		reset-names = "phy", "apb";
++		reset-names = "combphy", "combphy-apb";
+ 		rockchip,pipe-grf = <&php_grf>;
+ 		rockchip,pipe-phy-grf = <&pipe_phy0_grf>;
+ 		status = "disabled";
+@@ -2824,12 +2830,12 @@
+ 		reg = <0x0 0xfee20000 0x0 0x100>;
+ 		clocks = <&cru CLK_REF_PIPE_PHY2>, <&cru PCLK_PCIE_COMBO_PIPE_PHY2>,
+ 			 <&cru PCLK_PHP_ROOT>;
+-		clock-names = "ref", "apb", "pipe";
++		clock-names = "refclk", "apbclk", "phpclk";
+ 		assigned-clocks = <&cru CLK_REF_PIPE_PHY2>;
+ 		assigned-clock-rates = <100000000>;
+ 		#phy-cells = <1>;
+ 		resets = <&cru SRST_REF_PIPE_PHY2>, <&cru SRST_P_PCIE2_PHY2>;
+-		reset-names = "phy", "apb";
++		reset-names = "combphy", "combphy-apb";
+ 		rockchip,pipe-grf = <&php_grf>;
+ 		rockchip,pipe-phy-grf = <&pipe_phy2_grf>;
+ 		status = "disabled";
+Index: kernel-6_12/include/linux/aspm_ext.h
+===================================================================
+--- /dev/null
++++ kernel-6_12/include/linux/aspm_ext.h
+@@ -0,0 +1,24 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++
++/* Copyright (c) 2022-2024 Rockchip Electronics Co., Ltd. */
++
++#ifndef _ASPM_EXT_H
++#define _ASPM_EXT_H
++
++#if IS_REACHABLE(CONFIG_PCIEASPM_EXT)
++bool pcie_aspm_ext_is_rc_ep_l1ss_capable(struct pci_dev *child, struct pci_dev *parent);
++void pcie_aspm_ext_l1ss_enable(struct pci_dev *child, struct pci_dev *parent, bool enable);
++bool pcie_aspm_ext_is_in_l1sub_state(struct pci_dev *pdev);
++#else
++static inline bool pcie_aspm_ext_is_rc_ep_l1ss_capable(struct pci_dev *child, struct pci_dev *parent) { return false; }
++static inline void pcie_aspm_ext_l1ss_enable(struct pci_dev *child, struct pci_dev *parent, bool enable) {}
++static inline bool pcie_aspm_ext_is_in_l1sub_state(struct pci_dev *pdev) { return false; }
++#endif
++
++enum rockchip_pcie_pm_ctrl_flag {
++	ROCKCHIP_PCIE_PM_CTRL_RESET = 1,
++};
++
++int rockchip_dw_pcie_pm_ctrl_for_user(struct pci_dev *dev, enum rockchip_pcie_pm_ctrl_flag flag);
++
++#endif
+Index: kernel-6_12/drivers/pci/controller/dwc/rockchip-pcie-dma.h
+===================================================================
+--- /dev/null
++++ kernel-6_12/drivers/pci/controller/dwc/rockchip-pcie-dma.h
+@@ -0,0 +1,278 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright (C) 2018 Rockchip Electronics Co., Ltd.
++ */
++#ifndef __SOC_ROCKCHIP_PCIE_DMA_TRX_H
++#define __SOC_ROCKCHIP_PCIE_DMA_TRX_H
++
++#include <linux/debugfs.h>
++
++#define PCIE_DMA_TABLE_NUM		32
++
++#define PCIE_DMA_TRX_TYPE_NUM		3
++
++#define PCIE_DMA_CHN0			0x0
++#define PCIE_DMA_CHN1			0x1
++#define PCIE_DMA_DEFAULT_CHN		PCIE_DMA_CHN0
++
++#define PCIE_DMA_DATA_SND_TABLE_OFFSET		0x0
++#define PCIE_DMA_DATA_RCV_ACK_TABLE_OFFSET	0x8
++#define PCIE_DMA_DATA_FREE_ACK_TABLE_OFFSET	0x10
++#define PCIE_DMA_DATA_READ_REMOTE_TABLE_OFFSET	0x18
++
++/* DMA linked list register filed */
++#define PCIE_DWC_DMA_CB				BIT(0)
++#define PCIE_DWC_DMA_TCB			BIT(1)
++#define PCIE_DWC_DMA_LLP			BIT(2)
++#define PCIE_DWC_DMA_LIE			BIT(3)
++#define PCIE_DWC_DMA_RIE			BIT(4)
++#define PCIE_DWC_DMA_CCS			BIT(8)
++#define PCIE_DWC_DMA_LLE			BIT(9)
++
++#define SET_LL_32(ll, value) \
++	writel(value, ll)
++
++#define SET_LL_64(ll, value) \
++	writeq(value, ll)
++
++enum dma_dir {
++	DMA_FROM_BUS,
++	DMA_TO_BUS,
++};
++
++enum dma_mode {
++	RK_PCIE_DMA_BLOCK,
++	RK_PCIE_DMA_LL,
++};
++
++/**
++ * The Channel Control Register for read and write.
++ */
++union chan_ctrl_lo {
++	struct {
++		u32	cb		:1;	// 0
++		u32	tcb		:1;	// 1
++		u32	llp		:1;	// 2
++		u32	lie		:1;	// 3
++		u32	rie		:1;	// 4
++		u32	cs		:2;	// 5:6
++		u32	rsvd1		:1;	// 7
++		u32	ccs		:1;	// 8
++		u32	llen		:1;	// 9
++		u32	b_64s		:1;	// 10
++		u32	b_64d		:1;	// 11
++		u32	pf		:5;	// 12:16
++		u32	rsvd2		:7;	// 17:23
++		u32	sn		:1;	// 24
++		u32	ro		:1;	// 25
++		u32	td		:1;	// 26
++		u32	tc		:3;	// 27:29
++		u32	at		:2;	// 30:31
++	};
++	u32 asdword;
++};
++
++/**
++ * The Channel Control Register high part for read and write.
++ */
++union chan_ctrl_hi {
++	struct {
++		u32	vfenb		:1;	// 0
++		u32	vfunc		:8;	// 1-8
++		u32	rsvd0		:23;	// 9-31
++	};
++	u32 asdword;
++};
++
++/**
++ * The Channel Weight Register.
++ */
++union weight {
++	struct {
++		u32	weight0		:5;	// 0:4
++		u32	weight1		:5;	// 5:9
++		u32	weight2		:5;	// 10:14
++		u32	weight3		:5;	// 15:19
++		u32	rsvd		:12;	// 20:31
++	};
++	u32 asdword;
++};
++
++/**
++ * The Doorbell Register for read and write.
++ */
++union db {
++	struct {
++		u32	chnl		:3;	// 0
++		u32	reserved0	:28;	// 3:30
++		u32	stop		:1;	// 31
++	};
++	u32 asdword;
++};
++
++/**
++ * The Context Registers for read and write.
++ */
++struct ctx_regs {
++	union chan_ctrl_lo		ctrllo;
++	union chan_ctrl_hi		ctrlhi;
++	u32				xfersize;
++	u32				sarptrlo;
++	u32				sarptrhi;
++	u32				darptrlo;
++	u32				darptrhi;
++};
++
++/**
++ * The Enable Register for read and write.
++ */
++union enb {
++	struct {
++		u32	enb		:1;	// 0
++		u32	reserved0	:31;	// 1:31
++	};
++	u32 asdword;
++};
++
++/**
++ * The Interrupt Status Register for read and write.
++ */
++union int_status {
++	struct {
++		u32	donesta		:8;
++		u32	rsvd0		:8;
++		u32	abortsta	:8;
++		u32	rsvd1		:8;
++	};
++	u32 asdword;
++};
++
++/**
++ * The Interrupt Clear Register for read and write.
++ */
++union int_clear {
++	struct {
++		u32	doneclr		:8;
++		u32	rsvd0		:8;
++		u32	abortclr	:8;
++		u32	rsvd1		:8;
++	};
++	u32 asdword;
++};
++
++struct dma_table {
++	u32				*descs;
++	int				chn;
++	phys_addr_t			phys_descs;
++	u32				dir;
++	u32				type;
++	struct list_head		tbl_node;
++	union enb			enb;
++	struct ctx_regs			ctx_reg;
++	union weight			weilo;
++	union weight			weihi;
++	union db			start;
++	phys_addr_t			local;
++	phys_addr_t			bus;
++	size_t				buf_size;
++	u32				dma_mode;
++};
++
++struct rk_edma_lli {
++	u32 control;
++	u32 transfer_size;
++	union {
++		u64 reg;
++		struct {
++			u32 lsb;
++			u32 msb;
++		};
++	} sar;
++	union {
++		u64 reg;
++		struct {
++			u32 lsb;
++			u32 msb;
++		};
++	} dar;
++} __packed;
++
++struct rk_edma_llp {
++	u32 control;
++	u32 reserved;
++	union {
++		u64 reg;
++		struct {
++			u32 lsb;
++			u32 msb;
++		};
++	} llp;
++} __packed;
++
++struct dma_trx_obj {
++	struct device			*dev;
++	int				loop_count;
++	int				loop_count_threshold;
++	void				*local_mem_base;
++	phys_addr_t			local_mem_start;
++	size_t				local_mem_size;
++	phys_addr_t			remote_mem_start;
++	void				*region_base;
++	phys_addr_t			region_start;
++	size_t				region_size;
++	int				dma_free;
++	unsigned long			local_write_available;
++	unsigned long			local_read_available;
++	unsigned long			remote_write_available;
++	spinlock_t			tbl_list_lock; /* lock dma table */
++	struct list_head		tbl_list;
++	struct work_struct		dma_trx_work;
++	wait_queue_head_t		event_queue;
++	struct workqueue_struct		*dma_trx_wq;
++	struct dma_table		*table[PCIE_DMA_TABLE_NUM];
++	struct dma_table		*cur;
++	struct hrtimer			scan_timer;
++	int				busno;
++	void				*priv;
++	struct completion		done;
++	int				ref_count;
++	struct mutex			count_mutex;
++	unsigned long			irq_num;
++	struct dentry			*pcie_root;
++	struct pcie_misc_dev		*pcie_dev;
++	void				(*start_dma_func)(struct dma_trx_obj *obj, struct dma_table *table);
++	void				(*config_dma_func)(struct dma_table *table);
++	int				(*get_dma_status)(struct dma_trx_obj *obj, u8 chn, enum dma_dir dir);
++	int				(*cb)(struct dma_trx_obj *obj, u32 chn, enum dma_dir dir);
++	void				(*dma_debug)(struct dma_trx_obj *obj, struct dma_table *table);
++	ktime_t				begin;
++	ktime_t				end;
++	u64				cache_time_total;
++	u64				cache_time_avarage;
++	u32				buffer_size;
++	u32				rd_buf_size;
++	u32				wr_buf_size;
++	u32				ack_base;
++	u32				set_data_check_pos;
++	u32				set_local_idx_pos;
++	u32				set_buf_size_pos;
++	u32				set_chk_sum_pos;
++	u32				version;
++	int				addr_reverse;
++};
++
++#if IS_ENABLED(CONFIG_ROCKCHIP_PCIE_DMA_OBJ)
++struct dma_trx_obj *rk_pcie_dma_obj_probe(struct device *dev);
++void rk_pcie_dma_obj_remove(struct dma_trx_obj *obj);
++#else
++static inline struct dma_trx_obj *rk_pcie_dma_obj_probe(struct device *dev)
++{
++	return NULL;
++}
++
++static inline void rk_pcie_dma_obj_remove(struct dma_trx_obj *obj)
++{
++}
++#endif
++
++#endif
+Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-dmatest.h
+===================================================================
+--- /dev/null
++++ kernel-6_12/drivers/pci/controller/dwc/pcie-dw-dmatest.h
+@@ -0,0 +1,35 @@
++/* SPDX-License-Identifier: GPL-2.0+ */
++/*
++ * Copyright (C) 2022 Rockchip Electronics Co., Ltd.
++ */
++#ifndef __PCIE_DW_DMATEST_H
++#define __PCIE_DW_DMATEST_H
++
++struct dma_trx_obj;
++struct device;
++
++#if IS_ENABLED(CONFIG_PCIE_DW_DMATEST)
++struct dma_trx_obj *pcie_dw_dmatest_register(struct device *dev, bool irq_en);
++void pcie_dw_dmatest_unregister(struct dma_trx_obj *obj);
++int pcie_dw_wired_dma_frombus_block(struct dma_trx_obj *obj, u32 chn, u64 local_paddr, u64 bus_paddr, u32 size);
++int pcie_dw_wired_dma_tobus_block(struct dma_trx_obj *obj, u32 chn, u64 bus_paddr, u64 local_paddr, u32 size);
++#else
++static inline struct dma_trx_obj *pcie_dw_dmatest_register(struct device *dev, bool irq_en)
++{
++	return NULL;
++}
++
++static inline void pcie_dw_dmatest_unregister(struct dma_trx_obj *obj) { }
++
++static inline int pcie_dw_wired_dma_frombus_block(struct dma_trx_obj *obj, u32 chn, u64 local_paddr, u64 bus_paddr, u32 size)
++{
++	return -1;
++}
++
++static inline int pcie_dw_wired_dma_tobus_block(struct dma_trx_obj *obj, u32 chn, u64 bus_paddr, u64 local_paddr, u32 size)
++{
++	return -1;
++}
++#endif
++
++#endif
+Index: kernel-6_12/drivers/pci/controller/dwc/pcie-designware.h
+===================================================================
+--- kernel-6_12.orig/drivers/pci/controller/dwc/pcie-designware.h
++++ kernel-6_12/drivers/pci/controller/dwc/pcie-designware.h
+@@ -71,6 +71,7 @@
+ /* Synopsys-specific PCIe configuration registers */
+ #define PCIE_PORT_FORCE			0x708
+ #define PORT_FORCE_DO_DESKEW_FOR_SRIS	BIT(23)
++#define PORT_LINK_LPBK_ENABLE           BIT(2)
+ 
+ #define PCIE_PORT_AFR			0x70C
+ #define PORT_AFR_N_FTS_MASK		GENMASK(15, 8)
+Index: kernel-6_12/drivers/pci/controller/dwc/Kconfig
+===================================================================
+--- kernel-6_12.orig/drivers/pci/controller/dwc/Kconfig
++++ kernel-6_12/drivers/pci/controller/dwc/Kconfig
+@@ -341,6 +341,13 @@ config PCIE_ROCKCHIP_DW_EP
+ 	  Enables support for the DesignWare PCIe controller in the
+ 	  Rockchip SoC (except RK3399) to work in endpoint mode.
+ 
++config PCIE_RK_THREADED_INIT
++  bool "Threaded initialize Rockchip DW based PCIe controller"
++  depends on PCIE_ROCKCHIP_DW
++  default y
++  help
++    Enables threaded initialize Rockchip DW based PCIe controller.
++
+ config PCI_EXYNOS
+ 	tristate "Samsung Exynos PCIe controller"
+ 	depends on ARCH_EXYNOS || COMPILE_TEST

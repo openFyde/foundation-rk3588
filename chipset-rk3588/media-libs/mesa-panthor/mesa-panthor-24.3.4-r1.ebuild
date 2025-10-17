@@ -22,21 +22,27 @@ HOMEPAGE="http://mesa3d.org/"
 # GLES[2]/gl[2]{,ext,platform}.h are SGI-B-2.0
 LICENSE="MIT SGI-B-2.0"
 
-IUSE="debug libglvnd vulkan zstd"
+IUSE="debug libglvnd vulkan zstd perfetto"
 
 COMMON_DEPEND="
 	dev-libs/expat:=
 	>=x11-libs/libdrm-2.4.94:=
-	sys-libs/zlib
 "
 
 RDEPEND="${COMMON_DEPEND}
 	libglvnd? ( media-libs/libglvnd )
 	!libglvnd? ( !media-libs/libglvnd )
 	zstd? ( app-arch/zstd )
+  dev-libs/libxml2
+  app-arch/libarchive:=
+  dev-libs/libconfig:=
+  sys-libs/ncurses:=
+  >=sys-libs/zlib-1.2.13
+  virtual/libudev:=
 "
 
 DEPEND="${COMMON_DEPEND}
+	perfetto? ( >=chromeos-base/perfetto-29.0 )
 "
 
 BDEPEND="
@@ -46,19 +52,24 @@ BDEPEND="
 "
 
 src_configure() {
+  cros_optimize_package_for_speed
+
 	emesonargs+=(
 		-Dglvnd=$(usex libglvnd enabled disabled)
 		-Dllvm=disabled
 		-Dshader-cache=disabled
+		-Dunversion-libgallium=true
 		-Dglx=disabled
 		-Degl=enabled
 		-Dgbm=disabled
 		-Dgles1=disabled
 		-Dgles2=enabled
-		-Ddri-drivers-path=
+		-Dshared-glapi=enabled
 		-Dgallium-drivers=panfrost
 		-Dgallium-vdpau=disabled
+		-Dperfetto=$(usex perfetto true false)
 		$(meson_feature zstd)
+    -Degl-native-platform="surfaceless"
 		-Dplatforms=
 		-Dtools=panfrost
 		--buildtype $(usex debug debug release)
@@ -70,6 +81,5 @@ src_configure() {
 
 src_install() {
 	meson_src_install
-
 	rm -v -rf "${ED}/usr/include"
 }

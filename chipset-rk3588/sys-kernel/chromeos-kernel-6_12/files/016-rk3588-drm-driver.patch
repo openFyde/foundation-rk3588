@@ -93459,7 +93459,7 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
-@@ -0,0 +1,5225 @@
+@@ -0,0 +1,5255 @@
 +/*
 + * Copyright (C) 2013, NVIDIA Corporation.  All rights reserved.
 + *
@@ -93988,6 +93988,8 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +{
 +	struct panel_simple *p = to_panel_simple(panel);
 +
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_disable: entry\n");
++
 +	/*
 +	 * notify other devices (such as TP) to perform the action before the
 +	 * panel is disabled.
@@ -93995,14 +93997,17 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +	rockchip_panel_notifier_call_chain(&p->panel_notifier,
 +					   PANEL_PRE_DISABLE, NULL);
 +
-+	if (!p->enabled)
++	if (!p->enabled) {
++		dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_disable: already disabled, skip\n");
 +		return 0;
++	}
 +
 +	if (p->desc->delay.disable)
 +		panel_simple_msleep(p->desc->delay.disable);
 +
 +	p->enabled = false;
 +
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_disable: success\n");
 +	return 0;
 +}
 +
@@ -94010,9 +94015,13 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +{
 +	struct panel_simple *p = to_panel_simple(panel);
 +
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_unprepare: entry\n");
++
 +	/* Unpreparing when already unprepared is a no-op */
-+	if (!p->prepared)
++	if (!p->prepared) {
++		dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_unprepare: already unprepared, skip\n");
 +		return 0;
++	}
 +
 +	if (p->desc->exit_seq) {
 +		if (p->desc->cmd_type == CMD_TYPE_SPI) {
@@ -94041,6 +94050,7 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +
 +	p->prepared = false;
 +
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_unprepare: success\n");
 +	return 0;
 +}
 +
@@ -94049,15 +94059,20 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +	struct panel_simple *p = to_panel_simple(panel);
 +	int err;
 +
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_prepare: entry\n");
++
 +	/* Preparing when already prepared is a no-op */
-+	if (p->prepared)
++	if (p->prepared) {
++		dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_prepare: already prepared, skip\n");
 +		return 0;
++	}
 +
 +	err = panel_simple_regulator_enable(p);
 +	if (err < 0) {
-+		dev_err(panel->dev, "failed to enable supply: %d\n", err);
++		dev_err(panel->dev, "[FYDE_DEBUG] failed to enable supply: %d\n", err);
 +		return err;
 +	}
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_prepare: regulator enabled\n");
 +
 +	gpiod_direction_output(p->enable_gpio, 1);
 +  msleep(5);
@@ -94091,6 +94106,7 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +
 +	p->prepared = true;
 +
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_prepare: success\n");
 +	return 0;
 +}
 +
@@ -94117,8 +94133,12 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +{
 +	struct panel_simple *p = to_panel_simple(panel);
 +
-+	if (p->enabled)
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_enable: entry\n");
++
++	if (p->enabled) {
++		dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_enable: already enabled, skip\n");
 +		return 0;
++	}
 +
 +	if (p->desc->delay.enable)
 +		panel_simple_msleep(p->desc->delay.enable);
@@ -94132,6 +94152,7 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +	rockchip_panel_notifier_call_chain(&p->panel_notifier,
 +					   PANEL_ENABLED, NULL);
 +
++	dev_dbg(panel->dev, "[FYDE_DEBUG] panel_simple_enable: success\n");
 +	return 0;
 +}
 +
@@ -98565,9 +98586,14 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +	const struct of_device_id *id;
 +	int err;
 +
++	dev_dbg(dev, "[FYDE_DEBUG] panel_simple_dsi_probe: entry\n");
++
 +	id = of_match_node(dsi_of_match, dsi->dev.of_node);
-+	if (!id)
++	if (!id) {
++		dev_err(dev, "[FYDE_DEBUG] panel_simple_dsi_probe: no matching device tree node\n");
 +		return -ENODEV;
++	}
++	dev_dbg(dev, "[FYDE_DEBUG] panel_simple_dsi_probe: found matching device tree node\n");
 +
 +	if (!id->data) {
 +		d = devm_kzalloc(dev, sizeof(*d), GFP_KERNEL);
@@ -98618,9 +98644,13 @@ Index: kernel-6_12/drivers/gpu/drm/panel/panel-fydetab.c
 +	if (err) {
 +		struct panel_simple *panel = mipi_dsi_get_drvdata(dsi);
 +
++		dev_err(dev, "[FYDE_DEBUG] panel_simple_dsi_probe: mipi_dsi_attach failed: %d\n", err);
 +		drm_panel_remove(&panel->base);
++	} else {
++		dev_dbg(dev, "[FYDE_DEBUG] panel_simple_dsi_probe: mipi_dsi_attach succeeded\n");
 +	}
 +
++	dev_dbg(dev, "[FYDE_DEBUG] panel_simple_dsi_probe: exit with err=%d\n", err);
 +	return err;
 +}
 +
@@ -103121,3 +103151,38 @@ Index: kernel-6_12/include/uapi/drm/rockchip_drm.h
 +		DRM_ROCKCHIP_GET_VCNT_EVENT, union drm_wait_vblank)
 +
 +#endif /* _UAPI_ROCKCHIP_DRM_H */
+Index: kernel-6_12/arch/arm64/include/asm/system_info.h
+===================================================================
+--- /dev/null
++++ kernel-6_12/arch/arm64/include/asm/system_info.h
+@@ -0,0 +1,13 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __ASM_ARM_SYSTEM_INFO_H
++#define __ASM_ARM_SYSTEM_INFO_H
++
++#ifndef __ASSEMBLY__
++
++/* information about the system we're running on */
++extern unsigned int system_serial_low;
++extern unsigned int system_serial_high;
++
++#endif /* !__ASSEMBLY__ */
++
++#endif /* __ASM_ARM_SYSTEM_INFO_H */
+Index: kernel-6_12/arch/arm64/kernel/cpuinfo.c
+===================================================================
+--- kernel-6_12.orig/arch/arm64/kernel/cpuinfo.c
++++ kernel-6_12/arch/arm64/kernel/cpuinfo.c
+@@ -25,6 +25,12 @@
+ #include <linux/smp.h>
+ #include <linux/delay.h>
+ 
++unsigned int system_serial_low;
++EXPORT_SYMBOL(system_serial_low);
++
++unsigned int system_serial_high;
++EXPORT_SYMBOL(system_serial_high);
++
+ /*
+  * In case the boot CPU is hotpluggable, we record its initial state and
+  * current state separately. Certain system registers may contain different
