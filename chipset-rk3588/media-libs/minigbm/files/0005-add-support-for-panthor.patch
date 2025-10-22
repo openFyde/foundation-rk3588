@@ -1,0 +1,54 @@
+Index: minigbm/drv.c
+===================================================================
+--- minigbm.orig/drv.c
++++ minigbm/drv.c
+@@ -58,6 +58,7 @@ extern const struct backend backend_syna
+ extern const struct backend backend_virtgpu;
+ extern const struct backend backend_udl;
+ extern const struct backend backend_vkms;
++extern const struct backend backend_panthor;
+ 
+ extern const struct backend backend_mock;
+ 
+@@ -80,7 +81,7 @@ static const struct backend *drv_backend
+ 	&backend_evdi,	    &backend_komeda,	&backend_marvell, &backend_mediatek,
+ 	&backend_meson,	    &backend_nouveau,	&backend_radeon,  &backend_rockchip,
+ 	&backend_sun4i_drm, &backend_synaptics, &backend_udl,	  &backend_virtgpu,
+-	&backend_vkms,	    &backend_mock
++	&backend_vkms,	    &backend_mock, &backend_panthor
+ };
+ 
+ void drv_preload(bool load)
+@@ -128,6 +129,7 @@ struct driver *drv_create(int fd)
+ 	const char *minigbm_debug;
+ 	minigbm_debug = drv_get_os_option(MINIGBM_DEBUG);
+ 	drv->compression = false; // The compression isn't supported well by rk3588 soc
++  //  (minigbm_debug == NULL) || (strstr(minigbm_debug, "nocompression") == NULL);
+ 	drv->log_bos = (minigbm_debug && strstr(minigbm_debug, "log_bos") != NULL);
+ 
+ 	drv->fd = fd;
+Index: minigbm/dumb_driver.c
+===================================================================
+--- minigbm.orig/dumb_driver.c
++++ minigbm/dumb_driver.c
+@@ -74,6 +74,7 @@ INIT_DUMB_DRIVER_WITH_NAME(sun4i_drm, "s
+ INIT_DUMB_DRIVER(synaptics)
+ INIT_DUMB_DRIVER(udl)
+ INIT_DUMB_DRIVER(vkms)
++INIT_DUMB_DRIVER(panthor)
+ 
+ #ifndef DRV_ROCKCHIP
+ INIT_DUMB_DRIVER(rockchip)
+Index: minigbm/minigbm_helpers.c
+===================================================================
+--- minigbm.orig/minigbm_helpers.c
++++ minigbm/minigbm_helpers.c
+@@ -192,6 +192,8 @@ static int detect_device_info(unsigned i
+ 		info->dev_type_flags |= GBM_DEV_TYPE_FLAG_3D | GBM_DEV_TYPE_FLAG_ARMSOC;
+ 	} else if (strncmp("panfrost", version->name, version->name_len) == 0) {
+ 		info->dev_type_flags |= GBM_DEV_TYPE_FLAG_3D | GBM_DEV_TYPE_FLAG_ARMSOC;
++  } else if (strncmp("panthor", version->name, version->name_len) == 0) {
++    info->dev_type_flags |= GBM_DEV_TYPE_FLAG_3D | GBM_DEV_TYPE_FLAG_ARMSOC;
+ 	} else if (strncmp("pvr", version->name, version->name_len) == 0) {
+ 		info->dev_type_flags |= GBM_DEV_TYPE_FLAG_3D | GBM_DEV_TYPE_FLAG_ARMSOC;
+ 	} else if (strncmp("v3d", version->name, version->name_len) == 0) {
