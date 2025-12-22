@@ -1,0 +1,10 @@
+--- a/jail/seccomp/aarch64/gpu_common.policy
++++ b/jail/seccomp/aarch64/gpu_common.policy
+@@ -102,6 +102,7 @@
+ faccessat2: 1
+ getgid: 1
+ getegid: 1
++pread64: 1
+ 
+ ## Rules for vmm-swap
+ userfaultfd: 1
