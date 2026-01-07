@@ -2,7 +2,7 @@ Index: src/chrome/browser/ash/login/chrome_restart_request.cc
 ===================================================================
 --- src.orig/chrome/browser/ash/login/chrome_restart_request.cc
 +++ src/chrome/browser/ash/login/chrome_restart_request.cc
-@@ -73,6 +73,7 @@ using ::content::BrowserThread;
+@@ -75,6 +75,7 @@ using ::content::BrowserThread;
  
  // Increase logging level for Guest mode to avoid INFO messages in logs.
  const char kGuestModeLoggingLevel[] = "1";

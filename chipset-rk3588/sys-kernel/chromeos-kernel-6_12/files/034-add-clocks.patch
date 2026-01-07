@@ -1,0 +1,378 @@
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -397,13 +397,6 @@
+ 		method = "smc";
+ 	};
+ 
+-	spll: clock-0 {
+-		compatible = "fixed-clock";
+-		clock-frequency = <702000000>;
+-		clock-output-names = "spll";
+-		#clock-cells = <0>;
+-	};
+-
+ 	timer {
+ 		compatible = "arm,armv8-timer";
+ 		interrupts = <GIC_PPI 13 IRQ_TYPE_LEVEL_HIGH 0>,
+@@ -414,19 +407,33 @@
+ 		interrupt-names = "sec-phys", "phys", "virt", "hyp-phys", "hyp-virt";
+ 	};
+ 
+-	xin24m: clock-1 {
+-		compatible = "fixed-clock";
+-		clock-frequency = <24000000>;
+-		clock-output-names = "xin24m";
+-		#clock-cells = <0>;
+-	};
++  clocks: clocks {
++    compatible = "simple-bus";
++    #address-cells = <2>;
++    #size-cells = <2>;
++    ranges;
+ 
+-	xin32k: clock-2 {
+-		compatible = "fixed-clock";
+-		clock-frequency = <32768>;
+-		clock-output-names = "xin32k";
+-		#clock-cells = <0>;
+-	};
++		spll: clock-0 {
++			compatible = "fixed-clock";
++			clock-frequency = <702000000>;
++			clock-output-names = "spll";
++			#clock-cells = <0>;
++		};
++
++		xin24m: clock-1 {
++			compatible = "fixed-clock";
++			clock-frequency = <24000000>;
++			clock-output-names = "xin24m";
++			#clock-cells = <0>;
++		};
++
++		xin32k: clock-2 {
++			compatible = "fixed-clock";
++			clock-frequency = <32768>;
++			clock-output-names = "xin32k";
++			#clock-cells = <0>;
++		};
++  };
+ 
+ 	reserved-memory {
+ 		#address-cells = <2>;
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+@@ -307,7 +307,7 @@
+     };
+ 
+     masterdai: simple-audio-card,codec {
+-      sound-dai = <&es8388>;
++      sound-dai = <&es8323>;
+       system-clock-frequency = <12288000>;
+     };
+   };
+@@ -578,10 +578,12 @@
+     #sound-dai-cells = <0>;
+     compatible = "everest,es8323";
+     reg = <0x11>;
+-    clocks = <&cru I2S0_8CH_MCLKOUT>;
++    clocks = <&mclkout_i2s0>;
+     clock-names = "mclk";
+-    assigned-clocks = <&cru I2S0_8CH_MCLKOUT>;
+     assigned-clock-rates = <12288000>;
++    assigned-clocks = <&mclkout_i2s0>;
++    pinctrl-names = "default";
++    pinctrl-0 = <&i2s0_mclk>;
+     AVDD-supply = <&vcc_1v8_s0>;
+     DVDD-supply = <&vcc_1v8_s0>;
+     HPVDD-supply = <&vcc_3v3_s0>;
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
+@@ -1416,4 +1416,281 @@
+       <20000000>;
+ };
+ #endif
++&clocks {
++    hclk_vo1: hclk_vo1@fd7c08ec {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08ec 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_VO1USB_TOP_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_vdpu_low_pre: aclk_vdpu_low_pre@fd7c08b0 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08b0 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_vo0: hclk_vo0@fd7c08dc {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08dc 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_VOP_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_usb: hclk_usb@fd7c08a8 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08a8 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_VO1USB_TOP_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_nvm: hclk_nvm@fd7c087c {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c087c 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_NVM_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_usb: aclk_usb@fd7c08a8 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08a8 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VO1USB_TOP_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_isp1_pre: hclk_isp1_pre@fd7c0868 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c0868 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_VI_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_isp1_pre: aclk_isp1_pre@fd7c0868 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c0868 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VI_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_rkvdec0_pre: aclk_rkvdec0_pre@fd7c08a0 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08a0 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_rkvdec0_pre: hclk_rkvdec0_pre@fd7c08a0 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08a0 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_rkvdec1_pre: aclk_rkvdec1_pre@fd7c08a4 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08a4 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_rkvdec1_pre: hclk_rkvdec1_pre@fd7c08a4 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08a4 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_jpeg_decoder_pre: aclk_jpeg_decoder_pre@fd7c08b0 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08b0 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_rkvenc1_pre: aclk_rkvenc1_pre@fd7c08c0 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08c0 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_RKVENC0>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_rkvenc1_pre: hclk_rkvenc1_pre@fd7c08c0 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08c0 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_RKVENC0>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_hdcp0_pre: aclk_hdcp0_pre@fd7c08dc {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08dc 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VOP_LOW_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_hdcp1_pre: aclk_hdcp1_pre@fd7c08ec {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c08ec 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VO1USB_TOP_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    pclk_av1_pre: pclk_av1_pre@fd7c0910 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c0910 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru HCLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    aclk_av1_pre: aclk_av1_pre@fd7c0910 {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c0910 0 0x10>;
++      clock-names = "link";
++      clocks = <&cru ACLK_VDPU_ROOT>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    hclk_sdio_pre: hclk_sdio_pre@fd7c092c {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0 0xfd7c092c 0 0x10>;
++      clock-names = "link";
++      clocks = <&hclk_nvm>;
++      #power-domain-cells = <1>;
++      #clock-cells = <0>;
++    };
++
++    pclk_vo0_grf: pclk_vo0_grf@fd7c08dc {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0x0 0xfd7c08dc 0x0 0x4>;
++      clocks = <&hclk_vo0>;
++      clock-names = "link";
++      #clock-cells = <0>;
++    };
++
++    pclk_vo1_grf: pclk_vo1_grf@fd7c08ec {
++      compatible = "rockchip,rk3588-clock-gate-link";
++      reg = <0x0 0xfd7c08ec 0x0 0x4>;
++      clocks = <&hclk_vo1>;
++      clock-names = "link";
++      #clock-cells = <0>;
++    };
++
++    mclkin_i2s0: mclkin-i2s0 {
++      compatible = "fixed-clock";
++      #clock-cells = <0>;
++      clock-frequency = <0>;
++      clock-output-names = "i2s0_mclkin";
++    };
++
++    mclkin_i2s1: mclkin-i2s1 {
++      compatible = "fixed-clock";
++      #clock-cells = <0>;
++      clock-frequency = <0>;
++      clock-output-names = "i2s1_mclkin";
++    };
++
++		mclkin_i2s2: mclkin-i2s2 {
++      compatible = "fixed-clock";
++      #clock-cells = <0>;
++      clock-frequency = <0>;
++      clock-output-names = "i2s2_mclkin";
++    };
++
++    mclkin_i2s3: mclkin-i2s3 {
++      compatible = "fixed-clock";
++      #clock-cells = <0>;
++      clock-frequency = <0>;
++      clock-output-names = "i2s3_mclkin";
++    };
++
++    mclkout_i2s0: mclkout-i2s0@fd58c318 {
++      compatible = "rockchip,clk-out";
++      reg = <0 0xfd58c318 0 0x4>;
++      clocks = <&cru I2S0_8CH_MCLKOUT>;
++      #clock-cells = <0>;
++      clock-output-names = "i2s0_mclkout_to_io";
++      power-domains = <&power RK3588_PD_AUDIO>;
++      rockchip,bit-shift = <0>;
++      rockchip,bit-set-to-disable;
++    };
++
++    mclkout_i2s1: mclkout-i2s1@fd58c318 {
++      compatible = "rockchip,clk-out";
++      reg = <0 0xfd58c318 0 0x4>;
++      clocks = <&cru I2S1_8CH_MCLKOUT>;
++      #clock-cells = <0>;
++      clock-output-names = "i2s1_mclkout_to_io";
++      rockchip,bit-shift = <1>;
++      rockchip,bit-set-to-disable;
++    };
++
++    mclkout_i2s1m1: mclkout-i2s1@fd58a000 {
++      compatible = "rockchip,clk-out";
++      reg = <0 0xfd58a000 0 0x4>;
++      clocks = <&cru I2S1_8CH_MCLKOUT>;
++      #clock-cells = <0>;
++      clock-output-names = "i2s1m1_mclkout_to_io";
++      rockchip,bit-shift = <6>;
++    };
++
++    mclkout_i2s2: mclkout-i2s2@fd58c318 {
++      compatible = "rockchip,clk-out";
++      reg = <0 0xfd58c318 0 0x4>;
++      clocks = <&cru I2S2_2CH_MCLKOUT>;
++      #clock-cells = <0>;
++      clock-output-names = "i2s2_mclkout_to_io";
++      power-domains = <&power RK3588_PD_AUDIO>;
++      rockchip,bit-shift = <2>;
++      rockchip,bit-set-to-disable;
++    };
++
++    mclkout_i2s3: mclkout-i2s3@fd58c318 {
++      compatible = "rockchip,clk-out";
++      reg = <0 0xfd58c318 0 0x4>;
++      clocks = <&cru I2S3_2CH_MCLKOUT>;
++      #clock-cells = <0>;
++      clock-output-names = "i2s3_mclkout_to_io";
++      power-domains = <&power RK3588_PD_AUDIO>;
++      rockchip,bit-shift = <7>;
++      rockchip,bit-set-to-disable;
++    };
++};
+ #include "rk3588s-sound.dtsi"

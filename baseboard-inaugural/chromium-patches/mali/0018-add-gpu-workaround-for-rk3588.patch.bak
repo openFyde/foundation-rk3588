@@ -1,0 +1,13 @@
+Index: src/ui/ozone/platform/drm/gpu/hardware_display_controller.cc
+===================================================================
+--- src.orig/ui/ozone/platform/drm/gpu/hardware_display_controller.cc
++++ src/ui/ozone/platform/drm/gpu/hardware_display_controller.cc
+@@ -79,7 +79,7 @@ std::string NumberToHexString(const T va
+ bool IsRockchipAfbc(uint64_t modifier) {
+   return modifier ==
+          DRM_FORMAT_MOD_ARM_AFBC(AFBC_FORMAT_MOD_BLOCK_SIZE_16x16 |
+-                                 AFBC_FORMAT_MOD_SPARSE | AFBC_FORMAT_MOD_YTR);
++                                /* AFBC_FORMAT_MOD_SPARSE |*/ AFBC_FORMAT_MOD_YTR);
+ }
+
+ std::unique_ptr<DrmDumbBuffer> MakeCursorDrmBuffer(

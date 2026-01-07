@@ -46918,16 +46918,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_fb.c
  	afbc_fb = kzalloc(sizeof(*afbc_fb), GFP_KERNEL);
  	if (!afbc_fb)
  		return ERR_PTR(-ENOMEM);
-@@ -52,8 +342,6 @@ rockchip_fb_create(struct drm_device *de
- 	}
- 
- 	if (drm_is_afbc(mode_cmd->modifier[0])) {
--		int ret, i;
--
- 		ret = drm_gem_fb_afbc_init(dev, mode_cmd, afbc_fb);
- 		if (ret) {
- 			struct drm_gem_object **obj = afbc_fb->base.obj;
-@@ -69,24 +357,64 @@ rockchip_fb_create(struct drm_device *de
+@@ -62,24 +352,64 @@ rockchip_fb_create(struct drm_device *de
  	return &afbc_fb->base;
  }
  
@@ -52157,7 +52148,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	} bits;
  };
  
-@@ -136,199 +354,1804 @@ struct vop2_alpha_config {
+@@ -136,203 +354,1804 @@ struct vop2_alpha_config {
  	u16 dst_glb_alpha_value;
  };
  
@@ -52401,6 +52392,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	struct vop2 *vop2;
 +	struct reset_control *dclk_rst;
  	struct clk *dclk;
+-	struct clk *dclk_src;
 -	unsigned int id;
 -	const struct vop2_video_port_data *data;
 +	struct clk *dclk_parent;
@@ -52416,7 +52408,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +
 +	/* protected by dev->event_lock */
 +	struct drm_pending_vblank_event *event;
- 
++
 +	struct drm_flip_work fb_unref_work;
 +	unsigned long pending;
 +
@@ -52427,13 +52419,11 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	 *
 +	 */
 +	bool hdr_in;
- 	/**
--	 * @win_mask: Bitmask of windows attached to the video port;
++	/**
 +	 * @hdr_out: Indicate the screen want a hdr output
 +	 * from video port.
 +	 *
- 	 */
--	u32 win_mask;
++	 */
 +	bool hdr_out;
 +	/*
 +	 * @sdr2hdr_en: All the ui plane need to do sdr2hdr for a hdr_out enabled vp.
@@ -52454,14 +52444,16 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	 */
 +	bool has_dci_enabled_win;
  
--	struct vop2_win *primary_plane;
--	struct drm_pending_vblank_event *event;
-+	/**
+ 	/**
+-	 * @win_mask: Bitmask of windows attached to the video port;
 +	 * @bg_ovl_dly: The timing delay from background layer
 +	 * to overlay module.
-+	 */
+ 	 */
+-	u32 win_mask;
 +	u8 bg_ovl_dly;
-+
+ 
+-	struct vop2_win *primary_plane;
+-	struct drm_pending_vblank_event *event;
 +	/**
 +	 * @hdr_en: Set when has a hdr video input.
 +	 */
@@ -52574,8 +52566,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	 * it maybe init at dts file or uboot driver
 +	 */
 +	uint32_t plane_mask;
- 
--	unsigned int nlayers;
++
 +	/**
 +	 * @plane_mask_prop: plane mask interaction with userspace
 +	 */
@@ -52604,7 +52595,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	 * @hdr_ext_data_prop: hdr extend data interaction with userspace
 +	 */
 +	struct drm_property *hdr_ext_data_prop;
-+
+ 
+-	unsigned int nlayers;
 +	int hdrvivid_mode;
 +
 +	/**
@@ -52778,6 +52770,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	struct clk *hclk;
  	struct clk *aclk;
  	struct clk *pclk;
+-	struct clk *pll_hdmiphy0;
 +	struct reset_control *ahb_rst;
 +	struct reset_control *axi_rst;
 +	struct csu_clk *csu_aclk;
@@ -52806,7 +52799,9 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	/* must put at the end of the struct */
 +	struct vop2_win win[];
 +};
-+
+ 
+-	/* optional internal rgb encoder */
+-	struct rockchip_rgb *rgb;
 +struct vop2_clk {
 +	struct vop2 *vop2;
 +	struct list_head list;
@@ -52817,20 +52812,19 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	u8 parent_index;
 +};
  
--	/* optional internal rgb encoder */
--	struct rockchip_rgb *rgb;
-+#define to_vop2_clk(_hw) container_of(_hw, struct vop2_clk, hw)
- 
 -	/* must be put at the end of the struct */
 -	struct vop2_win win[];
++#define to_vop2_clk(_hw) container_of(_hw, struct vop2_clk, hw)
++
 +/*
 + * bus-format types.
 + */
 +struct drm_bus_format_enum_list {
 +	int type;
 +	const char *name;
-+};
-+
+ };
+ 
+-#define VOP2_MAX_DCLK_RATE		600000000
 +static const struct drm_bus_format_enum_list drm_bus_format_enum_list[] = {
 +	{ DRM_MODE_CONNECTOR_Unknown, "Unknown" },
 +	{ MEDIA_BUS_FMT_RGB565_1X16, "RGB565_1X16" },
@@ -52852,10 +52846,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	{ MEDIA_BUS_FMT_UYVY8_1X16, "UYVY8_1X16" },
 +	{ MEDIA_BUS_FMT_RGB101010_1X30, "RGB101010_1X30" },
 +	{ MEDIA_BUS_FMT_YUYV10_1X20, "YUYV10_1X20" },
- };
- 
--#define vop2_output_if_is_hdmi(x)	((x) == ROCKCHIP_VOP2_EP_HDMI0 || \
--					 (x) == ROCKCHIP_VOP2_EP_HDMI1)
++};
++
 +static DRM_ENUM_NAME_FN(drm_get_bus_format_name, drm_bus_format_enum_list)
 +
 +static inline struct vop2_video_port *to_vop2_video_port(struct drm_crtc *crtc)
@@ -52872,7 +52864,9 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	mutex_lock(&vop2->vop2_lock);
 +	rockchip_dmcfreq_lock();
 +}
-+
+ 
+-#define vop2_output_if_is_hdmi(x)	((x) == ROCKCHIP_VOP2_EP_HDMI0 || \
+-					 (x) == ROCKCHIP_VOP2_EP_HDMI1)
 +static void vop2_unlock(struct vop2 *vop2)
 +{
 +	rockchip_dmcfreq_unlock();
@@ -54050,7 +54044,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  {
  	switch (format) {
  	case DRM_FORMAT_XRGB2101010:
-@@ -343,9 +2166,13 @@ static enum vop2_data_format vop2_conver
+@@ -347,9 +2166,13 @@ static enum vop2_data_format vop2_conver
  		return VOP2_FMT_ARGB8888;
  	case DRM_FORMAT_RGB888:
  	case DRM_FORMAT_BGR888:
@@ -54065,7 +54059,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  		return VOP2_FMT_RGB565;
  	case DRM_FORMAT_NV12:
  	case DRM_FORMAT_NV21:
-@@ -362,8 +2189,10 @@ static enum vop2_data_format vop2_conver
+@@ -366,8 +2189,10 @@ static enum vop2_data_format vop2_conver
  		return VOP2_FMT_YUV422SP_10;
  	case DRM_FORMAT_NV24:
  	case DRM_FORMAT_NV42:
@@ -54076,7 +54070,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  		return VOP2_FMT_YUV444SP_10;
  	case DRM_FORMAT_YUYV:
  	case DRM_FORMAT_YVYU:
-@@ -372,19 +2201,20 @@ static enum vop2_data_format vop2_conver
+@@ -376,19 +2201,20 @@ static enum vop2_data_format vop2_conver
  	case DRM_FORMAT_UYVY:
  		return VOP2_FMT_YUYV422;
  	default:
@@ -54100,7 +54094,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	case DRM_FORMAT_XRGB8888:
  	case DRM_FORMAT_ARGB8888:
  	case DRM_FORMAT_XBGR8888:
-@@ -392,7 +2222,8 @@ static enum vop2_afbc_format vop2_conver
+@@ -396,7 +2222,8 @@ static enum vop2_afbc_format vop2_conver
  		return VOP2_AFBC_FMT_ARGB8888;
  	case DRM_FORMAT_RGB888:
  	case DRM_FORMAT_BGR888:
@@ -54110,7 +54104,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	case DRM_FORMAT_RGB565:
  	case DRM_FORMAT_BGR565:
  		return VOP2_AFBC_FMT_RGB565;
-@@ -407,14 +2238,109 @@ static enum vop2_afbc_format vop2_conver
+@@ -411,14 +2238,109 @@ static enum vop2_afbc_format vop2_conver
  		return VOP2_AFBC_FMT_YUV422;
  	case DRM_FORMAT_Y210:
  		return VOP2_AFBC_FMT_YUV422_10BIT;
@@ -54221,7 +54215,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  {
  	switch (format) {
  	case DRM_FORMAT_XBGR2101010:
-@@ -423,15 +2349,32 @@ static bool vop2_win_rb_swap(u32 format)
+@@ -427,15 +2349,32 @@ static bool vop2_win_rb_swap(u32 format)
  	case DRM_FORMAT_ABGR8888:
  	case DRM_FORMAT_BGR888:
  	case DRM_FORMAT_BGR565:
@@ -54255,7 +54249,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	case DRM_FORMAT_YUYV:
  	case DRM_FORMAT_Y210:
  	case DRM_FORMAT_YUV420_8BIT:
-@@ -442,7 +2385,7 @@ static bool vop2_afbc_uv_swap(u32 format
+@@ -446,7 +2385,7 @@ static bool vop2_afbc_uv_swap(u32 format
  	}
  }
  
@@ -54264,7 +54258,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  {
  	switch (format) {
  	case DRM_FORMAT_NV12:
-@@ -459,19 +2402,27 @@ static bool vop2_win_uv_swap(u32 format)
+@@ -463,19 +2402,27 @@ static bool vop2_win_uv_swap(u32 format)
  	}
  }
  
@@ -54294,7 +54288,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	/*
  	 * FIXME:
  	 *
-@@ -479,7 +2430,7 @@ static bool vop2_output_uv_swap(u32 bus_
+@@ -483,7 +2430,7 @@ static bool vop2_output_uv_swap(u32 bus_
  	 * so when out_mode is AAAA or P888, assume output is YUV444 on
  	 * yuv format.
  	 *
@@ -54303,7 +54297,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	 */
  	if (bus_format == MEDIA_BUS_FMT_YVYU8_1X16 ||
  	    bus_format == MEDIA_BUS_FMT_VYUY8_1X16 ||
-@@ -488,28 +2439,47 @@ static bool vop2_output_uv_swap(u32 bus_
+@@ -492,28 +2439,47 @@ static bool vop2_output_uv_swap(u32 bus_
  	    ((bus_format == MEDIA_BUS_FMT_YUV8_1X24 ||
  	      bus_format == MEDIA_BUS_FMT_YUV10_1X30) &&
  	     (output_mode == ROCKCHIP_OUT_MODE_AAAA ||
@@ -54360,7 +54354,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	case MEDIA_BUS_FMT_UYYVYY8_0_5X24:
  	case MEDIA_BUS_FMT_UYYVYY10_0_5X30:
  	case MEDIA_BUS_FMT_YUYV8_2X8:
-@@ -526,90 +2496,173 @@ static bool is_yuv_output(u32 bus_format
+@@ -530,90 +2496,173 @@ static bool is_yuv_output(u32 bus_format
  	}
  }
  
@@ -54584,7 +54578,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	/* 16 pixel align */
  	if (height & 0xf)
  		align16_crop = 16 - (height & 0xf);
-@@ -620,52 +2673,107 @@ static u32 vop2_afbc_transform_offset(st
+@@ -624,52 +2673,107 @@ static u32 vop2_afbc_transform_offset(st
  	if (height_tmp & 0x3f)
  		align64_crop = 64 - (height_tmp & 0x3f);
  
@@ -54735,7 +54729,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  }
  
  /*
-@@ -677,161 +2785,425 @@ static u32 vop2_afbc_transform_offset(st
+@@ -681,161 +2785,425 @@ static u32 vop2_afbc_transform_offset(st
   * 2: half mode, for rotate_90/270 mode
   *
   */
@@ -55264,7 +55258,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	}
  }
  
-@@ -869,49 +3241,849 @@ static int vop2_convert_csc_mode(int csc
+@@ -873,49 +3241,849 @@ static int vop2_convert_csc_mode(int csc
   */
  
  static void vop2_setup_csc_mode(struct vop2_video_port *vp,
@@ -56139,7 +56133,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  }
  
  static int vop2_core_clks_prepare_enable(struct vop2 *vop2)
-@@ -920,19 +4092,19 @@ static int vop2_core_clks_prepare_enable
+@@ -924,19 +4092,19 @@ static int vop2_core_clks_prepare_enable
  
  	ret = clk_prepare_enable(vop2->hclk);
  	if (ret < 0) {
@@ -56162,7 +56156,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  		goto err1;
  	}
  
-@@ -945,92 +4117,986 @@ err:
+@@ -949,92 +4117,986 @@ err:
  	return ret;
  }
  
@@ -57193,25 +57187,28 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	/*
  	 * Vop standby will take effect at end of current frame,
  	 * if dsp hold valid irq happen, it means standby complete.
-@@ -1039,27 +5105,40 @@ static void vop2_crtc_atomic_disable(str
+@@ -1043,30 +5105,40 @@ static void vop2_crtc_atomic_disable(str
  	 * if not, memory bus maybe dead.
  	 */
  	reinit_completion(&vp->dsp_hold_completion);
 +	vop2_dsp_hold_valid_irq_enable(crtc);
  
 -	vop2_crtc_enable_irq(vp, VP_INT_DSP_HOLD_VALID);
-+	spin_lock(&vop2->reg_lock);
- 
+-
 -	vop2_vp_write(vp, RK3568_VP_DSP_CTRL, RK3568_VP_DSP_CTRL__STANDBY);
-+	VOP_MODULE_SET(vop2, vp, splice_en, 0);
++	spin_lock(&vop2->reg_lock);
  
 -	ret = wait_for_completion_timeout(&vp->dsp_hold_completion,
 -					  msecs_to_jiffies(50));
 -	if (!ret)
 -		drm_info(vop2->drm, "wait for vp%d dsp_hold timeout\n", vp->id);
-+	VOP_MODULE_SET(vop2, vp, standby, 1);
++	VOP_MODULE_SET(vop2, vp, splice_en, 0);
  
 -	vop2_crtc_disable_irq(vp, VP_INT_DSP_HOLD_VALID);
++	VOP_MODULE_SET(vop2, vp, standby, 1);
+ 
+-	if (vp->dclk_src)
+-		clk_set_parent(vp->dclk, vp->dclk_src);
 +	spin_unlock(&vop2->reg_lock);
  
 -	clk_disable_unprepare(vp->dclk);
@@ -57245,7 +57242,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	if (crtc->state->event && !crtc->state->active) {
  		spin_lock_irq(&crtc->dev->event_lock);
  		drm_crtc_send_vblank_event(crtc, crtc->state->event);
-@@ -1069,121 +5148,597 @@ static void vop2_crtc_atomic_disable(str
+@@ -1076,121 +5148,597 @@ static void vop2_crtc_atomic_disable(str
  	}
  }
  
@@ -57890,7 +57887,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  		r <<= 5;
  		g <<= 4;
  		b <<= 5;
-@@ -1195,9 +5750,9 @@ static void vop2_plane_setup_color_key(s
+@@ -1202,9 +5750,9 @@ static void vop2_plane_setup_color_key(s
  	case DRM_FORMAT_ABGR8888:
  	case DRM_FORMAT_RGB888:
  	case DRM_FORMAT_BGR888:
@@ -57903,7 +57900,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  		r <<= 2;
  		g <<= 2;
  		b <<= 2;
-@@ -1205,263 +5760,610 @@ static void vop2_plane_setup_color_key(s
+@@ -1212,261 +5760,610 @@ static void vop2_plane_setup_color_key(s
  		break;
  	}
  
@@ -58510,10 +58507,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  
  	rb_swap = vop2_win_rb_swap(fb->format->format);
 -	vop2_win_write(win, VOP2_WIN_RB_SWAP, rb_swap);
--	if (!vop2_cluster_window(win)) {
--		uv_swap = vop2_win_uv_swap(fb->format->format);
--		vop2_win_write(win, VOP2_WIN_UV_SWAP, uv_swap);
-+	uv_swap = vop2_win_uv_swap(fb->format->format);
+ 	uv_swap = vop2_win_uv_swap(fb->format->format);
+-	vop2_win_write(win, VOP2_WIN_UV_SWAP, uv_swap);
 +	if (vpstate->tiled_en) {
 +		uv_swap = 1;
 +		if (vpstate->tiled_en == ROCKCHIP_TILED_BLOCK_SIZE_8x8)
@@ -58538,8 +58533,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			y2r_path_sel = true;
 +		}
 +		format = VOP2_FMT_RGB888_YUV444;
- 	}
- 
++	}
++
 +	if ((win->feature & WIN_FEATURE_DCI) && vpstate->dci_data)
 +		y2r_path_sel = true;
 +
@@ -58555,7 +58550,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	VOP_WIN_SET(vop2, win, csc_y2r_path_sel, y2r_path_sel);
 +	VOP_WIN_SET(vop2, win, format, format);
 +	VOP_WIN_SET(vop2, win, format_argb1555, is_argb1555_format(fb->format->format));
-+
+ 
  	if (fb->format->is_yuv) {
 -		vop2_win_write(win, VOP2_WIN_UV_VIR, DIV_ROUND_UP(fb->pitches[1], 4));
 -		vop2_win_write(win, VOP2_WIN_UV_MST, uv_mst);
@@ -58651,7 +58646,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	if (!pstate->visible) {
 +		vop2_plane_atomic_disable(plane, state);
 +		return;
- 	}
++	}
 +
 +	/*
 +	 * This means this window is moved from another vp
@@ -58685,7 +58680,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	} else {
 +		memcpy(&wsrc, &vpstate->src, sizeof(struct drm_rect));
 +		memcpy(&wdst, &vpstate->dest, sizeof(struct drm_rect));
-+	}
+ 	}
 +
 +	vop2_win_atomic_update(win, &wsrc, &wdst, pstate);
 +
@@ -58693,7 +58688,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  }
  
  static const struct drm_plane_helper_funcs vop2_plane_helper_funcs = {
-@@ -1470,21 +6372,336 @@ static const struct drm_plane_helper_fun
+@@ -1475,21 +6372,336 @@ static const struct drm_plane_helper_fun
  	.atomic_disable = vop2_plane_atomic_disable,
  };
  
@@ -59037,7 +59032,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  
  	return 0;
  }
-@@ -1492,301 +6709,2105 @@ static int vop2_crtc_enable_vblank(struc
+@@ -1497,301 +6709,2105 @@ static int vop2_crtc_enable_vblank(struc
  static void vop2_crtc_disable_vblank(struct drm_crtc *crtc)
  {
  	struct vop2_video_port *vp = to_vop2_video_port(crtc);
@@ -59315,8 +59310,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	s16 *lut_s;
 +	u32 value;
 +	int i;
- 
--	vop2_crtc_disable_irq(vp, VP_INT_FS_FIELD);
++
 +	value = readl(vop2->acm_regs + RK3528_ACM_CTRL);
 +	acm->acm_enable = value & 0x1;
 +	value = readl(vop2->acm_regs + RK3528_ACM_DELTA_RANGE);
@@ -59353,7 +59347,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		lut_h[i] = (value >> 12) & 0xff;
 +		lut_s[i] = (value >> 20) & 0x3ff;
 +	}
-+
+ 
+-	vop2_crtc_disable_irq(vp, VP_INT_FS_FIELD);
 +	return 0;
  }
  
@@ -60246,7 +60241,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			adj_mode->crtc_hsync_start += align;
 +			adj_mode->crtc_hsync_end += align;
 +			adj_mode->crtc_htotal += align;
-+
+ 
 +			DRM_WARN("VP%d: hactive need to be aligned with 4-pixel, %d -> %d\n",
 +				 vp->id, old_hdisplay, adj_mode->crtc_hdisplay);
 +		}
@@ -60262,7 +60257,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +
 +	if (mode->flags & DRM_MODE_FLAG_DBLCLK || vcstate->output_if & VOP_OUTPUT_IF_BT656)
 +		adj_mode->crtc_clock *= 2;
- 
++
 +	/*
 +	 * For RK3528, the path of CVBS output is like:
 +	 * VOP BT656 ENCODER -> CVBS BT656 DECODER -> CVBS ENCODER -> CVBS VDAC
@@ -60351,9 +60346,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 -		*dsp_ctrl |= RK3568_VP_DSP_CTRL__PRE_DITHER_DOWN_EN;
 +	if (is_yuv_output(vcstate->bus_format) && ((vp_data->feature & VOP_FEATURE_POST_FRC_V2) == 0))
 +		pre_dither_down_en = false;
- 
--	*dsp_ctrl |= FIELD_PREP(RK3568_VP_DSP_CTRL__DITHER_DOWN_SEL,
--				DITHER_DOWN_ALLEGRO);
++
 +	if (vp_data->feature & VOP_FEATURE_POST_FRC_V2 && pre_dither_down_en) {
 +		vop2_writel(vop2, RK3576_VP0_POST_DITHER_FRC_0, 0x00000000);
 +		vop2_writel(vop2, RK3576_VP0_POST_DITHER_FRC_1, 0x01000100);
@@ -60366,7 +60359,9 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		VOP_MODULE_SET(vop2, vp, pre_dither_down_en, pre_dither_down_en);
 +		VOP_MODULE_SET(vop2, vp, dither_down_sel, DITHER_DOWN_ALLEGRO);
 +	}
-+
+ 
+-	*dsp_ctrl |= FIELD_PREP(RK3568_VP_DSP_CTRL__DITHER_DOWN_SEL,
+-				DITHER_DOWN_ALLEGRO);
 +	/* If dither down enabled will lead to crc value dynamic changed */
 +	if (crtc->crc.opened) {
 +		VOP_MODULE_SET(vop2, vp, dither_down_en, 0);
@@ -60551,12 +60546,21 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			      __clk_get_name(dsc_txp_clk->hw.clk), ret);
 +		return ret;
 +	}
-+
-+	/* set dsc txp clk rate */
-+	clk_set_rate(dsc_txp_clk->hw.clk, vcstate->dsc_txp_clk_rate);
  
 -	die = vop2_readl(vop2, RK3568_DSP_IF_EN);
 -	dip = vop2_readl(vop2, RK3568_DSP_IF_POL);
++	/* set dsc txp clk rate */
++	clk_set_rate(dsc_txp_clk->hw.clk, vcstate->dsc_txp_clk_rate);
+ 
+-	switch (id) {
+-	case ROCKCHIP_VOP2_EP_RGB0:
+-		die &= ~RK3568_SYS_DSP_INFACE_EN_RGB_MUX;
+-		die |= RK3568_SYS_DSP_INFACE_EN_RGB |
+-			   FIELD_PREP(RK3568_SYS_DSP_INFACE_EN_RGB_MUX, vp->id);
+-		dip &= ~RK3568_DSP_IF_POL__RGB_LVDS_PIN_POL;
+-		dip |= FIELD_PREP(RK3568_DSP_IF_POL__RGB_LVDS_PIN_POL, polflags);
+-		if (polflags & POLFLAG_DCLK_INV)
+-			regmap_write(vop2->sys_grf, RK3568_GRF_VO_CON1, BIT(3 + 16) | BIT(3));
 +	/* set dsc pxl clk rate */
 +	dsc_pxl_clk = vop2_clk_get(vop2, dsc_data->dsc_pxl_clk_name);
 +	if (!dsc_pxl_clk) {
@@ -60572,16 +60576,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		return -ENODEV;
 +	}
 +	clk_set_rate(dsc_cds_clk->hw.clk, vcstate->dsc_cds_clk_rate);
- 
--	switch (id) {
--	case ROCKCHIP_VOP2_EP_RGB0:
--		die &= ~RK3568_SYS_DSP_INFACE_EN_RGB_MUX;
--		die |= RK3568_SYS_DSP_INFACE_EN_RGB |
--			   FIELD_PREP(RK3568_SYS_DSP_INFACE_EN_RGB_MUX, vp->id);
--		dip &= ~RK3568_DSP_IF_POL__RGB_LVDS_PIN_POL;
--		dip |= FIELD_PREP(RK3568_DSP_IF_POL__RGB_LVDS_PIN_POL, polflags);
--		if (polflags & POLFLAG_DCLK_INV)
--			regmap_write(vop2->sys_grf, RK3568_GRF_VO_CON1, BIT(3 + 16) | BIT(3));
++
 +	return 0;
 +}
 +
@@ -60747,9 +60742,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			}
 +		}
 +	}
- 
--	vop2_writel(vop2, RK3568_DSP_IF_EN, die);
--	vop2_writel(vop2, RK3568_DSP_IF_POL, dip);
++
 +	if (dclk_core_rate > if_pixclk->rate) {
 +		clk_set_rate(dclk_core->hw.clk, dclk_core_rate);
 +		if (output_if_is_mipi(conn_id))
@@ -60761,7 +60754,9 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		ret = vop2_cru_set_rate(if_pixclk, if_dclk);
 +		clk_set_rate(dclk_core->hw.clk, dclk_core_rate);
 +	}
-+
+ 
+-	vop2_writel(vop2, RK3568_DSP_IF_EN, die);
+-	vop2_writel(vop2, RK3568_DSP_IF_POL, dip);
 +	if (!dsc_txp_clk_is_biggest && vcstate->dsc_enable) {
 +		if (vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_LEFT_RIGHT_MODE) {
 +			vop2_set_dsc_clk(crtc, 0);
@@ -61345,7 +61340,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  }
  
  /*
-@@ -1795,328 +8816,1271 @@ static unsigned long rk3588_calc_cru_cfg
+@@ -1800,349 +8816,1271 @@ static unsigned long rk3588_calc_cru_cfg
   * 1: Video Port3
   * 3: Video Port 1(MIPI1 only)
   */
@@ -62165,14 +62160,11 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 -		    (act_end - us_to_vertical_line(mode, 0)) << 16 | act_end);
 +	if (vp->xmirror_en)
 +		VOP_MODULE_SET(vop2, vp, dsp_x_mir_en, 1);
- 
--	vop2_vp_write(vp, RK3568_VP_DSP_VTOTAL_VS_END, vtotal << 16 | vsync_len);
++
 +	VOP_INTR_SET(vop2, intr, line_flag_num[0], act_end);
 +	VOP_INTR_SET(vop2, intr, line_flag_num[1], act_end);
  
--	if (mode->flags & DRM_MODE_FLAG_DBLCLK) {
--		dsp_ctrl |= RK3568_VP_DSP_CTRL__CORE_DCLK_DIV;
--		clock *= 2;
+-	vop2_vp_write(vp, RK3568_VP_DSP_VTOTAL_VS_END, vtotal << 16 | vsync_len);
 +	VOP_MODULE_SET(vop2, vp, dsp_vtotal, vtotal);
 +	VOP_MODULE_SET(vop2, vp, dsp_vs_end, vsync_len);
 +	/**
@@ -62180,7 +62172,10 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	 */
 +	if (vcstate->max_refresh_rate && vcstate->min_refresh_rate)
 +		VOP_MODULE_SET(vop2, vp, sw_dsp_vtotal_imd, 1);
-+
+ 
+-	if (mode->flags & DRM_MODE_FLAG_DBLCLK) {
+-		dsp_ctrl |= RK3568_VP_DSP_CTRL__CORE_DCLK_DIV;
+-		clock *= 2;
 +	snprintf(clk_name, sizeof(clk_name), "dclk_out%d", vp->id);
 +	dclk_out = vop2_clk_get(vop2, clk_name);
 +	snprintf(clk_name, sizeof(clk_name), "dclk_core%d", vp->id);
@@ -62197,11 +62192,27 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 -	vop2_vp_write(vp, RK3568_VP_MIPI_CTRL, 0);
 +	snprintf(clk_name, sizeof(clk_name), "dclk%d", vp->id);
 +	dclk = vop2_clk_get(vop2, clk_name);
-+
-+	/*
+ 
+ 	/*
+-	 * Switch to HDMI PHY PLL as DCLK source for display modes up
+-	 * to 4K@60Hz, if available, otherwise keep using the system CRU.
 +	 * use HDMI_PHY_PLL as dclk source under 4K@60 if it is available,
 +	 * otherwise use system cru as dclk source.
-+	 */
+ 	 */
+-	if (vop2->pll_hdmiphy0 && clock <= VOP2_MAX_DCLK_RATE) {
+-		drm_for_each_encoder_mask(encoder, crtc->dev, crtc_state->encoder_mask) {
+-			struct rockchip_encoder *rkencoder = to_rockchip_encoder(encoder);
+-
+-			if (rkencoder->crtc_endpoint_id == ROCKCHIP_VOP2_EP_HDMI0) {
+-				if (!vp->dclk_src)
+-					vp->dclk_src = clk_get_parent(vp->dclk);
+-
+-				ret = clk_set_parent(vp->dclk, vop2->pll_hdmiphy0);
+-				if (ret < 0)
+-					drm_warn(vop2->drm,
+-						 "Could not switch to HDMI0 PHY PLL: %d\n", ret);
+-				break;
+-			}
 +	ret = vop2_clk_set_parent_extend(vp, vcstate, true);
 +	if (ret < 0)
 +		goto out;
@@ -62234,8 +62245,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			vop2_crtc_enable_dsc(crtc, old_cstate, 1);
 +		} else {
 +			vop2_crtc_enable_dsc(crtc, old_cstate, vcstate->dsc_id);
-+		}
-+	}
+ 		}
+ 	}
 +	/* For RK3588, the reset value of background is 0xa0080200,
 +	 * which will enable background and output a grey image. But
 +	 * the reset value is just valid in first frame and disable
@@ -62832,7 +62843,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  
  	alpha->src_color_ctrl.val = 0;
  	alpha->dst_color_ctrl.val = 0;
-@@ -2142,14 +10106,14 @@ static void vop2_parse_alpha(struct vop2
+@@ -2168,14 +10106,14 @@ static void vop2_parse_alpha(struct vop2
  		alpha->src_color_ctrl.bits.color_mode = ALPHA_SRC_PRE_MUL;
  		alpha->src_color_ctrl.bits.factor_mode = SRC_FAC_ALPHA_SRC_GLOBAL;
  	}
@@ -62849,7 +62860,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	alpha->dst_color_ctrl.bits.color_mode = dst_color_mode;
  	alpha->dst_color_ctrl.bits.factor_mode = ALPHA_SRC_INVERSE;
  
-@@ -2167,7 +10131,7 @@ static void vop2_parse_alpha(struct vop2
+@@ -2193,7 +10131,7 @@ static void vop2_parse_alpha(struct vop2
  	alpha->dst_alpha_ctrl.bits.factor_mode = ALPHA_SRC_INVERSE;
  }
  
@@ -62858,7 +62869,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  {
  	struct vop2_video_port *vp;
  	int used_layer = 0;
-@@ -2181,25 +10145,78 @@ static int vop2_find_start_mixer_id_for_
+@@ -2207,25 +10145,78 @@ static int vop2_find_start_mixer_id_for_
  	return used_layer;
  }
  
@@ -62947,7 +62958,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	alpha_config.src_premulti_en = premulti_en;
  	alpha_config.dst_premulti_en = false;
  	alpha_config.src_pixel_alpha_en = src_pixel_alpha_en;
-@@ -2209,54 +10226,50 @@ static void vop2_setup_cluster_alpha(str
+@@ -2235,54 +10226,50 @@ static void vop2_setup_cluster_alpha(str
  	vop2_parse_alpha(&alpha_config, &alpha);
  
  	alpha.src_color_ctrl.bits.src_dst_swap = swap;
@@ -63024,17 +63035,17 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 -	drm_atomic_crtc_for_each_plane(plane, &vp->crtc) {
 -		struct vop2_win *win = to_vop2_win(plane);
 +		vpstate = to_vop2_plane_state(pstate);
-+
-+		if (!vop2_plane_active(pstate))
-+			continue;
  
 -		if (plane->state->normalized_zpos == 0 &&
 -		    !is_opaque(plane->state->alpha) &&
++		if (!vop2_plane_active(pstate))
++			continue;
++
 +		if (vpstate->zpos == 0 && vpstate->global_alpha != 0xff &&
  		    !vop2_cluster_window(win)) {
  			/*
  			 * If bottom layer have global alpha effect [except cluster layer,
-@@ -2264,316 +10277,1593 @@ static void vop2_setup_alpha(struct vop2
+@@ -2290,316 +10277,1593 @@ static void vop2_setup_alpha(struct vop2
  			 * at cluster mix], bottom layer mix need deal with global alpha.
  			 */
  			bottom_layer_alpha_en = true;
@@ -63062,7 +63073,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	if (vop2->version == VOP_VERSION_RK3588 &&
 +	    vp->hdr10_at_splice_mode && vp->id == 0)
 +		mixer_id++;/* fixed path for rk3588: layer1 -> hdr10_1 */
-+
+ 
+-		if (plane->state->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
 +	alpha_config.dst_pixel_alpha_en = true; /* alpha value need transfer to next mix */
 +	for (i = 1; i < vp->nr_layers; i++) {
 +		zpos = &vop2_zpos[i];
@@ -63071,8 +63083,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			pstate = win->left_win->base.state;
 +		else
 +			pstate = win->base.state;
- 
--		if (plane->state->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
++
 +		vpstate = to_vop2_plane_state(pstate);
 +		fb = pstate->fb;
 +		if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
@@ -63307,14 +63318,14 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +				premulti_en = 1;
 +			else
 +				premulti_en = 0;
-+
-+			break;
-+		}
-+	}
  
 -		if (bottom_layer_alpha_en && zpos == 1) {
 -			gpremulti_en = premulti_en;
 -			/* Cd = Cs + (1 - As) * Cd * Agd */
++			break;
++		}
++	}
++
 +	alpha_config.dst_pixel_alpha_en = true; /* alpha value need transfer to next mix */
 +	for (i = 1; i < vp->nr_layers; i++) {
 +		zpos = &vop2_zpos[i];
@@ -63447,20 +63458,20 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +
 +	if (vop2->version == VOP_VERSION_RK3576 && vp->id == 0)
 +		rk3576_extra_alpha(vp, vop2_zpos);
-+}
-+
+ }
+ 
+-static void vop2_setup_layer_mixer(struct vop2_video_port *vp)
 +static u32 vop2_layer_cfg_update(struct vop2_layer *layer, u32 old_layer_cfg, u8 win_layer_id)
-+{
+ {
 +	const struct vop_reg *reg = &layer->regs->layer_sel;
 +	u32 mask = reg->mask;
 +	u32 shift = reg->shift;
 +
 +	return (old_layer_cfg & ~(mask << shift)) | ((win_layer_id & mask) << shift);
- }
- 
--static void vop2_setup_layer_mixer(struct vop2_video_port *vp)
++}
++
 +static u16 vop2_calc_bg_ovl_and_port_mux(struct vop2_video_port *vp)
- {
++{
 +	struct vop2_video_port *prev_vp;
  	struct vop2 *vop2 = vp->vop2;
 -	struct drm_plane *plane;
@@ -63674,12 +63685,12 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		layer_sel |= layer_sel_id << i * 4;
 +	}
 +	VOP_MODULE_SET(vop2, vp, layer_sel, layer_sel);
-+
+ 
+-	vop2_writel(vop2, RK3568_OVL_CTRL, ovl_ctrl);
 +	if (vp->id == 0 && vop2->version == VOP_VERSION_RK3576)
 +		rk3576_extra_layer_sel_for_vp(vp, vop2_zpos);
 +}
- 
--	vop2_writel(vop2, RK3568_OVL_CTRL, ovl_ctrl);
++
 +/*
 + * HDR window is fixed(not move in the overlay path with port_mux change)
 + * and is the most slow window. And the bg is the fast. So other windows
@@ -64273,10 +64284,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		if (vcstate->bcsh_en)
 +			DRM_WARN("VP%d unsupported BCSH\n", vp->id);
 +		return;
- 	}
- 
--	vop2_writel(vop2, RK3568_CLUSTER_DLY_NUM, cdly);
--	vop2_writel(vop2, RK3568_SMART_DLY_NUM, sdly);
++	}
++
 +	/*
 +	 * The BCSH only need to config once except one of the following
 +	 * condition changed:
@@ -64302,8 +64311,10 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			vcstate->post_r2y_en = 1;
 +		if (vcstate->yuv_overlay && !is_yuv_output(vcstate->bus_format))
 +			vcstate->post_y2r_en = 1;
-+	}
-+
+ 	}
+ 
+-	vop2_writel(vop2, RK3568_CLUSTER_DLY_NUM, cdly);
+-	vop2_writel(vop2, RK3568_SMART_DLY_NUM, sdly);
 +	vcstate->post_csc_mode = vop2_convert_csc_mode(vcstate->color_encoding, vcstate->color_range, CSC_10BIT_DEPTH);
 +
 +	if (vp_data->feature & VOP_FEATURE_OUTPUT_10BIT)
@@ -64645,8 +64656,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	vop2_sleep_scan_line_time(vp, delta_line);
 +	if (vop2_read_vcnt(vp) < wait_line)
 +		return;
- 
--	if (!vp->win_mask)
++
 +	ret = readx_poll_timeout_atomic(vop2_read_vcnt, vp, vcnt, vcnt < wait_line, 0, 50 * 1000);
 +	if (ret)
 +		DRM_DEV_ERROR(vop2->dev, "wait scan timing from FS to the assigned wait line: %d, vcnt:%d, ret:%d\n",
@@ -64664,7 +64674,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	u32 vcnt;
 +	int ret;
 +	int delta_line = wait_line - current_line;
-+
+ 
+-	if (!vp->win_mask)
 +	vop2_sleep_scan_line_time(vp, delta_line);
 +	if (vop2_read_vcnt(vp) > wait_line)
  		return;
@@ -64776,18 +64787,18 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		vop2_crtc_enable_line_flag_event(crtc, vcstate->line_flag);
 +	else
 +		vop2_crtc_disable_line_flag_event(crtc);
-+
+ 
+-	vop2_cfg_done(vp);
 +	spin_lock_irqsave(&vop2->irq_lock, flags);
 +	vop2_wb_commit(crtc);
 +	vop2_cfg_done(crtc);
  
--	vop2_cfg_done(vp);
+-	spin_lock_irq(&crtc->dev->event_lock);
 +	if (vp->mcu_timing.mcu_pix_total)
 +		VOP_MODULE_SET(vop2, vp, mcu_hold_mode, 0);
  
--	spin_lock_irq(&crtc->dev->event_lock);
 +	spin_unlock_irqrestore(&vop2->irq_lock, flags);
- 
++
 +	/*
 +	 * There is a (rather unlikely) possibility that a vblank interrupt
 +	 * fired before we set the cfg_done bit. To avoid spuriously
@@ -64811,12 +64822,12 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  		crtc->state->event = NULL;
  	}
 +	spin_unlock_irqrestore(&crtc->dev->event_lock, flags);
-+
+ 
+-	spin_unlock_irq(&crtc->dev->event_lock);
 +	for_each_old_plane_in_state(old_state, plane, old_pstate, i) {
 +		if (!old_pstate->fb)
 +			continue;
- 
--	spin_unlock_irq(&crtc->dev->event_lock);
++
 +		if (old_pstate->fb == plane->state->fb)
 +			continue;
 +		if (!vop2->skip_ref_fb)
@@ -64834,7 +64845,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	.mode_fixup = vop2_crtc_mode_fixup,
  	.atomic_check = vop2_crtc_atomic_check,
  	.atomic_begin = vop2_crtc_atomic_begin,
-@@ -2582,9 +11872,37 @@ static const struct drm_crtc_helper_func
+@@ -2608,9 +11872,37 @@ static const struct drm_crtc_helper_func
  	.atomic_disable = vop2_crtc_atomic_disable,
  };
  
@@ -64872,7 +64883,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  
  	if (WARN_ON(!crtc->state))
  		return NULL;
-@@ -2594,8 +11912,19 @@ static struct drm_crtc_state *vop2_crtc_
+@@ -2620,8 +11912,19 @@ static struct drm_crtc_state *vop2_crtc_
  	if (!vcstate)
  		return NULL;
  
@@ -64893,7 +64904,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	return &vcstate->base;
  }
  
-@@ -2605,42 +11934,532 @@ static void vop2_crtc_destroy_state(stru
+@@ -2631,42 +11934,532 @@ static void vop2_crtc_destroy_state(stru
  	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(state);
  
  	__drm_atomic_helper_crtc_destroy_state(&vcstate->base);
@@ -64921,7 +64932,9 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		}
 +	}
 +	drm_connector_list_iter_end(&conn_iter);
-+
+ 
+-	if (crtc->state)
+-		vop2_crtc_destroy_state(crtc, crtc->state);
 +	return NULL;
 +}
 +
@@ -64965,8 +64978,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	return ret;
 +}
  
--	if (crtc->state)
--		vop2_crtc_destroy_state(crtc, crtc->state);
+-	if (vcstate)
+-		__drm_atomic_helper_crtc_reset(crtc, &vcstate->base);
 +static int vop2_crtc_verify_crc_source(struct drm_crtc *crtc, const char *source_name,
 +				       size_t *values_cnt)
 +{
@@ -64983,9 +64996,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		if (source_name && strcmp(source_name, "auto") != 0)
 +			return -EINVAL;
 +	}
- 
--	if (vcstate)
--		__drm_atomic_helper_crtc_reset(crtc, &vcstate->base);
++
 +	/*
 +	 * The number of CRC values from encoder is 3 words;
 +	 * The number of CRC values from VOP is 1 words;
@@ -65436,7 +65447,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  	/*
  	 * The irq is shared with the iommu. If the runtime-pm state of the
  	 * vop2-device is disabled the irq has to be targeted at the iommu.
-@@ -2648,653 +12467,2027 @@ static irqreturn_t vop2_isr(int irq, voi
+@@ -2674,659 +12467,2027 @@ static irqreturn_t vop2_isr(int irq, voi
  	if (!pm_runtime_get_if_in_use(vop2->dev))
  		return IRQ_NONE;
  
@@ -65545,8 +65556,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		active_irqs = wb_irqs;
 +		ERROR_HANDLER(WB_UV_FIFO_FULL);
 +		ERROR_HANDLER(WB_YRGB_FIFO_FULL);
-+	}
-+
+ 	}
+ 
 +	for (i = 0; i < axi_max; i++) {
 +		active_irqs = axi_irqs[i];
 +
@@ -65628,13 +65639,18 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +
 +	vop2_core_clks_disable(vop2);
 +out:
-+	pm_runtime_put(vop2->dev);
-+
-+	return ret;
-+}
-+
+ 	pm_runtime_put(vop2->dev);
+ 
+ 	return ret;
+ }
+ 
+-static int vop2_plane_init(struct vop2 *vop2, struct vop2_win *win,
+-			   unsigned long possible_crtcs)
 +static irqreturn_t vop3_vp_isr(int irq, void *data)
-+{
+ {
+-	const struct vop2_win_data *win_data = win->data;
+-	unsigned int blend_caps = BIT(DRM_MODE_BLEND_PIXEL_NONE) |
+-				  BIT(DRM_MODE_BLEND_PREMULTI) |
 +	struct vop2_video_port *vp = data;
 +	struct vop2 *vop2 = vp->vop2;
 +	struct drm_crtc *crtc = &vp->rockchip_crtc.crtc;
@@ -65694,21 +65710,19 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +		DRM_DEV_ERROR_RATELIMITED(vop2->dev, "POST_BUF_EMPTY_INTR irq err at vp%d\n", vp->id);
 +		active_irqs &= ~POST_BUF_EMPTY_INTR;
 +		ret = IRQ_HANDLED;
- 	}
- 
++	}
++
 +	/* Unhandled irqs are spurious. */
 +	if (active_irqs)
 +		DRM_ERROR("Unknown video_port%d IRQs: %02x\n", vp->id, active_irqs);
 +
 +	vop2_core_clks_disable(vop2);
 +out:
- 	pm_runtime_put(vop2->dev);
- 
- 	return ret;
- }
- 
--static int vop2_plane_init(struct vop2 *vop2, struct vop2_win *win,
--			   unsigned long possible_crtcs)
++	pm_runtime_put(vop2->dev);
++
++	return ret;
++}
++
 +static int vop2_plane_create_name_property(struct vop2 *vop2, struct vop2_win *win)
 +{
 +	struct drm_prop_enum_list *props = vop2->plane_name_list;
@@ -65761,10 +65775,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +}
 +
 +static int vop2_plane_create_dci_property(struct vop2 *vop2, struct vop2_win *win)
- {
--	const struct vop2_win_data *win_data = win->data;
--	unsigned int blend_caps = BIT(DRM_MODE_BLEND_PIXEL_NONE) |
--				  BIT(DRM_MODE_BLEND_PREMULTI) |
++{
 +	struct drm_property *prop;
 +
 +	prop = drm_property_create(vop2->drm_dev, DRM_MODE_PROP_BLOB, "DCI_DATA", 0);
@@ -66009,11 +66020,11 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	struct drm_crtc *crtc;
 +	int i = 0, j = 0;
 +	u32 lut_len = 0;
- 
--		if (!vp->crtc.port)
++
 +	if (!vop2->lut_regs)
 +		return 0;
-+
+ 
+-		if (!vp->crtc.port)
 +	for (i = 0; i < vop2_data->nr_vps; i++) {
 +		vp = &vop2->vps[i];
 +		crtc = &vp->rockchip_crtc.crtc;
@@ -66035,12 +66046,12 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +				u32 b = j * lut_len * lut_len;
 +				u32 g = j * lut_len;
 +				u32 r = j;
-+
+ 
+-		return vp;
 +				vp->lut[j] = r | g | b;
 +			}
 +		}
- 
--		return vp;
++
 +		drm_mode_crtc_set_gamma_size(crtc, lut_len);
 +		drm_crtc_enable_color_mgmt(crtc, 0, false, lut_len);
 +		r_base = crtc->gamma_store;
@@ -66335,14 +66346,14 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +			DRM_DEV_INFO(vop2->dev, "VP%d plane_mask is zero, so ignore register crtc\n", vp->id);
 +			continue;
 +		}
- 
--		snprintf(dclk_name, sizeof(dclk_name), "dclk_vp%d", vp->id);
--		vp->dclk = devm_clk_get(vop2->dev, dclk_name);
++
 +		if (vop2_soc_is_rk3566())
 +			soc_id = vp_data->soc_id[1];
 +		else
 +			soc_id = vp_data->soc_id[0];
-+
+ 
+-		snprintf(dclk_name, sizeof(dclk_name), "dclk_vp%d", vp->id);
+-		vp->dclk = devm_clk_get(vop2->dev, dclk_name);
 +		snprintf(clk_name, sizeof(clk_name), "dclk_vp%d", vp->id);
 +		vp->dclk_rst = devm_reset_control_get_optional(vop2->dev, clk_name);
 +		if (IS_ERR(vp->dclk_rst)) {
@@ -66450,15 +66461,15 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +						break;
 +					}
 +				}
-+
-+				if (be_used_for_primary_plane)
-+					continue;
  
 -		ret = vop2_plane_init(vop2, win, possible_crtcs);
 -		if (ret) {
 -			drm_err(vop2->drm, "failed to init plane %s: %d\n",
 -				win->data->name, ret);
 -			return ret;
++				if (be_used_for_primary_plane)
++					continue;
++
 +				find_primary_plane = true;
 +				break;
 +			}
@@ -67126,8 +67137,11 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	"Cluster3",
 +	"Esmart2",
 +	"Esmart3",
-+};
-+
+ };
+ 
+-static const struct regmap_access_table vop2_volatile_table = {
+-	.no_ranges = vop2_nonvolatile_range,
+-	.n_no_ranges = ARRAY_SIZE(vop2_nonvolatile_range),
 +static char *vop2_plane_mask_to_string(unsigned long mask)
 +{
 +	return vop2_bitmask_to_string(mask, vop2_layer_name_list,
@@ -67249,9 +67263,14 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	.check_rate_volt = rockchip_monitor_check_rate_volt,
  };
  
--static const struct regmap_access_table vop2_volatile_table = {
--	.no_ranges = vop2_nonvolatile_range,
--	.n_no_ranges = ARRAY_SIZE(vop2_nonvolatile_range),
+-static const struct regmap_config vop2_regmap_config = {
+-	.reg_bits	= 32,
+-	.val_bits	= 32,
+-	.reg_stride	= 4,
+-	.max_register	= 0x3000,
+-	.name		= "vop2",
+-	.volatile_table	= &vop2_volatile_table,
+-	.cache_type	= REGCACHE_MAPLE,
 +static int devfreq_vop2_ondemand_func(struct devfreq *df, unsigned long *freq)
 +{
 +	struct vop2 *vop2 = df->data;
@@ -67276,14 +67295,6 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	.event_handler = devfreq_vop2_ondemand_handler,
  };
  
--static const struct regmap_config vop2_regmap_config = {
--	.reg_bits	= 32,
--	.val_bits	= 32,
--	.reg_stride	= 4,
--	.max_register	= 0x3000,
--	.name		= "vop2",
--	.volatile_table	= &vop2_volatile_table,
--	.cache_type	= REGCACHE_MAPLE,
 +static int vop2_devfreq_target(struct device *dev, unsigned long *freq,
 +			       u32 flags)
 +{
@@ -67338,8 +67349,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	.target	= vop2_devfreq_target,
 +	.get_dev_status	= vop2_devfreq_get_dev_status,
 +	.get_cur_freq = vop2_devfreq_get_cur_freq,
- };
- 
++};
++
 +static int rockchip_vop2_devfreq_init(struct vop2 *vop2)
 +{
 +	struct devfreq_dev_profile *dev_profile = &vop2_devfreq_profile;
@@ -67691,6 +67702,10 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
  		return PTR_ERR(vop2->pclk);
  	}
  
+-	vop2->pll_hdmiphy0 = devm_clk_get_optional(vop2->dev, "pll_hdmiphy0");
+-	if (IS_ERR(vop2->pll_hdmiphy0)) {
+-		drm_err(vop2->drm, "failed to get pll_hdmiphy0\n");
+-		return PTR_ERR(vop2->pll_hdmiphy0);
 +	vop2->ahb_rst = devm_reset_control_get_optional(vop2->dev, "ahb");
 +	if (IS_ERR(vop2->ahb_rst)) {
 +		DRM_DEV_ERROR(vop2->dev, "failed to get ahb reset\n");
@@ -67701,8 +67716,8 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c
 +	if (IS_ERR(vop2->axi_rst)) {
 +		DRM_DEV_ERROR(vop2->dev, "failed to get axi reset\n");
 +		return PTR_ERR(vop2->axi_rst);
-+	}
-+
+ 	}
+ 
 +	vop2->csu_aclk = rockchip_csu_get(dev, "aclk");
 +	if (IS_ERR(vop2->csu_aclk))
 +		vop2->csu_aclk = NULL;
@@ -83445,7 +83460,7 @@ Index: kernel-6_12/drivers/firmware/Kconfig
 ===================================================================
 --- kernel-6_12.orig/drivers/firmware/Kconfig
 +++ kernel-6_12/drivers/firmware/Kconfig
-@@ -120,6 +120,13 @@ config RASPBERRYPI_FIRMWARE
+@@ -119,6 +119,13 @@ config RASPBERRYPI_FIRMWARE
  	  This option enables support for communicating with the firmware on the
  	  Raspberry Pi.
  

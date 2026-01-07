@@ -1393,7 +1393,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 +&hdptxphy_hdmi0 {
 +  #clock-cells = <0>;
 +};
-+#if 0
++#if 1
 +&cru {
 +    assigned-clocks =
 +      <&cru PLL_PPLL>, <&cru PLL_AUPLL>,

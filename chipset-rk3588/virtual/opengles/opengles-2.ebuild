@@ -12,7 +12,7 @@ IUSE="mali panfrost"
 REQUIRED_USE=" ^^ ( mali panfrost ) "
 DEPEND="
 	mali? ( media-libs/mali-drivers-valhall-bin )
-  panfrost? ( media-libs/mesa-panfrost )
+  panfrost? ( media-libs/mesa-panthor )
 	x11-drivers/opengles-headers
 "
 RDEPEND="${DEPEND}"

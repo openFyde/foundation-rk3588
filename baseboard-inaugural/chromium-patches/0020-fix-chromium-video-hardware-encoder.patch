@@ -8,15 +8,15 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
  // Use of this source code is governed by a BSD-style license that can be
  // found in the LICENSE file.
  
-@@ -6,7 +6,6 @@
- // TODO(crbug.com/390223051): Remove C-library calls to fix the errors.
- #pragma allow_unsafe_libc_calls
+@@ -7,7 +7,6 @@
+ // TODO(crbug.com/390223051): spanify to fix the errors.
+ #pragma allow_unsafe_buffers
  #endif
 -
  #include "media/gpu/v4l2/v4l2_video_encode_accelerator.h"
  
  #include <fcntl.h>
-@@ -202,23 +201,28 @@ V4L2VideoEncodeAccelerator::~V4L2VideoEn
+@@ -205,23 +204,28 @@ V4L2VideoEncodeAccelerator::~V4L2VideoEn
  }
  
  EncoderStatus V4L2VideoEncodeAccelerator::Initialize(
@@ -46,7 +46,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -258,6 +262,7 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -261,6 +265,7 @@ EncoderStatus V4L2VideoEncodeAccelerator
    if (output_format_fourcc_ == V4L2_PIX_FMT_INVALID) {
      MEDIA_LOG(ERROR, media_log.get())
          << "invalid output_profile=" << GetProfileName(config.output_profile);
@@ -54,7 +54,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -266,6 +271,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -269,6 +274,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
          << "Failed to open device for profile="
          << GetProfileName(config.output_profile)
          << ", fourcc=" << FourccToString(output_format_fourcc_);
@@ -64,7 +64,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -282,6 +290,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -285,6 +293,9 @@ EncoderStatus V4L2VideoEncodeAccelerator
          << "Unsupported resolution: " << config.input_visible_size.ToString()
          << ", min=" << min_resolution.ToString()
          << ", max=" << max_resolution.ToString();
@@ -74,7 +74,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -299,12 +310,14 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -302,12 +313,14 @@ EncoderStatus V4L2VideoEncodeAccelerator
    if (device_->Ioctl(VIDIOC_QUERYCAP, &caps) != 0) {
      MEDIA_LOG(ERROR, media_log.get())
          << "ioctl() failed: VIDIOC_QUERYCAP, errno=" << errno;
@@ -89,7 +89,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      return {EncoderStatus::Codes::kEncoderInitializationError};
    }
  
-@@ -317,6 +330,7 @@ EncoderStatus V4L2VideoEncodeAccelerator
+@@ -344,6 +357,7 @@ EncoderStatus V4L2VideoEncodeAccelerator
  }
  
  void V4L2VideoEncodeAccelerator::InitializeTask(const Config& config) {
@@ -97,7 +97,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
    DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
    TRACE_EVENT0("media,gpu", "V4L2VEA::InitializeTask");
  
-@@ -625,7 +639,7 @@ void V4L2VideoEncodeAccelerator::Encode(
+@@ -652,7 +666,7 @@ void V4L2VideoEncodeAccelerator::Encode(
  
  void V4L2VideoEncodeAccelerator::UseOutputBitstreamBuffer(
      BitstreamBuffer buffer) {
@@ -106,7 +106,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
    DCHECK_CALLED_ON_VALID_SEQUENCE(child_sequence_checker_);
  
    encoder_task_runner_->PostTask(
-@@ -1120,7 +1134,7 @@ void V4L2VideoEncodeAccelerator::InputIm
+@@ -1143,7 +1157,7 @@ void V4L2VideoEncodeAccelerator::InputIm
  
  void V4L2VideoEncodeAccelerator::UseOutputBitstreamBufferTask(
      BitstreamBuffer buffer) {
@@ -115,7 +115,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
    DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
  
    if (buffer.size() < output_buffer_byte_size_) {
-@@ -1221,7 +1235,7 @@ void V4L2VideoEncodeAccelerator::Enqueue
+@@ -1244,7 +1258,7 @@ void V4L2VideoEncodeAccelerator::Enqueue
    DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
    DCHECK(input_queue_ && output_queue_);
    TRACE_EVENT0("media,gpu", "V4L2VEA::Enqueue");
@@ -124,7 +124,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
              << ", input_queue: " << encoder_input_queue_.size();
  
    bool do_streamon = false;
-@@ -1231,7 +1245,7 @@ void V4L2VideoEncodeAccelerator::Enqueue
+@@ -1254,7 +1268,7 @@ void V4L2VideoEncodeAccelerator::Enqueue
           input_queue_->FreeBuffersCount() > 0) {
      // A null frame indicates a flush.
      if (encoder_input_queue_.front().frame == nullptr) {
@@ -133,7 +133,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
        encoder_input_queue_.pop();
  
        // If we are not streaming, the device is not running and there is no need
-@@ -1337,14 +1351,14 @@ void V4L2VideoEncodeAccelerator::Enqueue
+@@ -1360,14 +1374,14 @@ void V4L2VideoEncodeAccelerator::Enqueue
  }
  
  void V4L2VideoEncodeAccelerator::Dequeue() {
@@ -150,7 +150,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
      DCHECK(input_queue_->IsStreaming());
  
      auto ret = input_queue_->DequeueBuffer();
-@@ -1401,7 +1415,7 @@ void V4L2VideoEncodeAccelerator::Dequeue
+@@ -1424,7 +1438,7 @@ void V4L2VideoEncodeAccelerator::Dequeue
  }
  
  void V4L2VideoEncodeAccelerator::PumpBitstreamBuffers() {
@@ -159,7 +159,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
    DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
  
    while (!output_buffer_queue_.empty()) {
-@@ -1428,7 +1442,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
+@@ -1451,7 +1465,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
        size_t output_data_size = CopyIntoOutputBuffer(
            output_buffer, bitstream_size, std::move(buffer_ref));
  
@@ -168,7 +168,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
                  << ", size=" << output_data_size
                  << ", key_frame=" << output_buf->IsKeyframe();
        const int64_t timestamp_us = output_buf->GetTimeStamp().tv_usec +
-@@ -1447,7 +1461,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
+@@ -1470,7 +1484,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
      if ((encoder_state_ == kFlushing) && output_buf->IsLast()) {
        // Notify client that flush has finished successfully. The flush callback
        // should be called after notifying the last buffer is ready.
@@ -177,7 +177,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
        encoder_state_ = kEncoding;
        child_task_runner_->PostTask(
            FROM_HERE, base::BindOnce(std::move(flush_callback_), true));
-@@ -1475,7 +1489,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
+@@ -1498,7 +1512,7 @@ void V4L2VideoEncodeAccelerator::PumpBit
  
  bool V4L2VideoEncodeAccelerator::EnqueueInputRecord(
      V4L2WritableBufferRef input_buf) {
@@ -186,7 +186,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
    DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
    DCHECK(!encoder_input_queue_.empty());
    TRACE_EVENT0("media,gpu", "V4L2VEA::EnqueueInputRecord");
-@@ -1627,7 +1641,7 @@ bool V4L2VideoEncodeAccelerator::Enqueue
+@@ -1649,7 +1663,7 @@ bool V4L2VideoEncodeAccelerator::Enqueue
  
  bool V4L2VideoEncodeAccelerator::EnqueueOutputRecord(
      V4L2WritableBufferRef output_buf) {
@@ -195,7 +195,7 @@ Index: src/media/gpu/v4l2/v4l2_video_encode_accelerator.cc
    DCHECK_CALLED_ON_VALID_SEQUENCE(encoder_sequence_checker_);
    TRACE_EVENT0("media,gpu", "V4L2VEA::EnqueueOutputRecord");
  
-@@ -2237,14 +2251,14 @@ bool V4L2VideoEncodeAccelerator::CreateI
+@@ -2259,14 +2273,14 @@ bool V4L2VideoEncodeAccelerator::CreateI
        num_buffers = kInputBufferCount;
        break;
    }

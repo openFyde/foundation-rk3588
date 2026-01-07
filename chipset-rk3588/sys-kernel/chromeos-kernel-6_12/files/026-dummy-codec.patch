@@ -24,11 +24,22 @@ Index: kernel-6_12/sound/soc/codecs/Kconfig
  config SND_SOC_HDMI_CODEC
  	tristate
  	select SND_PCM_ELD
+@@ -1160,6 +1168,10 @@ config SND_SOC_ES8328_SPI
+ 	depends on SPI_MASTER
+ 	select SND_SOC_ES8328
+ 
++config SND_SOC_ES8323
++	tristate "Everest Semi ES8323 CODEC"
++	depends on I2C
++
+ config SND_SOC_FRAMER
+ 	tristate "Framer codec"
+ 	depends on GENERIC_FRAMER
 Index: kernel-6_12/sound/soc/codecs/Makefile
 ===================================================================
 --- kernel-6_12.orig/sound/soc/codecs/Makefile
 +++ kernel-6_12/sound/soc/codecs/Makefile
-@@ -120,6 +120,7 @@ snd-soc-da7219-y := da7219.o da7219-aad.
+@@ -120,12 +120,14 @@ snd-soc-da7219-y := da7219.o da7219-aad.
  snd-soc-da732x-y := da732x.o
  snd-soc-da9055-y := da9055.o
  snd-soc-dmic-y := dmic.o
@@ -36,7 +47,14 @@ Index: kernel-6_12/sound/soc/codecs/Makefile
  snd-soc-es7134-y := es7134.o
  snd-soc-es7241-y := es7241.o
  snd-soc-es83xx-dsm-common-y := es83xx-dsm-common.o
-@@ -527,6 +528,7 @@ obj-$(CONFIG_SND_SOC_DA7219)	+= snd-soc-
+ snd-soc-es8311-y := es8311.o
+ snd-soc-es8316-y := es8316.o
+ snd-soc-es8326-y := es8326.o
++snd-soc-es8323-y := es8323.o
+ snd-soc-es8328-y := es8328.o
+ snd-soc-es8328-i2c-y := es8328-i2c.o
+ snd-soc-es8328-spi-y := es8328-spi.o
+@@ -527,12 +529,14 @@ obj-$(CONFIG_SND_SOC_DA7219)	+= snd-soc-
  obj-$(CONFIG_SND_SOC_DA732X)	+= snd-soc-da732x.o
  obj-$(CONFIG_SND_SOC_DA9055)	+= snd-soc-da9055.o
  obj-$(CONFIG_SND_SOC_DMIC)	+= snd-soc-dmic.o
@@ -44,6 +62,13 @@ Index: kernel-6_12/sound/soc/codecs/Makefile
  obj-$(CONFIG_SND_SOC_ES7134)	+= snd-soc-es7134.o
  obj-$(CONFIG_SND_SOC_ES7241)	+= snd-soc-es7241.o
  obj-$(CONFIG_SND_SOC_ES83XX_DSM_COMMON)    += snd-soc-es83xx-dsm-common.o
+ obj-$(CONFIG_SND_SOC_ES8311)    += snd-soc-es8311.o
+ obj-$(CONFIG_SND_SOC_ES8316)    += snd-soc-es8316.o
+ obj-$(CONFIG_SND_SOC_ES8326)    += snd-soc-es8326.o
++obj-$(CONFIG_SND_SOC_ES8323)	+= snd-soc-es8323.o
+ obj-$(CONFIG_SND_SOC_ES8328)	+= snd-soc-es8328.o
+ obj-$(CONFIG_SND_SOC_ES8328_I2C)+= snd-soc-es8328-i2c.o
+ obj-$(CONFIG_SND_SOC_ES8328_SPI)+= snd-soc-es8328-spi.o
 Index: kernel-6_12/sound/soc/codecs/dummy-codec.c
 ===================================================================
 --- /dev/null

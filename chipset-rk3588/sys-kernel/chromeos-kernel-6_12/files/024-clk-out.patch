@@ -2,9 +2,9 @@ Index: kernel-6_12/drivers/clk/rockchip/Kconfig
 ===================================================================
 --- kernel-6_12.orig/drivers/clk/rockchip/Kconfig
 +++ kernel-6_12/drivers/clk/rockchip/Kconfig
-@@ -123,4 +123,12 @@ config CLK_LINK
- 	  RK3562 and RK3588, supporting NIU (Network Interface Unit) 
- 	  dependencies and power domain transitions.
+@@ -114,4 +114,12 @@ config CLK_RK3588
+ 	help
+ 	  Build the driver for RK3588 Clock Driver.
  
 +config CLK_OUT
 +	tristate "Rockchip clock output switch driver"
@@ -19,11 +19,11 @@ Index: kernel-6_12/drivers/clk/rockchip/Makefile
 ===================================================================
 --- kernel-6_12.orig/drivers/clk/rockchip/Makefile
 +++ kernel-6_12/drivers/clk/rockchip/Makefile
-@@ -31,3 +31,4 @@ obj-$(CONFIG_CLK_RK3568)	+= clk-rk3568.o
+@@ -30,3 +30,4 @@ obj-$(CONFIG_CLK_RK3399)        += clk-r
+ obj-$(CONFIG_CLK_RK3568)	+= clk-rk3568.o
  obj-$(CONFIG_CLK_RK3576)	+= clk-rk3576.o rst-rk3576.o
  obj-$(CONFIG_CLK_RK3588)	+= clk-rk3588.o rst-rk3588.o
- obj-$(CONFIG_CLK_LINK)		+= clk-link.o
-+obj-$(CONFIG_CLK_OUT)		+= clk-out.o
++obj-$(CONFIG_CLK_OUT)          += clk-out.o
 Index: kernel-6_12/drivers/clk/rockchip/clk-out.c
 ===================================================================
 --- /dev/null

@@ -2,7 +2,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 ===================================================================
 --- kernel-6_12.orig/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +++ kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
-@@ -8,615 +8,1696 @@
+@@ -8,613 +8,1696 @@
   * Author: Simon Xue <xxm@rock-chips.com>
   */
  
@@ -99,7 +99,6 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 -#define PCIE_LINKUP			(PCIE_SMLH_LINKUP | PCIE_RDLH_LINKUP)
 -#define PCIE_RDLH_LINK_UP_CHGED		BIT(1)
 -#define PCIE_LINK_REQ_RST_NOT_INT	BIT(2)
--#define PCIE_L0S_ENTRY			0x11
 -#define PCIE_CLIENT_GENERAL_CONTROL	0x0
 -#define PCIE_CLIENT_INTR_STATUS_LEGACY	0x8
  #define PCIE_CLIENT_INTR_MASK_LEGACY	0x1c
@@ -602,8 +601,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	struct device *dev = rk_pcie->pci->dev;
 +	int ret;
  
--	if ((val & PCIE_LINKUP) == PCIE_LINKUP &&
--	    (val & PCIE_LTSSM_STATUS_MASK) == PCIE_L0S_ENTRY)
+-	if ((val & PCIE_LINKUP) == PCIE_LINKUP)
 -		return 1;
 +	rk_pcie->clk_cnt = devm_clk_bulk_get_all(dev, &rk_pcie->clks);
 +	if (rk_pcie->clk_cnt < 1)
@@ -1192,8 +1190,8 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 -static void rockchip_pcie_phy_deinit(struct rockchip_pcie *rockchip)
 +static int rk_pcie_disable_power(struct rk_pcie *rk_pcie)
  {
--	phy_exit(rockchip->phy);
 -	phy_power_off(rockchip->phy);
+-	phy_exit(rockchip->phy);
 +	int ret = 0;
 +	struct device *dev = rk_pcie->pci->dev;
 +
@@ -2120,7 +2118,104 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
      };
  
      ramoops: ramoops@110000 {
-@@ -570,6 +572,7 @@
+@@ -267,7 +269,7 @@
+     pinctrl-names = "default";
+     pinctrl-0 = <&finger_rst_test_en>;
+   };
+-
++#if 0
+   analog-sound {
+     status = "okay";
+     compatible = "simple-audio-card";
+@@ -351,7 +353,52 @@
+       press-threshold-microvolt = <10000>;
+     };
+   };
+-
++#else
++  es8388_sound: es8388-sound {
++    status = "okay";
++    compatible = "rockchip,multicodecs-card";
++    rockchip,card-name = "rockchip-es8388";
++    hp-det-gpio = <&gpio1 RK_PC0 GPIO_ACTIVE_LOW>;
++    io-channels = <&saradc 3>;
++    io-channel-names = "adc-detect";
++    keyup-threshold-microvolt = <500000>;
++    poll-interval = <100>;
++    spk-con-gpio = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
++    hp-con-gpio = <&gpio4 RK_PA4 GPIO_ACTIVE_HIGH>;
++    rockchip,format = "i2s";
++    rockchip,mclk-fs = <256>;
++    rockchip,cpu = <&i2s0_8ch>;
++    rockchip,codec = <&es8323>;
++    rockchip,audio-routing =
++            "Headphone", "LOUT1",
++            "Headphone", "ROUT1",
++            "Speaker", "LOUT2",
++            "Speaker", "ROUT2",
++            "Headphone", "Headphone Power",
++            "Speaker", "Speaker Power",
++            "LINPUT1", "Main Mic",
++            "LINPUT2", "Main Mic",
++            "RINPUT1", "Headset Mic",
++            "RINPUT2", "Headset Mic";
++    pinctrl-names = "default";
++    pinctrl-0 = <&hp_detect>, <&speaker_amplifier_en>, <&headphone_amplifier_en>;
++    play-pause-key {
++      label = "playpause";
++      linux,code = <KEY_PLAYPAUSE>;
++      press-threshold-microvolt = <10000>;
++    };
++    vol-up-key {
++      label = "volume up";
++      linux,code = <KEY_VOLUMEUP>;
++      press-threshold-microvolt = <135000>;
++    };
++    vol-down-key {
++      label = "volume down";
++      linux,code = <KEY_VOLUMEDOWN>;
++      press-threshold-microvolt = <220000>;
++    };
++  };
++#endif
+   adc_keys: adc-keys {
+     compatible = "adc-keys";
+     io-channels = <&saradc 1>;
+@@ -450,7 +497,7 @@
+   };
+ 
+   dmic: dmic {
+-    status = "okay";
++    status = "disabled";
+     compatible = "simple-audio-card";
+     simple-audio-card,name = "rockchip-dmic";
+ 
+@@ -466,7 +513,7 @@
+   };
+ 
+   pdmics: dummy-codec {
+-    status = "okay";
++    status = "disabled";
+     compatible = "rockchip,dummy-codec";
+     #sound-dai-cells = <0>;
+   };
+@@ -526,12 +573,13 @@
+   pinctrl-names = "default";
+   pinctrl-0 = <&i2c7m0_xfer>;
+ 
+-  es8388: es8388@11 {
++  es8323: es8323@11 {
+     status = "okay";
+     #sound-dai-cells = <0>;
+-    compatible = "everest,es8388", "everest,es8323";
++    compatible = "everest,es8323";
+     reg = <0x11>;
+     clocks = <&cru I2S0_8CH_MCLKOUT>;
++    clock-names = "mclk";
+     assigned-clocks = <&cru I2S0_8CH_MCLKOUT>;
+     assigned-clock-rates = <12288000>;
+     AVDD-supply = <&vcc_1v8_s0>;
+@@ -570,6 +618,7 @@
  };
  
  &i2s0_8ch {
@@ -2128,7 +2223,16 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
    status = "okay";
    pinctrl-0 = <&i2s0_lrck
           &i2s0_sclk
-@@ -848,6 +851,12 @@
+@@ -817,7 +866,7 @@
+   rockchip,path-map = <3 2 1 0>;
+   pinctrl-names = "default";
+   pinctrl-0 = <&pdm1m1_clk1 &pdm1m1_sdi3>;
+-  status = "okay";
++  status = "disabled";
+ };
+ 
+ &dp0_sound {
+@@ -848,6 +897,12 @@
        <850000000>, <1188000000>,
        <702000000>,
        <400000000>, <500000000>,
@@ -2141,7 +2245,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
        <750000000>, <100000000>,
        <400000000>, <100000000>,
        <200000000>,
-@@ -855,6 +864,7 @@
+@@ -855,6 +910,7 @@
        <200000000>, <12000000>,
        <12000000>, <99000000>,
        <20000000>;
@@ -2149,7 +2253,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
  };
  
  &wdt {
-@@ -1208,25 +1218,19 @@
+@@ -1208,25 +1264,19 @@
    pinctrl-0 = <&i2c8m2_xfer>;
  };
  
@@ -2538,7 +2642,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  {
  	struct rockchip_combphy_priv *priv = dev_get_drvdata(dev);
  
-@@ -263,57 +332,84 @@ static struct phy *rockchip_combphy_xlat
+@@ -263,60 +332,84 @@ static struct phy *rockchip_combphy_xlat
  		return ERR_PTR(-EINVAL);
  	}
  
@@ -2631,7 +2735,10 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
 +		if (ret != -EPROBE_DEFER)
 +			dev_warn(dev, "failed to get apb reset\n");
  
--	priv->phy_rst = devm_reset_control_get(dev, "phy");
+-	priv->phy_rst = devm_reset_control_get_exclusive(dev, "phy");
+-	/* fallback to old behaviour */
+-	if (PTR_ERR(priv->phy_rst) == -ENOENT)
+-		priv->phy_rst = devm_reset_control_array_get_exclusive(dev);
 -	if (IS_ERR(priv->phy_rst))
 -		return dev_err_probe(dev, PTR_ERR(priv->phy_rst), "failed to get phy reset\n");
 +		return ret;
@@ -2652,7 +2759,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  }
  
  static int rockchip_combphy_probe(struct platform_device *pdev)
-@@ -323,11 +419,11 @@ static int rockchip_combphy_probe(struct
+@@ -326,11 +419,11 @@ static int rockchip_combphy_probe(struct
  	struct rockchip_combphy_priv *priv;
  	const struct rockchip_combphy_cfg *phy_cfg;
  	struct resource *res;
@@ -2666,7 +2773,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  		return -EINVAL;
  	}
  
-@@ -335,35 +431,30 @@ static int rockchip_combphy_probe(struct
+@@ -338,35 +431,30 @@ static int rockchip_combphy_probe(struct
  	if (!priv)
  		return -ENOMEM;
  
@@ -2713,7 +2820,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  	priv->phy = devm_phy_create(dev, NULL, &rockchip_combphy_ops);
  	if (IS_ERR(priv->phy)) {
  		dev_err(dev, "failed to create combphy\n");
-@@ -378,85 +469,358 @@ static int rockchip_combphy_probe(struct
+@@ -381,85 +469,358 @@ static int rockchip_combphy_probe(struct
  	return PTR_ERR_OR_ZERO(phy_provider);
  }
  
@@ -3117,7 +3224,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  	case PHY_TYPE_QSGMII:
  		rockchip_combphy_param_write(priv->pipe_grf, &cfg->pipe_xpcs_phy_ready, true);
  		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_phymode_sel, true);
-@@ -464,78 +828,60 @@ static int rk3568_combphy_cfg(struct roc
+@@ -467,78 +828,60 @@ static int rk3568_combphy_cfg(struct roc
  		rockchip_combphy_param_write(priv->phy_grf, &cfg->pipe_sel_qsgmii, true);
  		rockchip_combphy_param_write(priv->phy_grf, &cfg->qsgmii_mode_set, true);
  		break;
@@ -3225,7 +3332,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  
  	return 0;
  }
-@@ -570,84 +916,309 @@ static const struct rockchip_combphy_grf
+@@ -573,84 +916,309 @@ static const struct rockchip_combphy_grf
  	.con3_for_sata		= { 0x000c, 15, 0, 0x00, 0x4407 },
  	/* pipe-grf */
  	.pipe_con0_for_sata	= { 0x0000, 15, 0, 0x00, 0x2220 },
@@ -3584,7 +3691,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  
  		rockchip_combphy_param_write(priv->phy_grf, &cfg->con0_for_sata, true);
  		rockchip_combphy_param_write(priv->phy_grf, &cfg->con1_for_sata, true);
-@@ -663,44 +1234,68 @@ static int rk3588_combphy_cfg(struct roc
+@@ -666,44 +1234,68 @@ static int rk3588_combphy_cfg(struct roc
  		return -EINVAL;
  	}
  
@@ -3678,7 +3785,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  		}
  		break;
  	default:
-@@ -708,23 +1303,43 @@ static int rk3588_combphy_cfg(struct roc
+@@ -711,23 +1303,43 @@ static int rk3588_combphy_cfg(struct roc
  		return -EINVAL;
  	}
  
@@ -3735,7 +3842,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  	}
  
  	return 0;
-@@ -737,6 +1352,7 @@ static const struct rockchip_combphy_grf
+@@ -740,6 +1352,7 @@ static const struct rockchip_combphy_grf
  	.pipe_rxterm_set	= { 0x0000, 12, 12, 0x00, 0x01 },
  	.pipe_txelec_set	= { 0x0004, 1, 1, 0x00, 0x01 },
  	.pipe_txcomp_set	= { 0x0004, 4, 4, 0x00, 0x01 },
@@ -3743,7 +3850,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  	.pipe_clk_25m		= { 0x0004, 14, 13, 0x00, 0x01 },
  	.pipe_clk_100m		= { 0x0004, 14, 13, 0x00, 0x02 },
  	.pipe_rxterm_sel	= { 0x0008, 8, 8, 0x00, 0x01 },
-@@ -754,28 +1370,41 @@ static const struct rockchip_combphy_grf
+@@ -757,28 +1370,41 @@ static const struct rockchip_combphy_grf
  	.con3_for_sata		= { 0x000c, 15, 0, 0x00, 0x0407 },
  	/* pipe-grf */
  	.pipe_con0_for_sata	= { 0x0000, 11, 5, 0x00, 0x22 },
@@ -3794,7 +3901,7 @@ Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-naneng-combphy.c
  		.compatible = "rockchip,rk3588-naneng-combphy",
  		.data = &rk3588_combphy_cfgs,
  	},
-@@ -786,7 +1415,7 @@ MODULE_DEVICE_TABLE(of, rockchip_combphy
+@@ -789,7 +1415,7 @@ MODULE_DEVICE_TABLE(of, rockchip_combphy
  static struct platform_driver rockchip_combphy_driver = {
  	.probe	= rockchip_combphy_probe,
  	.driver = {
@@ -3807,7 +3914,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 ===================================================================
 --- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 +++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-@@ -1620,107 +1620,113 @@
+@@ -1619,107 +1619,113 @@
  		rockchip,pmu = <&pmu1grf>;
  	};
  
@@ -4022,7 +4129,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
  
  	gmac1: ethernet@fe1c0000 {
  		compatible = "rockchip,rk3588-gmac", "snps,dwmac-4.20a";
-@@ -2808,12 +2814,12 @@
+@@ -2807,12 +2813,12 @@
  		reg = <0x0 0xfee00000 0x0 0x100>;
  		clocks = <&cru CLK_REF_PIPE_PHY0>, <&cru PCLK_PCIE_COMBO_PIPE_PHY0>,
  			 <&cru PCLK_PHP_ROOT>;
@@ -4037,7 +4144,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
  		rockchip,pipe-grf = <&php_grf>;
  		rockchip,pipe-phy-grf = <&pipe_phy0_grf>;
  		status = "disabled";
-@@ -2824,12 +2830,12 @@
+@@ -2823,12 +2829,12 @@
  		reg = <0x0 0xfee20000 0x0 0x100>;
  		clocks = <&cru CLK_REF_PIPE_PHY2>, <&cru PCLK_PCIE_COMBO_PIPE_PHY2>,
  			 <&cru PCLK_PHP_ROOT>;

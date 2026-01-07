@@ -1,0 +1,1471 @@
+Index: kernel-6_12/drivers/media/platform/rockchip/Kconfig
+===================================================================
+--- kernel-6_12.orig/drivers/media/platform/rockchip/Kconfig
++++ kernel-6_12/drivers/media/platform/rockchip/Kconfig
+@@ -2,5 +2,19 @@
+ 
+ comment "Rockchip media platform drivers"
+ 
++config VIDEO_RK3588_AV1_DEC
++	tristate "Rockchip RK3588 AV1 Video Decoder"
++	depends on VIDEO_DEV && VIDEO_V4L2_SUBDEV_API
++	depends on ARCH_ROCKCHIP || COMPILE_TEST
++	select VIDEOBUF2_DMA_CONTIG
++	select V4L2_MEM2MEM_DEV
++	help
++	  Support for the Rockchip RK3588 AV1 hardware video decoder.
++	  This is a V4L2 stateless decoder driver that uses the VDPU383
++	  hardware accelerator. Based on Rockchip MPP architecture.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called rk3588-av1-dec.
++
+ source "drivers/media/platform/rockchip/rga/Kconfig"
+ source "drivers/media/platform/rockchip/rkisp1/Kconfig"
+Index: kernel-6_12/drivers/media/platform/rockchip/Makefile
+===================================================================
+--- kernel-6_12.orig/drivers/media/platform/rockchip/Makefile
++++ kernel-6_12/drivers/media/platform/rockchip/Makefile
+@@ -1,3 +1,4 @@
+ # SPDX-License-Identifier: GPL-2.0-only
++obj-$(CONFIG_VIDEO_RK3588_AV1_DEC) += rk3588-av1-dec.o
+ obj-y += rga/
+ obj-y += rkisp1/
+Index: kernel-6_12/drivers/media/platform/rockchip/rk3588-av1-dec.c
+===================================================================
+--- /dev/null
++++ kernel-6_12/drivers/media/platform/rockchip/rk3588-av1-dec.c
+@@ -0,0 +1,893 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ * Rockchip RK3588 AV1 Stateless Video Decoder Driver
++ *
++ * Copyright (C) 2026
++ *
++ * Based on:
++ * - Rockchip MPP AV1 decoder (drivers/video/rockchip/mpp/mpp_av1dec.c)
++ * - Rockchip MPP HAL layer (mpp/hal/rkdec/av1d/hal_av1d_vdpu383.c)
++ *
++ * This is a V4L2 stateless decoder driver for the RK3588 AV1 hardware decoder.
++ * Like the MPP architecture, userspace is responsible for:
++ * - Parsing AV1 bitstream (OBUs, frame headers)
++ * - Managing DPB (Decoded Picture Buffer) and reference frames
++ * - Providing parsed frame parameters via V4L2 controls
++ *
++ * The kernel driver:
++ * - Receives parsed parameters via V4L2 AV1 stateless controls
++ * - Generates VDPU383 hardware registers (ported from MPP HAL)
++ * - Programs hardware and handles interrupts
++ * - Returns decoded frames to userspace
++ */
++
++#include <linux/clk.h>
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/pm_runtime.h>
++#include <linux/videodev2.h>
++#include <media/v4l2-ctrls.h>
++#include <media/v4l2-device.h>
++#include <media/v4l2-event.h>
++#include <media/v4l2-ioctl.h>
++#include <media/v4l2-mem2mem.h>
++#include <media/videobuf2-core.h>
++#include <media/videobuf2-dma-contig.h>
++#include <linux/dma-mapping.h>
++
++/* V4L2 AV1 controls */
++#include <uapi/linux/v4l2-controls.h>
++
++/* VDPU383 register definitions */
++#include "rk3588-av1-dec-regs.h"
++
++#define DRIVER_NAME "rk3588-av1-dec"
++
++/* Helper macros (from MPP) */
++#define MPP_ALIGN(x, a)		(((x) + (a) - 1) & ~((a) - 1))
++
++/* Hardware register offsets (from MPP driver) */
++#define AV1_REG_INTERRUPT		0x0004
++#define AV1_REG_CONFIG			0x0008
++
++/* Interrupt bits */
++#define AV1_INT_TIMEOUT			BIT(18)
++#define AV1_INT_DEC_RDY			BIT(12)
++#define AV1_INT_RAW			BIT(8)
++
++/* Register classes (MPP architecture) */
++enum rk3588_av1_reg_class {
++	RK3588_AV1_REG_CLASS_VCD = 0,	/* VPU decoder: 0x0000-0x07fc */
++	RK3588_AV1_REG_CLASS_CACHE = 1,	/* L2 cache: 0x10000-0x10294 */
++	RK3588_AV1_REG_CLASS_AFBC = 2,	/* AFBC: 0x20000-0x2034c */
++	RK3588_AV1_REG_CLASS_MAX,
++};
++
++/* Device context */
++struct rk3588_av1_dev {
++	struct v4l2_device v4l2_dev;
++	struct v4l2_m2m_dev *m2m_dev;
++	struct video_device vfd;
++	struct device *dev;
++
++	/* Hardware resources */
++	void __iomem *reg_base[RK3588_AV1_REG_CLASS_MAX];
++	int irq;
++	struct clk *aclk;
++	struct clk *hclk;
++
++	/* Decoder state */
++	struct mutex dev_mutex;
++
++	/* Statistics */
++	unsigned int decoded_frames;
++	unsigned int error_frames;
++};
++
++/* Uncompressed header size (from MPP) */
++#define VDPU383_UNCMPS_HEADER_SIZE	(MPP_ALIGN(5159, 128) / 8)  /* 645 bytes */
++
++/* Register buffer for hardware programming */
++struct rk3588_av1_reg_buf {
++	struct vdpu383_av1d_reg_set regs;	/* Hardware register set */
++	u8 *header_data;			/* Uncompressed header (DMA-able) */
++	dma_addr_t header_dma;			/* DMA address for header */
++	bool regs_valid;
++};
++
++/* Per-context state */
++struct rk3588_av1_ctx {
++	struct v4l2_fh fh;
++	struct rk3588_av1_dev *dev;
++
++	/* Format information */
++	struct v4l2_pix_format_mplane src_fmt;
++	struct v4l2_pix_format_mplane dst_fmt;
++
++	/* Register buffer for current frame */
++	struct rk3588_av1_reg_buf reg_buf;
++
++	/* Reference frame management (for stateful decoder) */
++	/* TODO: Add DPB (Decoded Picture Buffer) management */
++
++	/* Control handler and controls */
++	struct v4l2_ctrl_handler ctrl_handler;
++	const struct v4l2_ctrl_av1_sequence *sequence;
++	const struct v4l2_ctrl_av1_frame *frame;
++	const struct v4l2_ctrl_av1_film_grain *film_grain;
++
++	/* Current frame being processed */
++	struct vb2_v4l2_buffer *src_buf;
++	struct vb2_v4l2_buffer *dst_buf;
++};
++
++static inline struct rk3588_av1_ctx *fh_to_ctx(struct v4l2_fh *fh)
++{
++	return container_of(fh, struct rk3588_av1_ctx, fh);
++}
++
++/*
++ * V4L2 Queue Operations
++ */
++static int rk3588_av1_queue_setup(struct vb2_queue *vq,
++				   unsigned int *num_buffers,
++				   unsigned int *num_planes,
++				   unsigned int sizes[],
++				   struct device *alloc_devs[])
++{
++	struct rk3588_av1_ctx *ctx = vb2_get_drv_priv(vq);
++	struct v4l2_pix_format_mplane *fmt;
++
++	if (V4L2_TYPE_IS_OUTPUT(vq->type))
++		fmt = &ctx->src_fmt;
++	else
++		fmt = &ctx->dst_fmt;
++
++	if (*num_planes) {
++		if (*num_planes != fmt->num_planes)
++			return -EINVAL;
++		return 0;
++	}
++
++	*num_planes = fmt->num_planes;
++	sizes[0] = fmt->plane_fmt[0].sizeimage;
++	if (*num_planes == 2)
++		sizes[1] = fmt->plane_fmt[1].sizeimage;
++
++	return 0;
++}
++
++static int rk3588_av1_buf_prepare(struct vb2_buffer *vb)
++{
++	struct vb2_queue *vq = vb->vb2_queue;
++	struct rk3588_av1_ctx *ctx = vb2_get_drv_priv(vq);
++	struct v4l2_pix_format_mplane *fmt;
++	unsigned int i;
++
++	if (V4L2_TYPE_IS_OUTPUT(vq->type))
++		fmt = &ctx->src_fmt;
++	else
++		fmt = &ctx->dst_fmt;
++
++	for (i = 0; i < fmt->num_planes; i++) {
++		if (vb2_plane_size(vb, i) < fmt->plane_fmt[i].sizeimage)
++			return -EINVAL;
++	}
++
++	return 0;
++}
++
++static void rk3588_av1_buf_queue(struct vb2_buffer *vb)
++{
++	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
++	struct rk3588_av1_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
++
++	v4l2_m2m_buf_queue(ctx->fh.m2m_ctx, vbuf);
++}
++
++static int rk3588_av1_start_streaming(struct vb2_queue *q, unsigned int count)
++{
++	struct rk3588_av1_ctx *ctx = vb2_get_drv_priv(q);
++	struct rk3588_av1_dev *dev = ctx->dev;
++
++	pm_runtime_get_sync(dev->dev);
++
++	return 0;
++}
++
++static void rk3588_av1_stop_streaming(struct vb2_queue *q)
++{
++	struct rk3588_av1_ctx *ctx = vb2_get_drv_priv(q);
++	struct rk3588_av1_dev *dev = ctx->dev;
++	struct vb2_v4l2_buffer *vbuf;
++
++	/* Return all buffers */
++	while ((vbuf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx)))
++		v4l2_m2m_buf_done(vbuf, VB2_BUF_STATE_ERROR);
++	while ((vbuf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx)))
++		v4l2_m2m_buf_done(vbuf, VB2_BUF_STATE_ERROR);
++
++	pm_runtime_put(dev->dev);
++}
++
++static const struct vb2_ops rk3588_av1_qops = {
++	.queue_setup = rk3588_av1_queue_setup,
++	.buf_prepare = rk3588_av1_buf_prepare,
++	.buf_queue = rk3588_av1_buf_queue,
++	.start_streaming = rk3588_av1_start_streaming,
++	.stop_streaming = rk3588_av1_stop_streaming,
++	.wait_prepare = vb2_ops_wait_prepare,
++	.wait_finish = vb2_ops_wait_finish,
++};
++
++/*
++ * Queue initialization callback for M2M
++ */
++static int rk3588_av1_queue_init(void *priv, struct vb2_queue *src_vq,
++				  struct vb2_queue *dst_vq)
++{
++	struct rk3588_av1_ctx *ctx = priv;
++	int ret;
++
++	/* Initialize source (OUTPUT) queue */
++	src_vq->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
++	src_vq->io_modes = VB2_MMAP | VB2_DMABUF;
++	src_vq->drv_priv = ctx;
++	src_vq->ops = &rk3588_av1_qops;
++	src_vq->mem_ops = &vb2_dma_contig_memops;
++	src_vq->buf_struct_size = sizeof(struct v4l2_m2m_buffer);
++	src_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
++	src_vq->lock = &ctx->dev->dev_mutex;
++	src_vq->dev = ctx->dev->dev;
++
++	ret = vb2_queue_init(src_vq);
++	if (ret)
++		return ret;
++
++	/* Initialize destination (CAPTURE) queue */
++	dst_vq->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
++	dst_vq->io_modes = VB2_MMAP | VB2_DMABUF;
++	dst_vq->drv_priv = ctx;
++	dst_vq->ops = &rk3588_av1_qops;
++	dst_vq->mem_ops = &vb2_dma_contig_memops;
++	dst_vq->buf_struct_size = sizeof(struct v4l2_m2m_buffer);
++	dst_vq->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
++	dst_vq->lock = &ctx->dev->dev_mutex;
++	dst_vq->dev = ctx->dev->dev;
++
++	return vb2_queue_init(dst_vq);
++}
++
++/*
++ * Program hardware registers (ported from MPP av1dec_run)
++ * Writes VDPU383 registers to hardware
++ */
++static void rk3588_av1_program_registers(struct rk3588_av1_ctx *ctx)
++{
++	struct rk3588_av1_dev *dev = ctx->dev;
++	struct rk3588_av1_reg_buf *reg_buf = &ctx->reg_buf;
++	struct vdpu383_av1d_reg_set *regs = &reg_buf->regs;
++	void __iomem *base = dev->reg_base[RK3588_AV1_REG_CLASS_VCD];
++	u32 *reg_ptr = (u32 *)regs;
++	int i;
++
++	if (!reg_buf->regs_valid) {
++		dev_err(dev->dev, "No valid register data\n");
++		return;
++	}
++
++	/*
++	 * Write all registers except reg1 (interrupt/enable)
++	 * MPP writes regs 2-319, we write the full structure
++	 */
++	for (i = 2; i < (sizeof(*regs) / sizeof(u32)); i++) {
++		writel_relaxed(reg_ptr[i], base + (i * 4));
++	}
++
++	/* Memory barrier before starting decoder */
++	wmb();
++
++	/* Start decoder by writing enable register (reg1) */
++	writel(reg_ptr[1], base + AV1_REG_INTERRUPT);
++
++	dev_info(dev->dev, "Decoder started: stream_len=%u global_len=%u\n",
++		 regs->av1d_params.reg66_stream_len,
++		 regs->av1d_params.reg67_global_len);
++}
++
++/*
++ * Generate hardware registers from V4L2 AV1 controls
++ * Ported from MPP vdpu383_av1d_gen_regs()
++ *
++ * NOTE: This is a simplified version that sets up basic registers.
++ * Full implementation would include: uncompressed header generation,
++ * CDF setup, RCB buffers, collocated MV, film grain, etc.
++ */
++static int rk3588_av1_prepare_frame(struct rk3588_av1_ctx *ctx)
++{
++	struct rk3588_av1_dev *dev = ctx->dev;
++	struct vb2_buffer *src_vb = &ctx->src_buf->vb2_buf;
++	struct vb2_buffer *dst_vb = &ctx->dst_buf->vb2_buf;
++	struct vdpu383_av1d_reg_set *regs = &ctx->reg_buf.regs;
++	const struct v4l2_ctrl_av1_sequence *seq = ctx->sequence;
++	const struct v4l2_ctrl_av1_frame *frame = ctx->frame;
++	dma_addr_t src_dma, dst_dma;
++	u32 stream_len;
++	u32 width, height;
++	u32 hor_stride, ver_stride;
++
++	if (!seq || !frame) {
++		dev_err(dev->dev, "Missing AV1 sequence or frame parameters\n");
++		return -EINVAL;
++	}
++
++	/* Clear registers */
++	memset(regs, 0, sizeof(*regs));
++
++	/* Get buffer addresses */
++	src_dma = vb2_dma_contig_plane_dma_addr(src_vb, 0);
++	dst_dma = vb2_dma_contig_plane_dma_addr(dst_vb, 0);
++	stream_len = vb2_get_plane_payload(src_vb, 0);
++
++	/* Frame dimensions */
++	width = frame->frame_width_minus_1 + 1;
++	height = frame->frame_height_minus_1 + 1;
++
++	/*
++	 * Control registers (from MPP lines 2228-2269)
++	 */
++	regs->ctrl_regs.reg8_dec_mode = 4;  /* AV1 mode */
++	regs->ctrl_regs.reg9.fbc_e = 0;     /* No FBC for now */
++	regs->ctrl_regs.reg9.tile_e = 0;    /* No tile mode */
++	regs->ctrl_regs.reg9.buf_empty_en = 0;
++
++	/* Auto-gating enables */
++	regs->ctrl_regs.reg10.strmd_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.inter_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.intra_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.transd_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.recon_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.filterd_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.bus_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.ctrl_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.rcb_auto_gating_e = 1;
++	regs->ctrl_regs.reg10.err_prc_auto_gating_e = 1;
++
++	/* Timeout threshold */
++	regs->ctrl_regs.reg13_core_timeout_threshold = 0x3fffff;
++
++	/* Error processing */
++	regs->ctrl_regs.reg16.error_proc_disable = 1;
++	regs->ctrl_regs.reg16.error_spread_disable = 0;
++
++	/* CABAC error enable */
++	regs->ctrl_regs.reg20_cabac_error_en_lowbits = 0xffffffdf;
++	regs->ctrl_regs.reg21_cabac_error_en_highbits = 0x3fffffff;
++
++	/* AXI performance */
++	regs->ctrl_regs.reg28.axi_perf_work_e = 1;
++	regs->ctrl_regs.reg28.axi_cnt_type = 1;
++	regs->ctrl_regs.reg28.rd_latency_id = 11;
++
++	/* AXI counter configuration */
++	regs->ctrl_regs.reg29.addr_align_type = 1;
++	regs->ctrl_regs.reg29.ar_cnt_id_type = 0;
++	regs->ctrl_regs.reg29.aw_cnt_id_type = 1;
++	regs->ctrl_regs.reg29.ar_count_id = 17;
++	regs->ctrl_regs.reg29.aw_count_id = 0;
++
++	/* AXI QoS */
++	regs->ctrl_regs.reg30.axi_wr_qos = 0;
++	regs->ctrl_regs.reg30.axi_rd_qos = 0;
++
++	/*
++	 * Stream parameters (from MPP lines 2290-2315)
++	 */
++	regs->av1d_params.reg66_stream_len = MPP_ALIGN(stream_len + 15, 128);
++	regs->common_addrs.reg128_strm_base = src_dma;
++	regs->av1d_params.reg65_strm_start_bit = 0;
++
++	/*
++	 * Stride configuration (from MPP lines 2323-2360)
++	 * NV12 format: Y and UV planes
++	 */
++	hor_stride = ALIGN(width, 16);
++	ver_stride = ALIGN(height, 16);
++
++	regs->av1d_params.reg68_hor_virstride = hor_stride >> 4;
++	regs->av1d_params.reg69_raster_uv_hor_virstride = hor_stride >> 4;
++	regs->av1d_params.reg70_y_virstride = (hor_stride * ver_stride) >> 4;
++
++	/* Error reference strides (same as output) */
++	regs->av1d_params.reg80_error_ref_hor_virstride =
++		regs->av1d_params.reg68_hor_virstride;
++	regs->av1d_params.reg81_error_ref_raster_uv_hor_virstride =
++		regs->av1d_params.reg69_raster_uv_hor_virstride;
++	regs->av1d_params.reg82_error_ref_virstride =
++		regs->av1d_params.reg70_y_virstride;
++
++	/*
++	 * Output buffer address (from MPP lines 2385-2392)
++	 */
++	regs->av1d_addrs.reg168_decout_base = dst_dma;
++	regs->av1d_addrs.reg169_error_ref_base = dst_dma;
++
++	/*
++	 * TODO: Full implementation needs:
++	 * - Uncompressed header generation (prepare_uncompress_header)
++	 * - Reference frame setup
++	 * - CDF (Context Distribution Function) tables
++	 * - RCB (Reconstruction Buffer) configuration
++	 * - Collocated MV buffer setup
++	 * - Film grain synthesis parameters
++	 */
++
++	/* Mark registers as valid */
++	ctx->reg_buf.regs_valid = true;
++
++	dev_info(dev->dev, "Frame setup: %ux%u stream_len=%u stride=%u\n",
++		 width, height, stream_len, hor_stride);
++
++	return 0;
++}
++
++/*
++ * Device run - main decode function
++ * This will be called for each frame and will:
++ * 1. Parse frame parameters (TODO)
++ * 2. Program hardware registers (ported from MPP av1dec_run)
++ * 3. Start the decoder
++ * 4. Wait for interrupt
++ */
++static void rk3588_av1_device_run(void *priv)
++{
++	struct rk3588_av1_ctx *ctx = priv;
++	struct rk3588_av1_dev *dev = ctx->dev;
++	int ret;
++
++	ctx->src_buf = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
++	ctx->dst_buf = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
++
++	if (!ctx->src_buf || !ctx->dst_buf) {
++		dev_err(dev->dev, "Missing source or destination buffer\n");
++		goto err_buffers;
++	}
++
++	/* Prepare frame: parse bitstream and calculate registers */
++	ret = rk3588_av1_prepare_frame(ctx);
++	if (ret) {
++		dev_err(dev->dev, "Frame preparation failed: %d\n", ret);
++		goto err_buffers;
++	}
++
++	/* Program hardware registers */
++	rk3588_av1_program_registers(ctx);
++
++	/* Hardware will interrupt when done */
++	return;
++
++err_buffers:
++	/* Return buffers on error */
++	if (ctx->src_buf) {
++		v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
++		v4l2_m2m_buf_done(ctx->src_buf, VB2_BUF_STATE_ERROR);
++	}
++	if (ctx->dst_buf) {
++		v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
++		v4l2_m2m_buf_done(ctx->dst_buf, VB2_BUF_STATE_ERROR);
++	}
++	v4l2_m2m_job_finish(dev->m2m_dev, ctx->fh.m2m_ctx);
++}
++
++static const struct v4l2_m2m_ops rk3588_av1_m2m_ops = {
++	.device_run = rk3588_av1_device_run,
++};
++
++/*
++ * Interrupt handler (ported from MPP av1dec_vcd_irq and av1dec_isr)
++ */
++static irqreturn_t rk3588_av1_irq(int irq, void *data)
++{
++	struct rk3588_av1_dev *dev = data;
++	struct rk3588_av1_ctx *ctx;
++	struct vb2_v4l2_buffer *src_buf, *dst_buf;
++	enum vb2_buffer_state buf_state;
++	u32 status;
++
++	status = readl(dev->reg_base[RK3588_AV1_REG_CLASS_VCD] + AV1_REG_INTERRUPT);
++	if (!status)
++		return IRQ_NONE;
++
++	/* Clear interrupt */
++	writel(0, dev->reg_base[RK3588_AV1_REG_CLASS_VCD] + AV1_REG_INTERRUPT);
++
++	/* Get the context from M2M */
++	ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev);
++	if (!ctx) {
++		dev_err(dev->dev, "IRQ with no active context\n");
++		return IRQ_HANDLED;
++	}
++
++	/* Get buffers */
++	src_buf = v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
++	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
++
++	/* Check decode status */
++	if (status & AV1_INT_DEC_RDY) {
++		dev->decoded_frames++;
++		buf_state = VB2_BUF_STATE_DONE;
++		dev_info(dev->dev, "Frame decoded successfully (status=0x%08x)\n", status);
++	} else if (status & AV1_INT_TIMEOUT) {
++		dev->error_frames++;
++		buf_state = VB2_BUF_STATE_ERROR;
++		dev_err(dev->dev, "Decoder timeout (status=0x%08x)\n", status);
++	} else {
++		dev->error_frames++;
++		buf_state = VB2_BUF_STATE_ERROR;
++		dev_err(dev->dev, "Decoder error (status=0x%08x)\n", status);
++	}
++
++	/* Complete buffers */
++	if (src_buf)
++		v4l2_m2m_buf_done(src_buf, buf_state);
++	if (dst_buf)
++		v4l2_m2m_buf_done(dst_buf, buf_state);
++
++	/* Finish M2M job */
++	v4l2_m2m_job_finish(dev->m2m_dev, ctx->fh.m2m_ctx);
++
++	return IRQ_HANDLED;
++}
++
++/*
++ * V4L2 Control operations
++ */
++static int rk3588_av1_s_ctrl(struct v4l2_ctrl *ctrl)
++{
++	struct rk3588_av1_ctx *ctx = container_of(ctrl->handler,
++						   struct rk3588_av1_ctx,
++						   ctrl_handler);
++
++	switch (ctrl->id) {
++	case V4L2_CID_STATELESS_AV1_SEQUENCE:
++		ctx->sequence = ctrl->p_new.p_av1_sequence;
++		break;
++	case V4L2_CID_STATELESS_AV1_FRAME:
++		ctx->frame = ctrl->p_new.p_av1_frame;
++		break;
++	case V4L2_CID_STATELESS_AV1_FILM_GRAIN:
++		ctx->film_grain = ctrl->p_new.p_av1_film_grain;
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static const struct v4l2_ctrl_ops rk3588_av1_ctrl_ops = {
++	.s_ctrl = rk3588_av1_s_ctrl,
++};
++
++static int rk3588_av1_init_ctrls(struct rk3588_av1_ctx *ctx)
++{
++	struct v4l2_ctrl_handler *hdl = &ctx->ctrl_handler;
++	int ret;
++
++	ret = v4l2_ctrl_handler_init(hdl, 3);
++	if (ret)
++		return ret;
++
++	/* Add AV1 controls */
++	v4l2_ctrl_new_custom(hdl, &(struct v4l2_ctrl_config) {
++		.ops = &rk3588_av1_ctrl_ops,
++		.id = V4L2_CID_STATELESS_AV1_SEQUENCE,
++		.type = V4L2_CTRL_TYPE_AV1_SEQUENCE,
++	}, NULL);
++
++	v4l2_ctrl_new_custom(hdl, &(struct v4l2_ctrl_config) {
++		.ops = &rk3588_av1_ctrl_ops,
++		.id = V4L2_CID_STATELESS_AV1_FRAME,
++		.type = V4L2_CTRL_TYPE_AV1_FRAME,
++	}, NULL);
++
++	v4l2_ctrl_new_custom(hdl, &(struct v4l2_ctrl_config) {
++		.ops = &rk3588_av1_ctrl_ops,
++		.id = V4L2_CID_STATELESS_AV1_FILM_GRAIN,
++		.type = V4L2_CTRL_TYPE_AV1_FILM_GRAIN,
++	}, NULL);
++
++	if (hdl->error) {
++		ret = hdl->error;
++		v4l2_ctrl_handler_free(hdl);
++		return ret;
++	}
++
++	ctx->fh.ctrl_handler = hdl;
++	v4l2_ctrl_handler_setup(hdl);
++
++	return 0;
++}
++
++/*
++ * File operations
++ */
++static int rk3588_av1_open(struct file *file)
++{
++	struct rk3588_av1_dev *dev = video_drvdata(file);
++	struct rk3588_av1_ctx *ctx;
++	int ret;
++
++	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
++	if (!ctx)
++		return -ENOMEM;
++
++	ctx->dev = dev;
++	v4l2_fh_init(&ctx->fh, &dev->vfd);
++	file->private_data = &ctx->fh;
++
++	/* Initialize formats with defaults */
++	ctx->src_fmt.pixelformat = V4L2_PIX_FMT_AV1_FRAME;
++	ctx->src_fmt.num_planes = 1;
++	ctx->src_fmt.plane_fmt[0].sizeimage = SZ_1M;
++
++	ctx->dst_fmt.pixelformat = V4L2_PIX_FMT_NV12;
++	ctx->dst_fmt.width = 1920;
++	ctx->dst_fmt.height = 1088;
++	ctx->dst_fmt.num_planes = 1;
++	ctx->dst_fmt.plane_fmt[0].bytesperline = 1920;
++	ctx->dst_fmt.plane_fmt[0].sizeimage = 1920 * 1088 * 3 / 2;
++
++	/* Initialize controls */
++	ret = rk3588_av1_init_ctrls(ctx);
++	if (ret) {
++		v4l2_fh_exit(&ctx->fh);
++		kfree(ctx);
++		return ret;
++	}
++
++	/* Initialize M2M context */
++	ctx->fh.m2m_ctx = v4l2_m2m_ctx_init(dev->m2m_dev, ctx,
++					     rk3588_av1_queue_init);
++	if (IS_ERR(ctx->fh.m2m_ctx)) {
++		ret = PTR_ERR(ctx->fh.m2m_ctx);
++		v4l2_ctrl_handler_free(&ctx->ctrl_handler);
++		v4l2_fh_exit(&ctx->fh);
++		kfree(ctx);
++		return ret;
++	}
++
++	v4l2_fh_add(&ctx->fh);
++
++	return 0;
++}
++
++static int rk3588_av1_release(struct file *file)
++{
++	struct rk3588_av1_ctx *ctx = fh_to_ctx(file->private_data);
++
++	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
++	v4l2_ctrl_handler_free(&ctx->ctrl_handler);
++	v4l2_fh_del(&ctx->fh);
++	v4l2_fh_exit(&ctx->fh);
++	kfree(ctx);
++
++	return 0;
++}
++
++static const struct v4l2_file_operations rk3588_av1_fops = {
++	.owner = THIS_MODULE,
++	.open = rk3588_av1_open,
++	.release = rk3588_av1_release,
++	.poll = v4l2_m2m_fop_poll,
++	.unlocked_ioctl = video_ioctl2,
++	.mmap = v4l2_m2m_fop_mmap,
++};
++
++/*
++ * IOCTL operations
++ */
++static int rk3588_av1_querycap(struct file *file, void *priv,
++				struct v4l2_capability *cap)
++{
++	strscpy(cap->driver, DRIVER_NAME, sizeof(cap->driver));
++	strscpy(cap->card, "RK3588 AV1 Decoder", sizeof(cap->card));
++	snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s", DRIVER_NAME);
++
++	return 0;
++}
++
++static int rk3588_av1_enum_fmt(struct file *file, void *priv,
++				struct v4l2_fmtdesc *f)
++{
++	if (V4L2_TYPE_IS_OUTPUT(f->type)) {
++		/* Input: AV1 bitstream */
++		if (f->index > 0)
++			return -EINVAL;
++		f->pixelformat = V4L2_PIX_FMT_AV1_FRAME;
++	} else {
++		/* Output: NV12 */
++		if (f->index > 0)
++			return -EINVAL;
++		f->pixelformat = V4L2_PIX_FMT_NV12;
++	}
++
++	return 0;
++}
++
++static int rk3588_av1_g_fmt(struct file *file, void *priv, struct v4l2_format *f)
++{
++	struct rk3588_av1_ctx *ctx = fh_to_ctx(priv);
++
++	if (V4L2_TYPE_IS_OUTPUT(f->type))
++		f->fmt.pix_mp = ctx->src_fmt;
++	else
++		f->fmt.pix_mp = ctx->dst_fmt;
++
++	return 0;
++}
++
++static int rk3588_av1_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
++{
++	struct rk3588_av1_ctx *ctx = fh_to_ctx(priv);
++
++	/* TODO: Add format validation */
++	if (V4L2_TYPE_IS_OUTPUT(f->type))
++		ctx->src_fmt = f->fmt.pix_mp;
++	else
++		ctx->dst_fmt = f->fmt.pix_mp;
++
++	return 0;
++}
++
++static const struct v4l2_ioctl_ops rk3588_av1_ioctl_ops = {
++	.vidioc_querycap = rk3588_av1_querycap,
++	.vidioc_enum_fmt_vid_cap = rk3588_av1_enum_fmt,
++	.vidioc_enum_fmt_vid_out = rk3588_av1_enum_fmt,
++	.vidioc_g_fmt_vid_cap_mplane = rk3588_av1_g_fmt,
++	.vidioc_g_fmt_vid_out_mplane = rk3588_av1_g_fmt,
++	.vidioc_s_fmt_vid_cap_mplane = rk3588_av1_s_fmt,
++	.vidioc_s_fmt_vid_out_mplane = rk3588_av1_s_fmt,
++	.vidioc_try_fmt_vid_cap_mplane = rk3588_av1_g_fmt,
++	.vidioc_try_fmt_vid_out_mplane = rk3588_av1_g_fmt,
++
++	.vidioc_reqbufs = v4l2_m2m_ioctl_reqbufs,
++	.vidioc_querybuf = v4l2_m2m_ioctl_querybuf,
++	.vidioc_qbuf = v4l2_m2m_ioctl_qbuf,
++	.vidioc_dqbuf = v4l2_m2m_ioctl_dqbuf,
++	.vidioc_prepare_buf = v4l2_m2m_ioctl_prepare_buf,
++	.vidioc_create_bufs = v4l2_m2m_ioctl_create_bufs,
++	.vidioc_expbuf = v4l2_m2m_ioctl_expbuf,
++
++	.vidioc_streamon = v4l2_m2m_ioctl_streamon,
++	.vidioc_streamoff = v4l2_m2m_ioctl_streamoff,
++
++	.vidioc_subscribe_event = v4l2_ctrl_subscribe_event,
++	.vidioc_unsubscribe_event = v4l2_event_unsubscribe,
++};
++
++/*
++ * Platform driver
++ */
++static int rk3588_av1_probe(struct platform_device *pdev)
++{
++	struct rk3588_av1_dev *dev;
++	struct resource *res;
++	int ret, irq;
++
++	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
++	if (!dev)
++		return -ENOMEM;
++
++	dev->dev = &pdev->dev;
++	mutex_init(&dev->dev_mutex);
++	platform_set_drvdata(pdev, dev);
++
++	/* Map register regions (VCD, CACHE, AFBC) */
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	dev->reg_base[RK3588_AV1_REG_CLASS_VCD] = devm_ioremap_resource(&pdev->dev, res);
++	if (IS_ERR(dev->reg_base[RK3588_AV1_REG_CLASS_VCD]))
++		return PTR_ERR(dev->reg_base[RK3588_AV1_REG_CLASS_VCD]);
++
++	/* TODO: Map CACHE and AFBC regions if needed */
++
++	/* Get clocks */
++	dev->aclk = devm_clk_get(&pdev->dev, "aclk");
++	if (IS_ERR(dev->aclk))
++		return PTR_ERR(dev->aclk);
++
++	dev->hclk = devm_clk_get(&pdev->dev, "hclk");
++	if (IS_ERR(dev->hclk))
++		return PTR_ERR(dev->hclk);
++
++	/* Get and register IRQ */
++	irq = platform_get_irq(pdev, 0);
++	if (irq < 0)
++		return irq;
++
++	ret = devm_request_irq(&pdev->dev, irq, rk3588_av1_irq, 0,
++			       dev_name(&pdev->dev), dev);
++	if (ret) {
++		dev_err(&pdev->dev, "Failed to request IRQ: %d\n", ret);
++		return ret;
++	}
++
++	/* Initialize V4L2 device */
++	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
++	if (ret) {
++		dev_err(&pdev->dev, "Failed to register V4L2 device\n");
++		return ret;
++	}
++
++	/* Initialize M2M device */
++	dev->m2m_dev = v4l2_m2m_init(&rk3588_av1_m2m_ops);
++	if (IS_ERR(dev->m2m_dev)) {
++		ret = PTR_ERR(dev->m2m_dev);
++		goto err_v4l2;
++	}
++
++	/* Initialize video device */
++	dev->vfd.fops = &rk3588_av1_fops;
++	dev->vfd.ioctl_ops = &rk3588_av1_ioctl_ops;
++	dev->vfd.minor = -1;
++	dev->vfd.release = video_device_release_empty;
++	dev->vfd.lock = &dev->dev_mutex;
++	dev->vfd.v4l2_dev = &dev->v4l2_dev;
++	dev->vfd.vfl_dir = VFL_DIR_M2M;
++	dev->vfd.device_caps = V4L2_CAP_VIDEO_M2M_MPLANE | V4L2_CAP_STREAMING;
++	snprintf(dev->vfd.name, sizeof(dev->vfd.name), "%s", DRIVER_NAME);
++	video_set_drvdata(&dev->vfd, dev);
++
++	/* Register video device */
++	ret = video_register_device(&dev->vfd, VFL_TYPE_VIDEO, -1);
++	if (ret) {
++		dev_err(&pdev->dev, "Failed to register video device\n");
++		goto err_m2m;
++	}
++
++	pm_runtime_enable(&pdev->dev);
++
++	dev_info(&pdev->dev, "RK3588 AV1 stateful decoder registered as /dev/video%d\n",
++		 dev->vfd.num);
++
++	return 0;
++
++err_m2m:
++	v4l2_m2m_release(dev->m2m_dev);
++err_v4l2:
++	v4l2_device_unregister(&dev->v4l2_dev);
++	return ret;
++}
++
++static void rk3588_av1_remove(struct platform_device *pdev)
++{
++	struct rk3588_av1_dev *dev = platform_get_drvdata(pdev);
++
++	pm_runtime_disable(&pdev->dev);
++	video_unregister_device(&dev->vfd);
++	v4l2_m2m_release(dev->m2m_dev);
++	v4l2_device_unregister(&dev->v4l2_dev);
++}
++
++static const struct of_device_id rk3588_av1_dt_match[] = {
++	{ .compatible = "rockchip,rk3588-av1-decoder" },
++	{ /* sentinel */ }
++};
++MODULE_DEVICE_TABLE(of, rk3588_av1_dt_match);
++
++static struct platform_driver rk3588_av1_driver = {
++	.probe = rk3588_av1_probe,
++	.remove = rk3588_av1_remove,
++	.driver = {
++		.name = DRIVER_NAME,
++		.of_match_table = rk3588_av1_dt_match,
++	},
++};
++module_platform_driver(rk3588_av1_driver);
++
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR("RK3588 AV1 Decoder Development Team");
++MODULE_DESCRIPTION("Rockchip RK3588 AV1 Stateful Video Decoder");
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
+@@ -949,25 +949,7 @@
+     compatible = "rockchip,rk3588-mipidcphy-grf", "syscon";
+     reg = <0x0 0xfd5ec000 0x0 0x100>;
+   };
+-#if 0
+-  hclk_vo1: hclk_vo1@fd7c08ec {
+-    compatible = "rockchip,rk3588-clock-gate-link";
+-    reg = <0 0xfd7c08ec 0 0x10>;
+-    clock-names = "link";
+-    clocks = <&cru HCLK_VO1USB_TOP_ROOT>;
+-    #power-domain-cells = <1>;
+-    #clock-cells = <0>;
+-  };
+-
+-  hclk_vo0: hclk_vo0@fd7c08dc {
+-    compatible = "rockchip,rk3588-clock-gate-link";
+-    reg = <0 0xfd7c08dc 0 0x10>;
+-    clock-names = "link";
+-    clocks = <&cru HCLK_VOP_ROOT>;
+-    #power-domain-cells = <1>;
+-    #clock-cells = <0>;
+-  };
+-#endif
++
+   /* Updated to use existing aliases from rk3588-base.dtsi */
+   /* Removed duplicate phy@fed60000 and phy@fed80000 nodes - they exist in rk3588-base.dtsi */
+ 
+@@ -1388,7 +1370,7 @@
+ &hdptxphy_hdmi0 {
+   #clock-cells = <0>;
+ };
+-#if 1
++
+ &cru {
+     assigned-clocks =
+       <&cru PLL_PPLL>, <&cru PLL_AUPLL>,
+@@ -1415,204 +1397,8 @@
+       <12000000>, <99000000>,
+       <20000000>;
+ };
+-#endif
+-&clocks {
+-    hclk_vo1: hclk_vo1@fd7c08ec {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08ec 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_VO1USB_TOP_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_vdpu_low_pre: aclk_vdpu_low_pre@fd7c08b0 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08b0 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_vo0: hclk_vo0@fd7c08dc {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08dc 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_VOP_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_usb: hclk_usb@fd7c08a8 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08a8 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_VO1USB_TOP_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_nvm: hclk_nvm@fd7c087c {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c087c 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_NVM_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_usb: aclk_usb@fd7c08a8 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08a8 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VO1USB_TOP_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_isp1_pre: hclk_isp1_pre@fd7c0868 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c0868 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_VI_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_isp1_pre: aclk_isp1_pre@fd7c0868 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c0868 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VI_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_rkvdec0_pre: aclk_rkvdec0_pre@fd7c08a0 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08a0 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_rkvdec0_pre: hclk_rkvdec0_pre@fd7c08a0 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08a0 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_rkvdec1_pre: aclk_rkvdec1_pre@fd7c08a4 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08a4 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_rkvdec1_pre: hclk_rkvdec1_pre@fd7c08a4 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08a4 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_jpeg_decoder_pre: aclk_jpeg_decoder_pre@fd7c08b0 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08b0 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_rkvenc1_pre: aclk_rkvenc1_pre@fd7c08c0 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08c0 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_RKVENC0>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_rkvenc1_pre: hclk_rkvenc1_pre@fd7c08c0 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08c0 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_RKVENC0>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_hdcp0_pre: aclk_hdcp0_pre@fd7c08dc {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08dc 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VOP_LOW_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_hdcp1_pre: aclk_hdcp1_pre@fd7c08ec {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c08ec 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VO1USB_TOP_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    pclk_av1_pre: pclk_av1_pre@fd7c0910 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c0910 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru HCLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    aclk_av1_pre: aclk_av1_pre@fd7c0910 {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c0910 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&cru ACLK_VDPU_ROOT>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    hclk_sdio_pre: hclk_sdio_pre@fd7c092c {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0 0xfd7c092c 0 0x10>;
+-      clock-names = "link";
+-      clocks = <&hclk_nvm>;
+-      #power-domain-cells = <1>;
+-      #clock-cells = <0>;
+-    };
+-
+-    pclk_vo0_grf: pclk_vo0_grf@fd7c08dc {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0x0 0xfd7c08dc 0x0 0x4>;
+-      clocks = <&hclk_vo0>;
+-      clock-names = "link";
+-      #clock-cells = <0>;
+-    };
+-
+-    pclk_vo1_grf: pclk_vo1_grf@fd7c08ec {
+-      compatible = "rockchip,rk3588-clock-gate-link";
+-      reg = <0x0 0xfd7c08ec 0x0 0x4>;
+-      clocks = <&hclk_vo1>;
+-      clock-names = "link";
+-      #clock-cells = <0>;
+-    };
+ 
++&clocks {
+     mclkin_i2s0: mclkin-i2s0 {
+       compatible = "fixed-clock";
+       #clock-cells = <0>;
+@@ -1693,4 +1479,34 @@
+       rockchip,bit-set-to-disable;
+     };
+ };
++
++/* Disable old hantro-based AV1 decoder */
++&av1d {
++  status = "disabled";
++};
++
++/* New V4L2 stateless AV1 decoder (MPP-based architecture) */
++/ {
++  av1_decoder: video-codec@fdc70000 {
++    compatible = "rockchip,rk3588-av1-decoder";
++    reg = <0x0 0xfdc70000 0x0 0x800>,   /* VCD registers */
++          <0x0 0xfdc80000 0x0 0x400>,   /* CACHE registers */
++          <0x0 0xfdc90000 0x0 0x400>;   /* AFBC registers */
++    reg-names = "vcd", "cache", "afbc";
++    interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH 0>,
++                 <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH 0>,
++                 <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH 0>;
++    interrupt-names = "vdpu", "irq_cache", "irq_afbc";
++    assigned-clocks = <&cru ACLK_AV1>, <&cru PCLK_AV1>;
++    assigned-clock-rates = <400000000>, <400000000>;
++    clocks = <&cru ACLK_AV1>, <&cru PCLK_AV1>;
++    clock-names = "aclk", "hclk";
++    power-domains = <&power RK3588_PD_AV1>;
++    resets = <&cru SRST_A_AV1>, <&cru SRST_P_AV1>,
++             <&cru SRST_A_AV1_BIU>, <&cru SRST_P_AV1_BIU>;
++    iommus = <&av1d_mmu>;
++    status = "okay";
++  };
++};
++
+ #include "rk3588s-sound.dtsi"
+Index: kernel-6_12/drivers/media/platform/rockchip/rk3588-av1-dec-regs.h
+===================================================================
+--- /dev/null
++++ kernel-6_12/drivers/media/platform/rockchip/rk3588-av1-dec-regs.h
+@@ -0,0 +1,254 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Rockchip RK3588 AV1 Decoder - VDPU383 Register Definitions
++ *
++ * Copyright (C) 2026
++ *
++ * Ported from Rockchip MPP library (Apache-2.0 OR MIT license)
++ * Original file: mpp/hal/rkdec/inc/vdpu383_av1d.h
++ */
++
++#ifndef __RK3588_AV1_DEC_REGS_H__
++#define __RK3588_AV1_DEC_REGS_H__
++
++#include <linux/types.h>
++
++/*
++ * VDPU383 AV1 Decoder Register Structures
++ * Ported from MPP library for RK3588 hardware
++ */
++
++/* AV1 Decoder Parameters (registers 64-106) */
++struct vdpu383_av1d_params {
++	/* SWREG64 */
++	u32 reg64_unused;
++
++	/* SWREG65 - Stream parameter set */
++	u32 reg65_strm_start_bit;
++
++	/* SWREG66 - Stream length */
++	u32 reg66_stream_len;
++
++	/* SWREG67 - Global (uncompressed header) length */
++	u32 reg67_global_len;
++
++	/* SWREG68 - Horizontal stride */
++	u32 reg68_hor_virstride;
++
++	/* SWREG69 - Raster UV horizontal stride */
++	u32 reg69_raster_uv_hor_virstride;
++
++	/* SWREG70 - Y stride */
++	u32 reg70_y_virstride;
++
++	/* SWREG71-73 - Scaled reference strides */
++	u32 reg71_scl_ref_hor_virstride;
++	u32 reg72_scl_ref_raster_uv_hor_virstride;
++	u32 reg73_scl_ref_virstride;
++
++	/* SWREG74 - Film grain synthesis stride */
++	u32 reg74_fgs_ref_hor_virstride;
++
++	u32 reserve_reg75_79[5];
++
++	/* SWREG80-82 - Error reference strides */
++	u32 reg80_error_ref_hor_virstride;
++	u32 reg81_error_ref_raster_uv_hor_virstride;
++	u32 reg82_error_ref_virstride;
++
++	/* SWREG83-106 - Reference frame strides (8 reference frames × 3 values) */
++	u32 reg83_ref0_hor_virstride;
++	u32 reg84_ref0_raster_uv_hor_virstride;
++	u32 reg85_ref0_virstride;
++
++	u32 reg86_ref1_hor_virstride;
++	u32 reg87_ref1_raster_uv_hor_virstride;
++	u32 reg88_ref1_virstride;
++
++	u32 reg89_ref2_hor_virstride;
++	u32 reg90_ref2_raster_uv_hor_virstride;
++	u32 reg91_ref2_virstride;
++
++	u32 reg92_ref3_hor_virstride;
++	u32 reg93_ref3_raster_uv_hor_virstride;
++	u32 reg94_ref3_virstride;
++
++	u32 reg95_ref4_hor_virstride;
++	u32 reg96_ref4_raster_uv_hor_virstride;
++	u32 reg97_ref4_virstride;
++
++	u32 reg98_ref5_hor_virstride;
++	u32 reg99_ref5_raster_uv_hor_virstride;
++	u32 reg100_ref5_virstride;
++
++	u32 reg101_ref6_hor_virstride;
++	u32 reg102_ref6_raster_uv_hor_virstride;
++	u32 reg103_ref6_virstride;
++
++	u32 reg104_ref7_hor_virstride;
++	u32 reg105_ref7_raster_uv_hor_virstride;
++	u32 reg106_ref7_virstride;
++} __packed;
++
++/* AV1 Decoder Addresses (registers 168-232) */
++struct vdpu383_av1d_addrs {
++	/* SWREG168 - Decoded output base */
++	u32 reg168_decout_base;
++
++	/* SWREG169 - Error reference base */
++	u32 reg169_error_ref_base;
++
++	/* SWREG170-177 - Reference frame bases (8 frames) */
++	u32 reg170_av1_last_base;     /* REF0 */
++	u32 reg171_av1golden_base;    /* REF1 */
++	u32 reg172_av1alfter_base;    /* REF2 */
++	u32 reg173_refer3_base;
++	u32 reg174_refer4_base;
++	u32 reg175_refer5_base;
++	u32 reg176_refer6_base;
++	u32 reg177_refer7_base;
++
++	u32 reserve_reg178_191[14];
++
++	/* SWREG192 - FBC payload (current frame) base */
++	u32 reg192_payload_st_cur_base;
++
++	/* SWREG193 - FBC payload offset */
++	u32 reg193_fbc_payload_offset;
++
++	/* SWREG194-201 - FBC payload reference bases (8 frames) */
++	u32 reg194_payload_st_ref0_base;
++	u32 reg195_payload_st_ref1_base;
++	u32 reg196_payload_st_ref2_base;
++	u32 reg197_payload_st_ref3_base;
++	u32 reg198_payload_st_ref4_base;
++	u32 reg199_payload_st_ref5_base;
++	u32 reg200_payload_st_ref6_base;
++	u32 reg201_payload_st_ref7_base;
++
++	u32 reserve_reg202_215[14];
++
++	/* SWREG216 - Collocated MV (current frame) base */
++	u32 reg216_colmv_cur_base;
++
++	/* SWREG217-232 - Collocated MV reference bases (16 frames) */
++	u32 reg217_232_colmv_ref_base[16];
++} __packed;
++
++/* Control registers (registers 8-30) */
++struct vdpu383_ctrl_regs {
++	/* SWREG8 - Decoder mode */
++	u32 reg8_dec_mode;
++
++	/* SWREG9 - Decoder configuration */
++	struct {
++		u32 fbc_e : 1;
++		u32 tile_e : 1;
++		u32 scale_down_en : 1;
++		u32 buf_empty_en : 1;
++		u32 reserved : 28;
++	} reg9;
++
++	/* SWREG10 - Auto-gating controls */
++	struct {
++		u32 strmd_auto_gating_e : 1;
++		u32 inter_auto_gating_e : 1;
++		u32 intra_auto_gating_e : 1;
++		u32 transd_auto_gating_e : 1;
++		u32 recon_auto_gating_e : 1;
++		u32 filterd_auto_gating_e : 1;
++		u32 bus_auto_gating_e : 1;
++		u32 ctrl_auto_gating_e : 1;
++		u32 rcb_auto_gating_e : 1;
++		u32 err_prc_auto_gating_e : 1;
++		u32 reserved : 22;
++	} reg10;
++
++	/* SWREG11 - Timeout control */
++	struct {
++		u32 dec_timeout_dis : 1;
++		u32 reserved : 31;
++	} reg11;
++
++	u32 reg12_reserved;
++
++	/* SWREG13 - Core timeout threshold */
++	u32 reg13_core_timeout_threshold;
++
++	u32 reg14_15_reserved[2];
++
++	/* SWREG16 - Error processing */
++	struct {
++		u32 error_proc_disable : 1;
++		u32 error_spread_disable : 1;
++		u32 roi_error_ctu_cal_en : 1;
++		u32 reserved : 29;
++	} reg16;
++
++	u32 reg17_19_reserved[3];
++
++	/* SWREG20-21 - CABAC error enable */
++	u32 reg20_cabac_error_en_lowbits;
++	u32 reg21_cabac_error_en_highbits;
++
++	u32 reg22_27_reserved[6];
++
++	/* SWREG28 - AXI performance */
++	struct {
++		u32 axi_perf_work_e : 1;
++		u32 axi_cnt_type : 1;
++		u32 rd_latency_id : 5;
++		u32 reserved : 25;
++	} reg28;
++
++	/* SWREG29 - AXI counter configuration */
++	struct {
++		u32 addr_align_type : 2;
++		u32 ar_cnt_id_type : 1;
++		u32 aw_cnt_id_type : 1;
++		u32 ar_count_id : 8;
++		u32 aw_count_id : 8;
++		u32 rd_band_width_mode : 1;
++		u32 reserved : 11;
++	} reg29;
++
++	/* SWREG30 - AXI QoS */
++	struct {
++		u32 axi_wr_qos : 4;
++		u32 axi_rd_qos : 4;
++		u32 reserved : 24;
++	} reg30;
++} __packed;
++
++/* Common address registers (registers 128-161) */
++struct vdpu383_common_addrs {
++	/* SWREG128 - Stream base */
++	u32 reg128_strm_base;
++
++	u32 reg129_130_reserved[2];
++
++	/* SWREG131 - Global (uncompressed header) base */
++	u32 reg131_gbl_base;
++
++	/* SWREG132 - RCB (Reconstruction Buffer) base */
++	u32 reg132_scanlist_addr;
++
++	/* SWREG133 - Scale down base */
++	u32 reg133_scale_down_base;
++
++	u32 reg134_161_reserved[28];
++} __packed;
++
++/* Complete register set for VDPU383 AV1 Decoder */
++struct vdpu383_av1d_reg_set {
++	u32 reg0_7_reserved[8];
++	struct vdpu383_ctrl_regs ctrl_regs;         /* regs 8-30 */
++	u32 reg31_63_reserved[33];
++	struct vdpu383_av1d_params av1d_params;     /* regs 64-106 */
++	u32 reg107_127_reserved[21];
++	struct vdpu383_common_addrs common_addrs;   /* regs 128-161 */
++	u32 reg162_167_reserved[6];
++	struct vdpu383_av1d_addrs av1d_addrs;       /* regs 168-232 */
++} __packed;
++
++#endif /* __RK3588_AV1_DEC_REGS_H__ */

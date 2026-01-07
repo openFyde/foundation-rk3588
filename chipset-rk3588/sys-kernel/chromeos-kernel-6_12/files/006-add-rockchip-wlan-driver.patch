@@ -303,7 +303,8 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 +	-DUSE_NEW_RSPEC_DEFS                                                  \
 +	-DWL_EXT_IAPSTA -DWL_ESCAN -DCCODE_LIST -DSUSPEND_EVENT               \
 +	-DKEY_INSTALL_CHECK                                                   \
-+	-DENABLE_INSMOD_NO_FW_LOAD -Wno-missing-prototypes  -Wno-missing-declarations
++	-DENABLE_INSMOD_NO_FW_LOAD -Wno-missing-prototypes  -Wno-missing-declarations \
++	-Wno-fortify-source -Wno-error=attribute-warning
 +
 +DHDOFILES = aiutils.o siutils.o sbutils.o                                 \
 +	bcmutils.o bcmwifi_channels.o bcmxtlv.o bcm_app_utils.o bcmstdlib_s.o \
@@ -355,7 +356,6 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/Makefile
 +	DHDCFLAGS += -DGTK_OFFLOAD_SUPPORT
 +#	DHDCFLAGS += -DWL_STATIC_IF #-DDHD_MAX_STATIC_IFS=2
 +	DHDCFLAGS += -DWL_CLIENT_SAE -DWL_WPA3_TRANSITION_DISABLE -DWL_ENHANCED_PMF
-+#-DWPA3_DEBUG
 +	DHDCFLAGS += -DCONNECT_INFO_WAR -DWL_ROAM_WAR
 +	DHDCFLAGS += -DVNDR_IE_WAR
 +	DHDCFLAGS += -DRESTART_AP_WAR -DRXF0OVFL_REINIT_WAR
@@ -76585,7 +76585,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
-@@ -0,0 +1,23362 @@
+@@ -0,0 +1,23381 @@
 +/*
 + * Broadcom Dongle Host Driver (DHD), Linux-specific network interface.
 + * Basically selected code segments from usb-cdc.c and usb-rndis.c
@@ -86960,6 +86960,14 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +  dhd->fw_capabilities[cap_buf_size - 2] = ' ';
 +  dhd->fw_capabilities[cap_buf_size - 1] = '\0';
 +
++ /* Print all firmware capabilities for WPA3 debugging */
++ {
++   DHD_ERROR(("%s: ========== FW CAPABILITIES START ==========\n", __FUNCTION__));
++   DHD_ERROR(("%s: Full capability string (size=%d):\n", __FUNCTION__, cap_buf_size));
++   /* Print the full string first */
++   DHD_ERROR(("%s: [%s]\n", __FUNCTION__, dhd->fw_capabilities));
++   DHD_ERROR(("%s: ========== FW CAPABILITIES END ==========\n", __FUNCTION__));
++ }
 +  return 0;
 +}
 +
@@ -88028,6 +88036,16 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +               __FUNCTION__));
 +    op_mode = DHD_FLAG_MFG_MODE;
 +  }
++
++ /* Get firmware capabilities for WPA3 debugging */
++ ret = dhd_get_fw_capabilities(dhd);
++ if (ret < 0) {
++   DHD_ERROR(("%s: dhd_get_fw_capabilities failed (error=%d)\n", __FUNCTION__, ret));
++   /* Continue anyway, don't fail initialization */
++ } else {
++   DHD_ERROR(("%s: dhd_get_fw_capabilities succeeded\n", __FUNCTION__));
++ }
++ ret = 0; /* Reset ret to continue with other ioctls */
 +
 +  if ((!op_mode && dhd_get_fw_mode(dhd->info) == DHD_FLAG_MFG_MODE) ||
 +      (op_mode == DHD_FLAG_MFG_MODE)) {
@@ -90286,7 +90304,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +#if defined(BCMPCIE) && defined(DHDTCPACK_SUPPRESS)
 +      dhd_tcpack_suppress_set(dhdp, TCPACK_SUP_OFF);
 +#endif /* BCMPCIE && DHDTCPACK_SUPPRESS */
-+
++#if 0 /* linux doesn't need turning off Wifi */
 +#if defined(WLAN_ACCEL_BOOT)
 +      /*
 +       * Make Wifi suspended after boot up with forge_reg_on true
@@ -90305,6 +90323,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd_linux.c
 +      wl_android_wifi_off(net, TRUE);
 +#endif /* BT_OVER_SDIO */
 +#endif /* WLAN_ACCEL_BOOT */
++#endif
 +    }
 +  }
 +#endif /* OEM_ANDROID && (BCMPCIE || (BCMLXSDMMC) */
@@ -327313,7 +327332,7 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
-@@ -0,0 +1,28523 @@
+@@ -0,0 +1,28542 @@
 +/*
 + * Linux cfg80211 driver
 + *
@@ -332355,24 +332374,19 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +#endif /* WL_FILS */
 +#if defined(WL_SAE) || defined(WL_CLIENT_SAE)
 +    case NL80211_AUTHTYPE_SAE:
-+#ifdef WL_CLIENT_SAE
-+      if (!wl_is_pmkid_available(dev, sme->bssid))
-+        val = DOT11_SAE;
-+      else
-+#endif /* WL_CLIENT_SAE */
-+      {
-+        /* Fw will choose right auth type
-+         * dynamically based on PMKID availability
-+         */
-+        val = WL_AUTH_OPEN_SHARED;
-+      }
-+
-+      WL_DBG(("sae auth type\n"));
-+#ifdef WPA3_DEBUG
-+	    WL_ERR(("WPA3-SAE: Authentication initiated for BSSID %pM\n", sme->bssid));
-+   	  WL_ERR(("WPA3-SAE: PMKID available: %s, Auth value: 0x%x\n",
-+     		wl_is_pmkid_available(dev, sme->bssid) ? "Yes" : "No", val));
-+#endif /* WPA3_DEBUG */
++#ifdef WL_SAE
++   /* WL_SAE: Firmware handles SAE, always use DOT11_SAE */
++   val = DOT11_SAE;
++#else /* WL_CLIENT_SAE */
++   /* WL_CLIENT_SAE: wpa_supplicant handles SAE.
++    * Use OPEN_SYSTEM auth type to allow external SAE authentication.
++    * The driver will receive SAE frames via management frame
++    * registration and forward them to wpa_supplicant.
++    */
++   val = WL_AUTH_OPEN_SYSTEM;
++#endif /* WL_SAE */
++   WL_DBG(("WPA3-SAE: Authentication initiated for BSSID %pM, type:0x%x, PMKID available: %s\n",
++      sme->bssid, val, wl_is_pmkid_available(dev, sme->bssid) ? "Yes" : "No"));
 +      break;
 +#endif /* WL_SAE || WL_CLIENT_SAE */
 +#ifdef BCMCCX
@@ -332772,6 +332786,19 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +      }
 +    }
 +  }
++
++ /* Check if userspace explicitly requested MFP */
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0))
++ if (sme->mfp == NL80211_MFP_REQUIRED) {
++   WL_INFORM_MEM(("Userspace requires MFP, setting MFP=REQUIRED\n"));
++   mfp = WL_MFP_REQUIRED;
++ } else if (sme->mfp == NL80211_MFP_OPTIONAL && mfp == WL_MFP_NONE) {
++   /* If userspace says optional and we haven't detected it yet,
++    * set to CAPABLE to allow connection to both MFP and non-MFP networks
++    */
++   mfp = WL_MFP_CAPABLE;
++ }
++#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0) */
 +
 +  /* WPA3-SAE REQUIRES MFP - Override if SAE authentication is being used */
 +  if (sec && (sec->wpa_auth & WPA3_AUTH_SAE_PSK) && (mfp == WL_MFP_NONE)) {
@@ -334669,6 +334696,17 @@ Index: kernel-6_12/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.
 +  chanspec_t scan_chspec = 1;
 +
 +  WL_DBG(("Enter len=%zu\n", sme->ie_len));
++#ifdef WPA3_DEBUG
++ WL_ERR(("WPA3-DEBUG: wl_cfg80211_connect called - SSID=%s auth_type=%d\n",
++   sme->ssid ? (char *)sme->ssid : "NULL", sme->auth_type));
++ if (sme->crypto.n_akm_suites > 0) {
++   WL_ERR(("WPA3-DEBUG: AKM suite[0]=0x%08x n_akm=%d\n",
++     sme->crypto.akm_suites[0], sme->crypto.n_akm_suites));
++ }
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0))
++ WL_ERR(("WPA3-DEBUG: sme->mfp=%d\n", sme->mfp));
++#endif
++#endif /* WPA3_DEBUG */
 +  RETURN_EIO_IF_NOT_UP(cfg);
 +
 +  /* syncronize the connect states */

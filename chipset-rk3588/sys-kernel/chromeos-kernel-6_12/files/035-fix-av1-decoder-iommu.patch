@@ -1,0 +1,1664 @@
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+@@ -435,7 +435,7 @@
+ 		};
+   };
+ 
+-	reserved-memory {
++	reserved_memory: reserved-memory {
+ 		#address-cells = <2>;
+ 		#size-cells = <2>;
+ 		ranges;
+@@ -445,6 +445,13 @@
+ 			reg = <0x0 0x0010f000 0x0 0x100>;
+ 			no-map;
+ 		};
++
++		cma {
++			compatible = "shared-dma-pool";
++			reusable;
++			size = <0x0 (256 * 0x100000)>; /* 256 MiB */
++			linux,cma-default;
++		};
+ 	};
+ 
+ 	gpu: gpu@fb000000 {
+@@ -1246,15 +1253,30 @@
+ 
+ 	av1d: video-codec@fdc70000 {
+ 		compatible = "rockchip,rk3588-av1-vpu";
+-		reg = <0x0 0xfdc70000 0x0 0x800>;
+-		interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH 0>;
+-		interrupt-names = "vdpu";
++		reg = <0x0 0xfdc70000 0x0 0x800>, <0x0 0xfdc80000 0x0 0x400>,
++		      <0x0 0xfdc90000 0x0 0x400>;
++		reg-names = "vcd", "cache", "afbc";
++		interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH 0>,
++			     <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH 0>,
++			     <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH 0>;
++		interrupt-names = "vdpu", "irq_cache", "irq_afbc";
+ 		assigned-clocks = <&cru ACLK_AV1>, <&cru PCLK_AV1>;
+ 		assigned-clock-rates = <400000000>, <400000000>;
+ 		clocks = <&cru ACLK_AV1>, <&cru PCLK_AV1>;
+ 		clock-names = "aclk", "hclk";
+ 		power-domains = <&power RK3588_PD_AV1>;
+ 		resets = <&cru SRST_A_AV1>, <&cru SRST_P_AV1>, <&cru SRST_A_AV1_BIU>, <&cru SRST_P_AV1_BIU>;
++		iommus = <&av1d_mmu>;
++	};
++
++	av1d_mmu: iommu@fdca0000 {
++		compatible = "rockchip,iommu-av1d";
++		reg = <0x0 0xfdca0000 0x0 0x600>;
++		interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH 0>;
++		clocks = <&cru ACLK_AV1>, <&cru PCLK_AV1>;
++		clock-names = "aclk", "iface";
++		power-domains = <&power RK3588_PD_AV1>;
++		#iommu-cells = <0>;
+ 	};
+ 
+ 	vop: vop@fdd90000 {
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+@@ -74,56 +74,6 @@
+     };
+   };
+ 
+-  reserved-memory {
+-    #address-cells = <2>;
+-    #size-cells = <2>;
+-    ranges;
+-
+-    cma {
+-      compatible = "shared-dma-pool";
+-      reusable;
+-      size = <0x0 (8 * 0x100000)>;
+-      linux,cma-default;
+-    };
+-
+-    drm_logo: drm-logo@0 {
+-      compatible = "rockchip,drm-logo";
+-      reg = <0x0 0x0 0x0 0x0>;
+-      status = "disabled";
+-    };
+-
+-    drm_cubic_lut: drm-cubic-lut@0 {
+-      compatible = "rockchip,drm-cubic-lut";
+-      reg = <0x0 0x0 0x0 0x0>;
+-      status = "disabled";
+-    };
+-
+-    ramoops: ramoops@110000 {
+-      compatible = "ramoops";
+-      /* 0x110000 to 0x1f0000 is for ramoops */
+-      reg = <0x0 0x110000 0x0 0xe0000>;
+-      boot-log-size = <0x8000>; /* do not change */
+-      boot-log-count = <0x1>;   /* do not change */
+-      console-size = <0x80000>;
+-      pmsg-size = <0x30000>;
+-      ftrace-size = <0x00000>;
+-      record-size = <0x14000>;
+-    };
+-
+-    minidump_smem: minidump-smem@1f0000 {
+-      reg = <0x0 0x1f0000 0x0 0x100>;   /* do not change */
+-      no-map;
+-      status = "disabled";
+-    };
+-
+-    minidump_mem: minidump-mem@c000000 {
+-      reg = <0x0 0x0c000000 0x0 0x2000000>; /* changing according to your project */
+-      no-map;
+-      status = "disabled";
+-    };
+-
+-  };
+-
+   vbus_typec: vbus-typec {
+     compatible = "regulator-fixed";
+     regulator-name = "vbus_typec";
+@@ -1296,6 +1246,44 @@
+   status = "okay";
+ };
+ 
++&reserved_memory {
++  drm_logo: drm-logo@0 {
++    compatible = "rockchip,drm-logo";
++    reg = <0x0 0x0 0x0 0x0>;
++    status = "disabled";
++  };
++
++  drm_cubic_lut: drm-cubic-lut@0 {
++    compatible = "rockchip,drm-cubic-lut";
++    reg = <0x0 0x0 0x0 0x0>;
++    status = "disabled";
++  };
++
++  ramoops: ramoops@110000 {
++    compatible = "ramoops";
++    /* 0x110000 to 0x1f0000 is for ramoops */
++    reg = <0x0 0x110000 0x0 0xe0000>;
++    boot-log-size = <0x8000>; /* do not change */
++    boot-log-count = <0x1>;   /* do not change */
++    console-size = <0x80000>;
++    pmsg-size = <0x30000>;
++    ftrace-size = <0x00000>;
++    record-size = <0x14000>;
++  };
++
++  minidump_smem: minidump-smem@1f0000 {
++    reg = <0x0 0x1f0000 0x0 0x100>;   /* do not change */
++    no-map;
++    status = "disabled";
++  };
++
++  minidump_mem: minidump-mem@c000000 {
++    reg = <0x0 0x0c000000 0x0 0x2000000>; /* changing according to your project */
++    no-map;
++    status = "disabled";
++  };
++};
++
+ &pinctrl {
+   audio {
+     hp_detect: headphone-detect {
+Index: kernel-6_12/drivers/iommu/Makefile
+===================================================================
+--- kernel-6_12.orig/drivers/iommu/Makefile
++++ kernel-6_12/drivers/iommu/Makefile
+@@ -18,7 +18,8 @@ obj-$(CONFIG_MTK_IOMMU) += mtk_iommu.o
+ obj-$(CONFIG_MTK_IOMMU_V1) += mtk_iommu_v1.o
+ obj-$(CONFIG_OMAP_IOMMU) += omap-iommu.o
+ obj-$(CONFIG_OMAP_IOMMU_DEBUG) += omap-iommu-debug.o
+-obj-$(CONFIG_ROCKCHIP_IOMMU) += rockchip-iommu.o
++obj-$(CONFIG_ROCKCHIP_IOMMU) += rockchip_iommu.o
++rockchip_iommu-objs := rockchip-iommu.o rockchip-iommu-av1d.o
+ obj-$(CONFIG_SUN50I_IOMMU) += sun50i-iommu.o
+ obj-$(CONFIG_TEGRA_IOMMU_SMMU) += tegra-smmu.o
+ obj-$(CONFIG_EXYNOS_IOMMU) += exynos-iommu.o
+Index: kernel-6_12/drivers/iommu/rockchip-iommu-av1d.c
+===================================================================
+--- /dev/null
++++ kernel-6_12/drivers/iommu/rockchip-iommu-av1d.c
+@@ -0,0 +1,808 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Compatible with the IOMMU of av1 decode
++ *
++ * Module Authors:	Yandong Lin <yandong.lin@rock-chips.com>
++ *			Simon Xue <xxm@rock-chips.com>
++ */
++
++#include <linux/clk.h>
++#include <linux/compiler.h>
++#include <linux/delay.h>
++#include <linux/device.h>
++#include <linux/dma-mapping.h>
++#include <linux/dma-map-ops.h>
++#include <linux/errno.h>
++#include <linux/interrupt.h>
++#include <linux/io.h>
++#include <linux/iommu.h>
++#include <linux/iopoll.h>
++#include <linux/list.h>
++#include <linux/mm.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/of.h>
++#include <linux/of_iommu.h>
++#include <linux/of_platform.h>
++#include <linux/platform_device.h>
++#include <linux/pm_runtime.h>
++#include <linux/slab.h>
++#include <linux/spinlock.h>
++#include <soc/rockchip/rockchip_iommu.h>
++
++struct av1d_iommu {
++	struct device *dev;
++	void __iomem **bases;
++	int num_mmu;
++	int num_irq;
++	struct clk_bulk_data *clocks;
++	int num_clocks;
++	struct iommu_device iommu;
++	struct iommu_domain *domain; /* domain to which iommu is attached */
++	struct iommu_group *group;
++
++	u32 *dt; /* page directory table */
++	dma_addr_t dt_dma;
++	spinlock_t iommus_lock; /* lock for iommus list */
++	spinlock_t dt_lock; /* lock for modifying page directory table */
++	/* for av1 iommu */
++	u64 *pta; /* page directory table */
++	dma_addr_t pta_dma;
++};
++
++#define RK_IOMMU_AV1	0xa
++#define NUM_DT_ENTRIES	1024
++#define NUM_PT_ENTRIES	1024
++
++#define SPAGE_ORDER	12
++#define SPAGE_SIZE	(1 << SPAGE_ORDER)
++
++/* av1 iommu regs address */
++#define AV1_CLOCK_CTRL_BASE			0x0
++#define AV1_IDLE_ST_BASE			0x4
++#define AV1_MMU_CONFIG0_BASE			0x184
++#define AV1_MMU_CONFIG1_BASE			0x1ac
++#define AV1_MMU_AHB_EXCEPTION_BASE		0x380
++#define AV1_MMU_AHB_STATUS_BASE			0x384
++#define AV1_MMU_AHB_CONTROL_BASE		0x388
++#define AV1_MMU_AHB_TBL_ARRAY_BASE_L_BASE	0x38C
++#define AV1_MMU_AHB_TBL_ARRAY_BASE_H_BASE	0x390
++#define AV1_MMU_AHB_CTX_PD_BASE			0x3b4
++#define AV1_MMU_BUTT_BASE			0xffff
++
++/* MMU register offsets */
++#define AV1_MMU_FLUSH_BASE		0x184
++#define AV1_MMU_BIT_FLUSH		BIT(4)
++
++#define AV1_MMU_PAGE_FAULT_ADDR		0x380
++#define AV1_MMU_STATUS_BASE		0x384	/* IRQ status */
++
++#define AV1_MMU_EN_BASE			0x388
++#define AV1_MMU_BIT_ENABLE		BIT(0)
++
++#define AV1_MMU_OUT_OF_BOUND		BIT(28)
++/* Irq mask */
++#define AV1_MMU_IRQ_MASK		0x7
++
++#define AV1_DTE_PT_ADDRESS_MASK		0xffffffc0
++#define AV1_DTE_PT_VALID		BIT(0)
++
++#define AV1_PAGE_DESC_LO_MASK		0xfffff000
++#define AV1_PAGE_DESC_HI_MASK		GENMASK_ULL(39, 32)
++#define AV1_PAGE_DESC_HI_SHIFT		(32-4)
++
++#define AV1_IOMMU_PGSIZE_BITMAP 0x007ff000
++
++static inline phys_addr_t av1_dte_pt_address(u32 dte)
++{
++	return (phys_addr_t)dte & AV1_DTE_PT_ADDRESS_MASK;
++}
++
++static inline u32 av1_mk_dte(dma_addr_t pt_dma)
++{
++	return (pt_dma) | AV1_DTE_PT_VALID;
++}
++
++#define AV1_PTE_PAGE_ADDRESS_MASK	0xfffffff0
++#define AV1_PTE_PAGE_WRITABLE		BIT(2)
++#define AV1_PTE_PAGE_VALID		BIT(0)
++
++static struct device *dma_dev;
++
++static inline phys_addr_t av1_pte_page_address(u32 pte)
++{
++	u64 pte_av1 = pte;
++
++	pte_av1 = ((pte_av1 & AV1_PAGE_DESC_HI_MASK) << AV1_PAGE_DESC_HI_SHIFT) |
++		  (pte_av1 & AV1_PAGE_DESC_LO_MASK);
++
++	return (phys_addr_t)pte_av1;
++}
++
++static u32 av1_mk_pte(phys_addr_t page, int prot)
++{
++	u32 flags = 0;
++
++	flags |= (prot & IOMMU_WRITE) ? AV1_PTE_PAGE_WRITABLE : 0;
++	page = (page & AV1_PAGE_DESC_LO_MASK) |
++	       ((page & AV1_PAGE_DESC_HI_MASK) >> AV1_PAGE_DESC_HI_SHIFT);
++	page &= AV1_PTE_PAGE_ADDRESS_MASK;
++
++	return page | flags | AV1_PTE_PAGE_VALID;
++}
++
++#define AV1_DTE_PT_VALID	BIT(0)
++
++static inline bool av1_dte_is_pt_valid(u32 dte)
++{
++	return dte & AV1_DTE_PT_VALID;
++}
++
++static inline bool av1_pte_is_page_valid(u32 pte)
++{
++	return pte & AV1_PTE_PAGE_VALID;
++}
++
++static u32 av1_mk_pte_invalid(u32 pte)
++{
++	return pte & ~AV1_PTE_PAGE_VALID;
++}
++
++#define AV1_MASTER_TLB_MASK	GENMASK_ULL(31, 10)
++/* mode 0 : 4k */
++#define AV1_PTA_4K_MODE	0
++
++static u64 av1_mk_pta(dma_addr_t dt_dma)
++{
++	u64 val = (dt_dma & AV1_MASTER_TLB_MASK) | AV1_PTA_4K_MODE;
++
++	return val;
++}
++
++static void av1d_iommu_disable(struct av1d_iommu *iommu)
++{
++	int i;
++
++	/* Ignore error while disabling, just keep going */
++	WARN_ON(clk_bulk_enable(iommu->num_clocks, iommu->clocks));
++	for (i = 0; i < iommu->num_mmu; i++)
++		writel(0, iommu->bases[i] + AV1_MMU_AHB_CONTROL_BASE);
++
++	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
++}
++
++static int av1_iommu_disable(struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++
++	if (!av1d_iommu->domain)
++		return 0;
++
++	av1d_iommu_disable(av1d_iommu);
++
++	return 0;
++}
++
++static int av1d_iommu_enable(struct av1d_iommu *av1d_iommu)
++{
++	int ret, i;
++
++	ret = clk_bulk_enable(av1d_iommu->num_clocks, av1d_iommu->clocks);
++	if (ret)
++		return ret;
++
++	for (i = 0; i < av1d_iommu->num_mmu; i++) {
++		u32 val = readl(av1d_iommu->bases[i] + AV1_MMU_AHB_CONTROL_BASE);
++
++		if (!(val & AV1_MMU_BIT_ENABLE)) {
++			writel(av1d_iommu->pta_dma,
++			       av1d_iommu->bases[i] + AV1_MMU_AHB_TBL_ARRAY_BASE_L_BASE);
++			writel(AV1_MMU_OUT_OF_BOUND, av1d_iommu->bases[i] + AV1_MMU_CONFIG1_BASE);
++			writel(AV1_MMU_BIT_ENABLE,
++			       av1d_iommu->bases[i] + AV1_MMU_AHB_EXCEPTION_BASE);
++			writel(AV1_MMU_BIT_ENABLE, av1d_iommu->bases[i] + AV1_MMU_AHB_CONTROL_BASE);
++		}
++	}
++	clk_bulk_disable(av1d_iommu->num_clocks, av1d_iommu->clocks);
++	return ret;
++}
++
++static int av1_iommu_enable(struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	int ret;
++
++	dev_info(dev, "AV1 IOMMU: av1_iommu_enable called, domain=%p\n",
++		 av1d_iommu ? av1d_iommu->domain : NULL);
++
++	if (!av1d_iommu->domain)
++		return 0;
++
++	ret = av1d_iommu_enable(av1d_iommu);
++	dev_info(dev, "AV1 IOMMU: av1d_iommu_enable returned %d\n", ret);
++	return ret;
++}
++
++static inline void av1_table_flush(dma_addr_t dma, unsigned int count)
++{
++	size_t size = count * sizeof(u32); /* count of u32 entry */
++
++	dma_sync_single_for_device(dma_dev, dma, size, DMA_TO_DEVICE);
++}
++
++#define AV1_IOVA_DTE_MASK	0xffc00000
++#define AV1_IOVA_DTE_SHIFT	22
++#define AV1_IOVA_PTE_MASK	0x003ff000
++#define AV1_IOVA_PTE_SHIFT	12
++#define AV1_IOVA_PAGE_MASK	0x00000fff
++#define AV1_IOVA_PAGE_SHIFT	0
++
++static u32 av1_iova_dte_index(dma_addr_t iova)
++{
++	return (u32)(iova & AV1_IOVA_DTE_MASK) >> AV1_IOVA_DTE_SHIFT;
++}
++
++static u32 av1_iova_pte_index(dma_addr_t iova)
++{
++	return (u32)(iova & AV1_IOVA_PTE_MASK) >> AV1_IOVA_PTE_SHIFT;
++}
++
++static u32 av1_iova_page_offset(dma_addr_t iova)
++{
++	return (u32)(iova & AV1_IOVA_PAGE_MASK) >> AV1_IOVA_PAGE_SHIFT;
++}
++
++static u32 av1_iommu_read(void __iomem *base, u32 offset)
++{
++	return readl(base + offset);
++}
++
++static void av1_iommu_write(void __iomem *base, u32 offset, u32 value)
++{
++	writel(value, base + offset);
++}
++
++
++static void av1_iommu_flush_tlb_all(struct iommu_domain *domain, struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	unsigned long flags;
++	int i, ret;
++
++	if (WARN_ON(!av1d_iommu))
++		return;
++
++	spin_lock_irqsave(&av1d_iommu->iommus_lock, flags);
++	ret = pm_runtime_get_if_in_use(av1d_iommu->dev);
++	if (WARN_ON_ONCE(ret < 0)) {
++		spin_unlock_irqrestore(&av1d_iommu->iommus_lock, flags);
++		return;
++	}
++	if (ret) {
++		WARN_ON(clk_bulk_enable(av1d_iommu->num_clocks, av1d_iommu->clocks));
++		for (i = 0; i < av1d_iommu->num_mmu; i++) {
++			writel(AV1_MMU_BIT_FLUSH,
++				av1d_iommu->bases[i] + AV1_MMU_FLUSH_BASE);
++			writel(0, av1d_iommu->bases[i] + AV1_MMU_FLUSH_BASE);
++		}
++		clk_bulk_disable(av1d_iommu->num_clocks, av1d_iommu->clocks);
++		pm_runtime_put(av1d_iommu->dev);
++	}
++	spin_unlock_irqrestore(&av1d_iommu->iommus_lock, flags);
++}
++
++static irqreturn_t av1_iommu_irq(int irq, void *dev_id)
++{
++	struct av1d_iommu *av1d_iommu = dev_id;
++	u32 int_status;
++	dma_addr_t iova;
++	irqreturn_t ret = IRQ_NONE;
++	int i, err;
++
++	err = pm_runtime_get_if_in_use(av1d_iommu->dev);
++	if (!err || WARN_ON_ONCE(err < 0))
++		return ret;
++
++	if (WARN_ON(clk_bulk_enable(av1d_iommu->num_clocks, av1d_iommu->clocks)))
++		goto out;
++
++	for (i = 0; i < av1d_iommu->num_mmu; i++) {
++		int_status = av1_iommu_read(av1d_iommu->bases[i], AV1_MMU_STATUS_BASE);
++		if (int_status & AV1_MMU_IRQ_MASK) {
++			dev_err(av1d_iommu->dev, "unexpected int_status=%08x\n", int_status);
++			iova = av1_iommu_read(av1d_iommu->bases[i], AV1_MMU_PAGE_FAULT_ADDR);
++
++			if (av1d_iommu->domain)
++				report_iommu_fault(av1d_iommu->domain, av1d_iommu->dev,
++						   iova, int_status);
++			else
++				dev_err(av1d_iommu->dev,
++					"Page fault while av1d_iommu not attached to domain?\n");
++		}
++		av1_iommu_write(av1d_iommu->bases[i], AV1_MMU_STATUS_BASE, 0);
++		ret = IRQ_HANDLED;
++	}
++
++	clk_bulk_disable(av1d_iommu->num_clocks, av1d_iommu->clocks);
++
++out:
++	pm_runtime_put(av1d_iommu->dev);
++	return ret;
++}
++
++static int av1d_iommu_init(struct av1d_iommu *av1d_iommu)
++{
++	if (!dma_dev)
++		return -ENAVAIL;
++
++	/*
++	 * av132xx iommus use a 2 level pagetable.
++	 * Each level1 (dt) and level2 (pt) table has 1024 4-byte entries.
++	 * Allocate one 4 KiB page for each table.
++	 */
++	av1d_iommu->dt = (u32 *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
++	if (!av1d_iommu->dt)
++		return -1;
++
++	av1d_iommu->dt_dma = dma_map_single(dma_dev, av1d_iommu->dt,
++					   SPAGE_SIZE, DMA_TO_DEVICE);
++	if (dma_mapping_error(dma_dev, av1d_iommu->dt_dma)) {
++		dev_err(dma_dev, "DMA map error for DT\n");
++		goto err_free_dt;
++	}
++
++	av1d_iommu->pta = (u64 *)get_zeroed_page(GFP_KERNEL | GFP_DMA32);
++	if (!av1d_iommu->pta)
++		goto err_unmap_dt;
++
++	av1d_iommu->pta_dma = dma_map_single(dma_dev, av1d_iommu->pta,
++					SPAGE_SIZE, DMA_TO_DEVICE);
++	if (dma_mapping_error(dma_dev, av1d_iommu->pta_dma)) {
++		dev_err(dma_dev, "DMA map error for PTA\n");
++		goto err_free_pta;
++	}
++	av1d_iommu->pta[0] = av1_mk_pta(av1d_iommu->dt_dma);
++
++	av1_table_flush(av1d_iommu->pta_dma, 1024);
++	av1_table_flush(av1d_iommu->dt_dma, NUM_DT_ENTRIES);
++
++	spin_lock_init(&av1d_iommu->iommus_lock);
++	spin_lock_init(&av1d_iommu->dt_lock);
++
++	return 0;
++err_free_pta:
++	free_page((unsigned long)av1d_iommu->pta);
++err_unmap_dt:
++	dma_unmap_single(dma_dev, av1d_iommu->dt_dma,
++			 SPAGE_SIZE, DMA_TO_DEVICE);
++err_free_dt:
++	free_page((unsigned long)av1d_iommu->dt);
++
++	return -1;
++}
++
++static phys_addr_t av1_iommu_iova_to_phys(struct iommu_domain *domain, dma_addr_t iova,
++					  struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	unsigned long flags;
++	phys_addr_t pt_phys, phys = 0;
++	u32 dte, pte;
++	u32 *page_table;
++
++	spin_lock_irqsave(&av1d_iommu->dt_lock, flags);
++
++	dte = av1d_iommu->dt[av1_iova_dte_index(iova)];
++	if (!av1_dte_is_pt_valid(dte))
++		goto out;
++
++	pt_phys = av1_dte_pt_address(dte);
++	page_table = (u32 *)phys_to_virt(pt_phys);
++	pte = page_table[av1_iova_pte_index(iova)];
++	if (!av1_pte_is_page_valid(pte))
++		goto out;
++
++	phys = av1_pte_page_address(pte) + av1_iova_page_offset(iova);
++out:
++	spin_unlock_irqrestore(&av1d_iommu->dt_lock, flags);
++
++	return phys;
++}
++
++static u32 *av1_dte_get_page_table(struct av1d_iommu *av1d_iommu, dma_addr_t iova)
++{
++	u32 *page_table, *dte_addr;
++	u32 dte_index, dte;
++	phys_addr_t pt_phys;
++	dma_addr_t pt_dma;
++
++	assert_spin_locked(&av1d_iommu->dt_lock);
++
++	dte_index = av1_iova_dte_index(iova);
++	dte_addr = &av1d_iommu->dt[dte_index];
++	dte = *dte_addr;
++	if (av1_dte_is_pt_valid(dte))
++		goto done;
++
++	page_table = (u32 *)get_zeroed_page(GFP_ATOMIC | GFP_DMA32);
++	if (!page_table)
++		return ERR_PTR(-ENOMEM);
++
++	pt_dma = dma_map_single(dma_dev, page_table, SPAGE_SIZE, DMA_TO_DEVICE);
++	if (dma_mapping_error(dma_dev, pt_dma)) {
++		dev_err(dma_dev, "DMA mapping error while allocating page table\n");
++		free_page((unsigned long)page_table);
++		return ERR_PTR(-ENOMEM);
++	}
++
++	dte = av1_mk_dte(pt_dma);
++	*dte_addr = dte;
++
++	av1_table_flush(pt_dma, NUM_PT_ENTRIES);
++	av1_table_flush(av1d_iommu->dt_dma + dte_index * sizeof(u32), 1);
++done:
++	pt_phys = av1_dte_pt_address(dte);
++
++	return (u32 *)phys_to_virt(pt_phys);
++}
++
++static size_t av1_iommu_unmap_iova(struct av1d_iommu *av1d_iommu,
++				   u32 *pte_addr, dma_addr_t pte_dma,
++				   size_t size)
++{
++	unsigned int pte_count;
++	unsigned int pte_total = size / SPAGE_SIZE;
++
++	assert_spin_locked(&av1d_iommu->dt_lock);
++
++	for (pte_count = 0; pte_count < pte_total; pte_count++) {
++		u32 pte = pte_addr[pte_count];
++
++		if (!av1_pte_is_page_valid(pte))
++			break;
++
++		pte_addr[pte_count] = av1_mk_pte_invalid(pte);
++	}
++
++	av1_table_flush(pte_dma, pte_count);
++
++	return pte_count * SPAGE_SIZE;
++}
++
++static int av1_iommu_map_iova(struct av1d_iommu *av1_iommu, u32 *pte_addr,
++			      dma_addr_t pte_dma, dma_addr_t iova,
++			      phys_addr_t paddr, size_t size, int prot)
++{
++	unsigned int pte_count;
++	unsigned int pte_total = size / SPAGE_SIZE;
++	phys_addr_t page_phys;
++
++	assert_spin_locked(&av1_iommu->dt_lock);
++
++	for (pte_count = 0; pte_count < pte_total; pte_count++) {
++		u32 pte = pte_addr[pte_count];
++
++		if (av1_pte_is_page_valid(pte))
++			goto unwind;
++
++		pte_addr[pte_count] = av1_mk_pte(paddr, prot);
++
++		paddr += SPAGE_SIZE;
++	}
++
++	av1_table_flush(pte_dma, pte_total);
++
++	return 0;
++unwind:
++	/* Unmap the range of iovas that we just mapped */
++	av1_iommu_unmap_iova(av1_iommu, pte_addr, pte_dma,
++			    pte_count * SPAGE_SIZE);
++
++	iova += pte_count * SPAGE_SIZE;
++	page_phys = av1_pte_page_address(pte_addr[pte_count]);
++	pr_err("iova: %pad already mapped to %pa cannot remap to phys: %pa prot: %#x\n",
++	       &iova, &page_phys, &paddr, prot);
++
++	return -EADDRINUSE;
++}
++
++static size_t av1_iommu_unmap(struct iommu_domain *domain, unsigned long _iova,
++			      size_t size, struct iommu_iotlb_gather *gather, struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	unsigned long flags;
++	dma_addr_t pte_dma, iova = (dma_addr_t)_iova;
++	phys_addr_t pt_phys;
++	u32 dte;
++	u32 *pte_addr;
++	size_t unmap_size;
++
++	spin_lock_irqsave(&av1d_iommu->dt_lock, flags);
++
++	dte = av1d_iommu->dt[av1_iova_dte_index(iova)];
++	/* Just return 0 if iova is unmapped */
++	if (!av1_dte_is_pt_valid(dte)) {
++		spin_unlock_irqrestore(&av1d_iommu->dt_lock, flags);
++		return 0;
++	}
++
++	pt_phys = av1_dte_pt_address(dte);
++	pte_addr = (u32 *)phys_to_virt(pt_phys) + av1_iova_pte_index(iova);
++	pte_dma = pt_phys + av1_iova_pte_index(iova) * sizeof(u32);
++	unmap_size = av1_iommu_unmap_iova(av1d_iommu, pte_addr, pte_dma, size);
++
++	spin_unlock_irqrestore(&av1d_iommu->dt_lock, flags);
++
++	return unmap_size;
++}
++
++static int av1_iommu_map(struct iommu_domain *domain, unsigned long _iova, phys_addr_t paddr,
++			 size_t size, int prot, gfp_t gfp, struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	unsigned long flags;
++	dma_addr_t pte_dma, iova = (dma_addr_t)_iova;
++	u32 *page_table, *pte_addr;
++	u32 dte, pte_index;
++	int ret;
++
++	if (WARN_ON(!av1d_iommu))
++		return -1;
++
++	spin_lock_irqsave(&av1d_iommu->dt_lock, flags);
++
++	page_table = av1_dte_get_page_table(av1d_iommu, iova);
++	if (IS_ERR(page_table)) {
++		spin_unlock_irqrestore(&av1d_iommu->dt_lock, flags);
++		return PTR_ERR(page_table);
++	}
++
++	dte = av1d_iommu->dt[av1_iova_dte_index(iova)];
++	pte_index = av1_iova_pte_index(iova);
++	pte_addr = &page_table[pte_index];
++	pte_dma = av1_dte_pt_address(dte) + pte_index * sizeof(u32);
++	ret = av1_iommu_map_iova(av1d_iommu, pte_addr, pte_dma, iova,
++				   paddr, size, prot);
++
++	spin_unlock_irqrestore(&av1d_iommu->dt_lock, flags);
++
++	if (ret == 0) {
++		/* Flush IOTLB to make mapping visible to hardware */
++		av1_iommu_flush_tlb_all(domain, dev);
++	}
++
++	return ret;
++}
++
++static void av1_iommu_detach_device(struct iommu_domain *domain, struct device *dev)
++{
++	struct av1d_iommu *iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	int ret;
++
++	if (WARN_ON(!iommu))
++		return;
++
++	dev_dbg(dev, "Detaching from iommu domain\n");
++
++	if (!iommu->domain)
++		return;
++
++	ret = pm_runtime_get_if_in_use(iommu->dev);
++	WARN_ON_ONCE(ret < 0);
++	if (ret > 0) {
++		av1d_iommu_disable(iommu);
++		pm_runtime_put(iommu->dev);
++	}
++	iommu->domain = NULL;
++}
++
++static int av1_iommu_attach_device(struct iommu_domain *domain, struct device *dev)
++{
++	struct av1d_iommu *iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	int ret;
++
++	dev_info(dev, "AV1 IOMMU: attach_device called\n");
++
++	if (WARN_ON(!iommu))
++		return -ENODEV;
++
++	if (iommu->domain)
++		av1_iommu_detach_device(iommu->domain, dev);
++
++	iommu->domain = domain;
++
++	/* Attach NULL for disable iommu */
++	if (!domain)
++		return 0;
++
++	ret = pm_runtime_get_if_in_use(iommu->dev);
++	if (!ret || WARN_ON_ONCE(ret < 0))
++		return 0;
++
++	ret = av1d_iommu_enable(iommu);
++	if (ret)
++		av1_iommu_detach_device(iommu->domain, dev);
++
++	pm_runtime_put(iommu->dev);
++
++	return ret;
++}
++
++static void av1_iommu_domain_free(struct iommu_domain *domain, struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++	int i;
++
++	for (i = 0; i < NUM_DT_ENTRIES; i++) {
++		u32 dte = av1d_iommu->dt[i];
++
++		if (av1_dte_is_pt_valid(dte)) {
++			phys_addr_t pt_phys = av1_dte_pt_address(dte);
++			u32 *page_table = phys_to_virt(pt_phys);
++
++			dma_unmap_single(dma_dev, pt_phys,
++					 SPAGE_SIZE, DMA_TO_DEVICE);
++			free_page((unsigned long)page_table);
++		}
++	}
++
++	dma_unmap_single(dma_dev, av1d_iommu->dt_dma,
++			 SPAGE_SIZE, DMA_TO_DEVICE);
++	free_page((unsigned long)av1d_iommu->dt);
++
++	dma_unmap_single(dma_dev, av1d_iommu->pta_dma,
++			 SPAGE_SIZE, DMA_TO_DEVICE);
++	free_page((unsigned long)av1d_iommu->pta);
++
++	kfree(av1d_iommu);
++}
++
++static int av1_iommu_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct av1d_iommu *iommu;
++	struct resource *res;
++	int num_res = pdev->num_resources;
++	int err, i;
++
++	iommu = devm_kzalloc(dev, sizeof(*iommu), GFP_KERNEL);
++	if (!iommu)
++		return -ENOMEM;
++
++	iommu->dev = dev;
++	iommu->num_mmu = 0;
++
++	iommu->bases = devm_kcalloc(dev, num_res, sizeof(*iommu->bases),
++				    GFP_KERNEL);
++	if (!iommu->bases)
++		return -ENOMEM;
++
++	for (i = 0; i < num_res; i++) {
++		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
++		if (!res)
++			continue;
++		iommu->bases[i] = devm_ioremap_resource(&pdev->dev, res);
++		if (IS_ERR(iommu->bases[i]))
++			continue;
++		iommu->num_mmu++;
++	}
++	if (iommu->num_mmu == 0) {
++		dev_err(dev, "get iommu base failed\n");
++		return PTR_ERR(iommu->bases[0]);
++	}
++
++	iommu->num_irq = platform_irq_count(pdev);
++	if (iommu->num_irq < 0) {
++		dev_err(dev, "get av1 iommu irq num failed\n");
++		return iommu->num_irq;
++	}
++
++	err = devm_clk_bulk_get_all(dev, &iommu->clocks);
++	if (err >= 0)
++		iommu->num_clocks = err;
++	else if (err == -ENOENT)
++		iommu->num_clocks = 0;
++	else {
++		dev_err(dev, "get av1 iommu clocks failed\n");
++		return err;
++	}
++
++	err = clk_bulk_prepare(iommu->num_clocks, iommu->clocks);
++	if (err)
++		return err;
++
++	if (!dma_dev)
++		dma_dev = &pdev->dev;
++
++	pm_runtime_enable(dev);
++
++	for (i = 0; i < iommu->num_irq; i++) {
++		int irq = platform_get_irq(pdev, i);
++
++		if (irq < 0) {
++			err = -ENODEV;
++			dev_err(dev, "av1 iommu get irq failed\n");
++			goto err_disable_runtime;
++		}
++
++		err = devm_request_irq(iommu->dev, irq, av1_iommu_irq,
++				       IRQF_SHARED, dev_name(dev), iommu);
++		if (err) {
++			dev_err(dev, "av1 iommu request irq handle failed\n");
++			goto err_disable_runtime;
++		}
++
++	}
++
++	err = av1d_iommu_init(iommu);
++	if (err) {
++		dev_err(dev, "av1 iommu init failed err %d\n", err);
++		goto err_disable_runtime;
++	}
++
++	/* store av1d-iommu data to dev->platform_data */
++	dev->platform_data = iommu;
++
++	return 0;
++err_disable_runtime:
++	pm_runtime_disable(dev);
++	clk_bulk_unprepare(iommu->num_clocks, iommu->clocks);
++
++	return err;
++}
++
++static void av1_iommu_shutdown(struct platform_device *pdev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(&pdev->dev);
++	int i;
++
++	for (i = 0; i < av1d_iommu->num_irq; i++) {
++		int irq = platform_get_irq(pdev, i);
++
++		devm_free_irq(av1d_iommu->dev, irq, av1d_iommu);
++	}
++
++	pm_runtime_force_suspend(&pdev->dev);
++}
++
++static int __maybe_unused av1_iommu_suspend(struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++
++	if (!av1d_iommu->domain)
++		return 0;
++
++	av1d_iommu_disable(av1d_iommu);
++	return 0;
++}
++
++static int __maybe_unused av1_iommu_resume(struct device *dev)
++{
++	struct av1d_iommu *av1d_iommu = (struct av1d_iommu *)dev_get_platdata(dev);
++
++	if (!av1d_iommu->domain)
++		return 0;
++
++	return av1d_iommu_enable(av1d_iommu);
++}
++
++static struct third_iommu_ops_wrap av1d_iommu_ops = {
++	.attach_dev      = av1_iommu_attach_device,
++	.detach_dev      = av1_iommu_detach_device,
++	.map             = av1_iommu_map,
++	.unmap           = av1_iommu_unmap,
++	.flush_iotlb_all = av1_iommu_flush_tlb_all,
++	.iova_to_phys    = av1_iommu_iova_to_phys,
++	.free            = av1_iommu_domain_free,
++	.enable          = av1_iommu_enable,
++	.disable         = av1_iommu_disable,
++	.shutdown        = av1_iommu_shutdown,
++	.suspend         = av1_iommu_suspend,
++	.resume          = av1_iommu_resume,
++	.probe           = av1_iommu_probe,
++};
++
++struct third_iommu_ops_wrap *av1d_iommu_get_ops(void)
++{
++	return &av1d_iommu_ops;
++}
+Index: kernel-6_12/include/soc/rockchip/rockchip_iommu.h
+===================================================================
+--- /dev/null
++++ kernel-6_12/include/soc/rockchip/rockchip_iommu.h
+@@ -0,0 +1,89 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Copyright (c) 2021 Rockchip Electronics Co., Ltd
++ */
++#ifndef __SOC_ROCKCHIP_IOMMU_H
++#define __SOC_ROCKCHIP_IOMMU_H
++
++struct device;
++struct iommu_domain;
++struct iommu_iotlb_gather;
++struct platform_device;
++
++/* 1. dev and pdev is iommu device.
++ * 2. store third_iommu data in dev->platform_data.
++ */
++struct third_iommu_ops_wrap {
++	int (*attach_dev)(struct iommu_domain *domain, struct device *dev);
++	void (*detach_dev)(struct iommu_domain *domain, struct device *dev);
++	int (*map)(struct iommu_domain *domain, unsigned long iova,
++		   phys_addr_t paddr, size_t size, int prot, gfp_t gfp,
++		   struct device *dev);
++	size_t (*unmap)(struct iommu_domain *domain, unsigned long iova,
++			size_t size, struct iommu_iotlb_gather *iotlb_gather,
++			struct device *dev);
++	void (*flush_iotlb_all)(struct iommu_domain *domain,
++				struct device *dev);
++	phys_addr_t (*iova_to_phys)(struct iommu_domain *domain,
++				    dma_addr_t iova, struct device *dev);
++	void (*free)(struct iommu_domain *domain, struct device *dev);
++	int (*enable)(struct device *dev);
++	int (*disable)(struct device *dev);
++	void (*shutdown)(struct platform_device *pdev);
++	int (*suspend)(struct device *dev);
++	int (*resume)(struct device *dev);
++	int (*probe)(struct platform_device *pdev);
++};
++
++#if IS_REACHABLE(CONFIG_ROCKCHIP_IOMMU)
++int rockchip_iommu_enable(struct device *dev);
++int rockchip_iommu_disable(struct device *dev);
++int rockchip_pagefault_done(struct device *master_dev);
++void __iomem *rockchip_get_iommu_base(struct device *master_dev, int idx);
++bool rockchip_iommu_is_enabled(struct device *dev);
++void rockchip_iommu_mask_irq(struct device *dev);
++void rockchip_iommu_unmask_irq(struct device *dev);
++int rockchip_iommu_force_reset(struct device *dev);
++#else
++static inline int rockchip_iommu_enable(struct device *dev)
++{
++	return -ENODEV;
++}
++static inline int rockchip_iommu_disable(struct device *dev)
++{
++	return -ENODEV;
++}
++static inline int rockchip_pagefault_done(struct device *master_dev)
++{
++	return 0;
++}
++static inline void __iomem *rockchip_get_iommu_base(struct device *master_dev, int idx)
++{
++	return NULL;
++}
++static inline bool rockchip_iommu_is_enabled(struct device *dev)
++{
++	return false;
++}
++static inline void rockchip_iommu_mask_irq(struct device *dev)
++{
++}
++static inline void rockchip_iommu_unmask_irq(struct device *dev)
++{
++}
++static inline int rockchip_iommu_force_reset(struct device *dev)
++{
++	return -ENODEV;
++}
++#endif
++
++#if IS_ENABLED(CONFIG_ROCKCHIP_IOMMU)
++struct third_iommu_ops_wrap *av1d_iommu_get_ops(void);
++#else
++static inline struct third_iommu_ops_wrap *av1d_iommu_get_ops(void)
++{
++	return NULL;
++}
++#endif
++
++#endif
+Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+===================================================================
+--- kernel-6_12.orig/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
++++ kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+@@ -10,6 +10,34 @@
+ #include "hantro_v4l2.h"
+ #include "rockchip_vpu981_regs.h"
+ 
++/* Module parameters for PP debugging */
++static int pp_in_blk_size = 0;
++module_param(pp_in_blk_size, int, 0644);
++MODULE_PARM_DESC(pp_in_blk_size, "PP input block size (0-7, default 0)");
++
++static int pp_out_format = 3;
++module_param(pp_out_format, int, 0644);
++MODULE_PARM_DESC(pp_out_format, "PP output format for NV12 (0-31, default 3)");
++
++static int pp_in_format = 0;
++module_param(pp_in_format, int, 0644);
++MODULE_PARM_DESC(pp_in_format, "PP input format (0-31, default 0)");
++
++static int pp_tile_mode = 0;
++module_param(pp_tile_mode, int, 0644);
++MODULE_PARM_DESC(pp_tile_mode, "PP tile mode: 0=480x270, 1=240x135 (default 0)");
++
++/* AFBC register offsets (based on MPP driver) */
++#define AFBC_REG_CONTROL		0x20
++#define AFBC_REG_INTRENBL		0x34
++#define AFBC_REG_FORMAT			0x100
++#define AFBC_REG_COMPRESSENABLE		0x104
++#define AFBC_REG_HEADERBASE		0x10c
++#define AFBC_REG_PAYLOADBASE		0x114
++#define AFBC_REG_INPUTBUFSIZE		0x11c
++#define AFBC_REG_INPUTBUFBASE		0x124
++#define AFBC_REG_INPUTBUFSTRIDE		0x12c
++
+ #define AV1_DEC_MODE		17
+ #define GM_GLOBAL_MODELS_PER_FRAME	7
+ #define GLOBAL_MODEL_TOTAL_SIZE	(6 * 4 + 4 * 2)
+@@ -419,6 +447,39 @@ int rockchip_vpu981_av1_dec_init(struct
+ 	return 0;
+ }
+ 
++/*
++ * Initialize AFBC hardware (called once on first frame, with interrupts enabled)
++ */
++static void rockchip_vpu981_av1_afbc_init(struct hantro_dev *vpu)
++{
++	if (!vpu->afbc_base || vpu->afbc_initialized)
++		return;
++
++	/* Initialize AFBC but keep compression disabled for V4L2 */
++	writel_relaxed(0, vpu->afbc_base + AFBC_REG_CONTROL);
++	writel_relaxed(0, vpu->afbc_base + AFBC_REG_INTRENBL);
++	writel_relaxed(0, vpu->afbc_base + AFBC_REG_COMPRESSENABLE);
++	writel_relaxed(0, vpu->afbc_base + AFBC_REG_COMPRESSENABLE + 4);
++
++	vpu->afbc_initialized = true;
++	dev_info(vpu->dev, "AFBC initialized (compression disabled)\n");
++}
++
++/*
++ * Clear L2 cache status (called per frame, based on MPP driver)
++ * Note: Moved to IRQ handler to match MPP timing
++ */
++static void __attribute__ ((unused)) rockchip_vpu981_av1_clear_cache(struct hantro_dev *vpu)
++{
++	if (!vpu->cache_base)
++		return;
++
++	/* Clear L2 cache status registers */
++	writel_relaxed(0x0, vpu->cache_base + 0x020);
++	writel_relaxed(0x0, vpu->cache_base + 0x204);
++	writel_relaxed(0x00000000, vpu->cache_base + 0x208); /* multi id enable bit */
++}
++
+ static int rockchip_vpu981_av1_dec_prepare_run(struct hantro_ctx *ctx)
+ {
+ 	struct hantro_av1_dec_hw_ctx *av1_dec = &ctx->av1_dec;
+@@ -1567,6 +1628,11 @@ static void rockchip_vpu981_av1_dec_set_
+ 	struct hantro_dev *vpu = ctx->dev;
+ 	int pic_width_in_cbs = DIV_ROUND_UP(frame->frame_width_minus_1 + 1, 8);
+ 	int pic_height_in_cbs = DIV_ROUND_UP(frame->frame_height_minus_1 + 1, 8);
++
++	dev_info(vpu->dev, "AV1 DEC: frame dimensions w=%d h=%d upscaled_w=%d superres_denom=%d (in_cbs: %d x %d)\n",
++		 frame->frame_width_minus_1 + 1, frame->frame_height_minus_1 + 1,
++		 frame->upscaled_width, frame->superres_denom,
++		 pic_width_in_cbs, pic_height_in_cbs);
+ 	int pic_width_pad = ALIGN(frame->frame_width_minus_1 + 1, 8)
+ 			    - (frame->frame_width_minus_1 + 1);
+ 	int pic_height_pad = ALIGN(frame->frame_height_minus_1 + 1, 8)
+@@ -2102,6 +2168,12 @@ int rockchip_vpu981_av1_dec_run(struct h
+ 
+ 	hantro_start_prepare_run(ctx);
+ 
++	/* Initialize AFBC hardware on first frame */
++	rockchip_vpu981_av1_afbc_init(vpu);
++
++	/* Note: MPP clears cache AFTER decode in ISR, not before */
++	/* Removed: rockchip_vpu981_av1_clear_cache(vpu); */
++
+ 	ret = rockchip_vpu981_av1_dec_prepare_run(ctx);
+ 	if (ret)
+ 		goto prepare_error;
+@@ -2168,11 +2240,43 @@ prepare_error:
+ static void rockchip_vpu981_postproc_enable(struct hantro_ctx *ctx)
+ {
+ 	struct hantro_dev *vpu = ctx->dev;
+-	int width = ctx->dst_fmt.width;
+-	int height = ctx->dst_fmt.height;
++	struct hantro_av1_dec_hw_ctx *av1_dec = &ctx->av1_dec;
++	struct hantro_av1_dec_ctrls *ctrls = &av1_dec->ctrls;
++	const struct v4l2_ctrl_av1_frame *frame = ctrls->frame;
+ 	struct vb2_v4l2_buffer *vb2_dst;
+ 	size_t chroma_offset;
+ 	dma_addr_t dst_dma;
++	int width = ctx->dst_fmt.width;
++	int height = ctx->dst_fmt.height;
++	int width_in_cbs, height_in_cbs;
++
++	/* Decoder outputs 4x4 tiled format - PP input dimensions are in 4x4 tile units */
++	int actual_width, actual_height;
++	int width_in_tiles, height_in_tiles;
++
++	if (frame) {
++		actual_width = frame->frame_width_minus_1 + 1;
++		actual_height = frame->frame_height_minus_1 + 1;
++		width_in_cbs = DIV_ROUND_UP(actual_width, 8);
++		height_in_cbs = DIV_ROUND_UP(actual_height, 8);
++	} else {
++		actual_width = width;
++		actual_height = height;
++		width_in_cbs = DIV_ROUND_UP(width, 8);
++		height_in_cbs = DIV_ROUND_UP(height, 8);
++	}
++
++	/* PP input is in 4x4 tile units, not 8x8 block units! */
++	width_in_tiles = DIV_ROUND_UP(actual_width, 4);
++	height_in_tiles = DIV_ROUND_UP(actual_height, 4);
++
++	dev_info(vpu->dev, "AV1 PP: enable - w=%d h=%d fmt=0x%x stride=%d | PP cfg: in=%dx%d out=%dx%d cbs=%dx%d | blk_size=%d in_fmt=%d out_fmt=%d\n",
++		 width, height, ctx->dst_fmt.pixelformat,
++		 ctx->dst_fmt.plane_fmt[0].bytesperline,
++		 width, height,  /* PP input: full frame */
++		 width, height,  /* PP output: full frame */
++		 width_in_cbs, height_in_cbs,
++		 pp_in_blk_size, pp_in_format, pp_out_format);
+ 
+ 	vb2_dst = hantro_get_dst_buf(ctx);
+ 
+@@ -2180,14 +2284,19 @@ static void rockchip_vpu981_postproc_ena
+ 	chroma_offset = ctx->dst_fmt.plane_fmt[0].bytesperline *
+ 	    ctx->dst_fmt.height;
+ 
++	dev_info(vpu->dev, "AV1 PP: DMA addrs - luma=0x%pad chroma=0x%pad (offset=%zu)\n",
++		 &dst_dma, &(dma_addr_t){dst_dma + chroma_offset}, chroma_offset);
++
+ 	/* enable post processor */
+ 	hantro_reg_write(vpu, &av1_pp_out_e, 1);
+-	hantro_reg_write(vpu, &av1_pp_in_format, 0);
+-	hantro_reg_write(vpu, &av1_pp0_dup_hor, 1);
+-	hantro_reg_write(vpu, &av1_pp0_dup_ver, 1);
+-
+-	hantro_reg_write(vpu, &av1_pp_in_height, height / 2);
+-	hantro_reg_write(vpu, &av1_pp_in_width, width / 2);
++	hantro_reg_write(vpu, &av1_pp_in_blk_size, pp_in_blk_size);
++	hantro_reg_write(vpu, &av1_pp_in_format, pp_in_format);
++	hantro_reg_write(vpu, &av1_pp0_dup_hor, 0);
++	hantro_reg_write(vpu, &av1_pp0_dup_ver, 0);
++
++	/* PP input/output should be full frame dimensions (matching MPP behavior) */
++	hantro_reg_write(vpu, &av1_pp_in_height, height);
++	hantro_reg_write(vpu, &av1_pp_in_width, width);
+ 	hantro_reg_write(vpu, &av1_pp_out_height, height);
+ 	hantro_reg_write(vpu, &av1_pp_out_width, width);
+ 	hantro_reg_write(vpu, &av1_pp_out_y_stride,
+@@ -2197,12 +2306,16 @@ static void rockchip_vpu981_postproc_ena
+ 	switch (ctx->dst_fmt.pixelformat) {
+ 	case V4L2_PIX_FMT_P010:
+ 		hantro_reg_write(vpu, &av1_pp_out_format, 1);
++		dev_info(vpu->dev, "AV1 PP: output format P010 (code=1)\n");
+ 		break;
+ 	case V4L2_PIX_FMT_NV12:
+-		hantro_reg_write(vpu, &av1_pp_out_format, 3);
++		hantro_reg_write(vpu, &av1_pp_out_format, pp_out_format);
++		dev_info(vpu->dev, "AV1 PP: output format NV12 (code=%d)\n", pp_out_format);
+ 		break;
+ 	default:
+ 		hantro_reg_write(vpu, &av1_pp_out_format, 0);
++		dev_info(vpu->dev, "AV1 PP: output format UNKNOWN (code=0, fmt=0x%x)\n",
++			 ctx->dst_fmt.pixelformat);
+ 	}
+ 
+ 	hantro_reg_write(vpu, &av1_ppd_blend_exist, 0);
+Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+===================================================================
+--- kernel-6_12.orig/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -417,14 +417,51 @@ static irqreturn_t rk3588_vpu981_irq(int
+ 	state = (status & AV1_REG_INTERRUPT_DEC_RDY_INT) ?
+ 		VB2_BUF_STATE_DONE : VB2_BUF_STATE_ERROR;
+ 
++	/* Log decode completion */
++	dev_info(vpu->dev, "AV1 IRQ: status=0x%08x state=%s\n",
++		 status, state == VB2_BUF_STATE_DONE ? "DONE" : "ERROR");
++
+ 	vdpu_write(vpu, 0, AV1_REG_INTERRUPT);
+ 	vdpu_write(vpu, AV1_REG_CONFIG_DEC_CLK_GATE_E, AV1_REG_CONFIG);
+ 
++	/* Clear L2 cache status after decode (matching MPP behavior) */
++	if (vpu->cache_base) {
++		writel_relaxed(0x0, vpu->cache_base + 0x020);
++		writel_relaxed(0x0, vpu->cache_base + 0x204);
++		writel_relaxed(0x00000000, vpu->cache_base + 0x208);
++	}
++
+ 	hantro_irq_done(vpu, state);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
++static irqreturn_t rk3588_vpu981_cache_irq(int irq, void *dev_id)
++{
++	struct hantro_dev *vpu = dev_id;
++
++	/* Cache interrupt - just acknowledge it */
++	if (vpu->cache_base) {
++		/* Clear cache interrupt status if needed */
++		writel_relaxed(0, vpu->cache_base + 0x020);
++	}
++
++	return IRQ_HANDLED;
++}
++
++static irqreturn_t rk3588_vpu981_afbc_irq(int irq, void *dev_id)
++{
++	struct hantro_dev *vpu = dev_id;
++
++	/* AFBC interrupt - just acknowledge it */
++	if (vpu->afbc_base) {
++		/* Clear AFBC interrupt status */
++		writel_relaxed(0, vpu->afbc_base + 0x34); /* INTRENBL */
++	}
++
++	return IRQ_HANDLED;
++}
++
+ static int rk3036_vpu_hw_init(struct hantro_dev *vpu)
+ {
+ 	/* Bump ACLK to max. possible freq. to improve performance. */
+@@ -442,8 +479,28 @@ static int rk3066_vpu_hw_init(struct han
+ 
+ static int rk3588_vpu981_hw_init(struct hantro_dev *vpu)
+ {
++	int ret;
++	unsigned long rate;
++
+ 	/* Bump ACLKs to max. possible freq. to improve performance. */
+-	clk_set_rate(vpu->clocks[0].clk, RK3588_ACLK_MAX_FREQ);
++	dev_info(vpu->dev, "RK3588 VPU981: Setting clocks to 400MHz\n");
++
++	ret = clk_set_rate(vpu->clocks[0].clk, 400 * 1000 * 1000);  /* aclk to 400MHz */
++	rate = clk_get_rate(vpu->clocks[0].clk);
++	dev_info(vpu->dev, "RK3588 VPU981: aclk set_rate ret=%d, actual rate=%lu\n", ret, rate);
++
++	ret = clk_set_rate(vpu->clocks[1].clk, 400 * 1000 * 1000);  /* hclk to 400MHz */
++	rate = clk_get_rate(vpu->clocks[1].clk);
++	dev_info(vpu->dev, "RK3588 VPU981: hclk set_rate ret=%d, actual rate=%lu\n", ret, rate);
++
++	/* Initialize cache and afbc register bases */
++	if (vpu->variant->num_regs >= 3) {
++		vpu->cache_base = vpu->reg_bases[1];  /* cache is 2nd region */
++		vpu->afbc_base = vpu->reg_bases[2];   /* afbc is 3rd region */
++		dev_info(vpu->dev, "RK3588 VPU981: cache_base=%p afbc_base=%p\n",
++			 vpu->cache_base, vpu->afbc_base);
++	}
++
+ 	return 0;
+ }
+ 
+@@ -640,6 +697,8 @@ static const char * const rk3066_vpu_clk
+ 
+ static const struct hantro_irq rk3588_vpu981_irqs[] = {
+ 	{ "vdpu", rk3588_vpu981_irq },
++	{ "irq_cache", rk3588_vpu981_cache_irq },
++	{ "irq_afbc", rk3588_vpu981_afbc_irq },
+ };
+ 
+ static const char * const rockchip_vpu_clk_names[] = {
+@@ -796,6 +855,10 @@ const struct hantro_variant px30_vpu_var
+ 	.num_clocks = ARRAY_SIZE(rockchip_vpu_clk_names)
+ };
+ 
++static const char * const rk3588_vpu981_reg_names[] = {
++	"vcd", "cache", "afbc"
++};
++
+ const struct hantro_variant rk3588_vpu981_variant = {
+ 	.dec_offset = 0x0,
+ 	.dec_fmts = rockchip_vpu981_dec_fmts,
+@@ -809,5 +872,8 @@ const struct hantro_variant rk3588_vpu98
+ 	.num_irqs = ARRAY_SIZE(rk3588_vpu981_irqs),
+ 	.init = rk3588_vpu981_hw_init,
+ 	.clk_names = rk3588_vpu981_vpu_clk_names,
+-	.num_clocks = ARRAY_SIZE(rk3588_vpu981_vpu_clk_names)
++	.num_clocks = ARRAY_SIZE(rk3588_vpu981_vpu_clk_names),
++	.reg_names = rk3588_vpu981_reg_names,
++	.num_regs = ARRAY_SIZE(rk3588_vpu981_reg_names),
++	.late_postproc = true,
+ };
+Index: kernel-6_12/drivers/media/platform/verisilicon/hantro.h
+===================================================================
+--- kernel-6_12.orig/drivers/media/platform/verisilicon/hantro.h
++++ kernel-6_12/drivers/media/platform/verisilicon/hantro.h
+@@ -206,6 +206,9 @@ struct hantro_dev {
+ 	void __iomem *enc_base;
+ 	void __iomem *dec_base;
+ 	void __iomem *ctrl_base;
++	void __iomem *cache_base;	/* RK3588 AV1 cache registers */
++	void __iomem *afbc_base;	/* RK3588 AV1 afbc registers */
++	bool afbc_initialized;		/* RK3588 AV1 AFBC init flag */
+ 
+ 	struct mutex vpu_mutex;	/* video_device lock */
+ 	spinlock_t irqlock;
+Index: kernel-6_12/drivers/media/platform/verisilicon/hantro_v4l2.c
+===================================================================
+--- kernel-6_12.orig/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ kernel-6_12/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -585,6 +585,11 @@ static int hantro_set_fmt_cap(struct han
+ 	if (ret)
+ 		return ret;
+ 
++	dev_info(ctx->dev->dev, "AV1 set_fmt_cap: APPLIED fmt=0x%x w=%d h=%d stride=%d->%d\n",
++		 pix_mp->pixelformat, pix_mp->width, pix_mp->height,
++		 ctx->dst_fmt.plane_fmt[0].bytesperline,
++		 pix_mp->plane_fmt[0].bytesperline);
++
+ 	ctx->vpu_dst_fmt = hantro_find_format(ctx, pix_mp->pixelformat);
+ 	ctx->dst_fmt = *pix_mp;
+ 
+Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
+===================================================================
+--- kernel-6_12.orig/drivers/iommu/rockchip-iommu.c
++++ kernel-6_12/drivers/iommu/rockchip-iommu.c
+@@ -25,6 +25,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/slab.h>
+ #include <linux/spinlock.h>
++#include <soc/rockchip/rockchip_iommu.h>
+ 
+ #include "iommu-pages.h"
+ 
+@@ -87,6 +88,8 @@ struct rk_iommu_domain {
+ 	dma_addr_t dt_dma;
+ 	spinlock_t iommus_lock; /* lock for iommus list */
+ 	spinlock_t dt_lock; /* lock for modifying page directory table */
++	struct third_iommu_ops_wrap *opt_ops;
++	struct device *iommu_dev;
+ 
+ 	struct iommu_domain domain;
+ };
+@@ -115,6 +118,7 @@ struct rk_iommu {
+ 	struct iommu_device iommu;
+ 	struct list_head node; /* entry in rk_iommu_domain.iommus */
+ 	struct iommu_domain *domain; /* domain to which iommu is attached */
++	struct third_iommu_ops_wrap *opt_ops;
+ };
+ 
+ struct rk_iommudata {
+@@ -656,6 +660,10 @@ static phys_addr_t rk_iommu_iova_to_phys
+ 	u32 dte, pte;
+ 	u32 *page_table;
+ 
++	if (rk_domain->opt_ops && rk_domain->opt_ops->iova_to_phys)
++		return rk_domain->opt_ops->iova_to_phys(domain, iova,
++							rk_domain->iommu_dev);
++
+ 	spin_lock_irqsave(&rk_domain->dt_lock, flags);
+ 
+ 	dte = rk_domain->dt[rk_iova_dte_index(iova)];
+@@ -828,6 +836,14 @@ static int rk_iommu_map(struct iommu_dom
+ 	u32 dte_index, pte_index;
+ 	int ret;
+ 
++	if (rk_domain->opt_ops && rk_domain->opt_ops->map) {
++		ret = rk_domain->opt_ops->map(domain, _iova, paddr, size, prot,
++					      gfp, rk_domain->iommu_dev);
++		if (!ret)
++			*mapped = size;
++		return ret;
++	}
++
+ 	spin_lock_irqsave(&rk_domain->dt_lock, flags);
+ 
+ 	/*
+@@ -869,6 +885,10 @@ static size_t rk_iommu_unmap(struct iomm
+ 	u32 *pte_addr;
+ 	size_t unmap_size;
+ 
++	if (rk_domain->opt_ops && rk_domain->opt_ops->unmap)
++		return rk_domain->opt_ops->unmap(domain, _iova, size, gather,
++						 rk_domain->iommu_dev);
++
+ 	spin_lock_irqsave(&rk_domain->dt_lock, flags);
+ 
+ 	/*
+@@ -898,6 +918,40 @@ static size_t rk_iommu_unmap(struct iomm
+ 	return unmap_size;
+ }
+ 
++static void rk_iommu_flush_tlb_all(struct iommu_domain *domain)
++{
++	struct rk_iommu_domain *rk_domain = to_rk_domain(domain);
++	struct list_head *pos;
++	unsigned long flags;
++	int i;
++
++	if (rk_domain->opt_ops && rk_domain->opt_ops->flush_iotlb_all) {
++		return rk_domain->opt_ops->flush_iotlb_all(domain,
++							   rk_domain->iommu_dev);
++	}
++
++	spin_lock_irqsave(&rk_domain->iommus_lock, flags);
++	list_for_each(pos, &rk_domain->iommus) {
++		struct rk_iommu *iommu;
++		int ret;
++
++		iommu = list_entry(pos, struct rk_iommu, node);
++
++		ret = pm_runtime_get_if_in_use(iommu->dev);
++		if (WARN_ON_ONCE(ret < 0))
++			continue;
++		if (ret) {
++			WARN_ON(clk_bulk_enable(iommu->num_clocks, iommu->clocks));
++			for (i = 0; i < iommu->num_mmu; i++)
++				rk_iommu_base_command(iommu->bases[i],
++						      RK_MMU_CMD_ZAP_CACHE);
++			clk_bulk_disable(iommu->num_clocks, iommu->clocks);
++			pm_runtime_put(iommu->dev);
++		}
++	}
++	spin_unlock_irqrestore(&rk_domain->iommus_lock, flags);
++}
++
+ static struct rk_iommu *rk_iommu_from_dev(struct device *dev)
+ {
+ 	struct rk_iommudata *data = dev_iommu_priv_get(dev);
+@@ -1018,6 +1072,19 @@ static int rk_iommu_attach_device(struct
+ 	if (!iommu)
+ 		return 0;
+ 
++	if (iommu->opt_ops) {
++		rk_domain->opt_ops = iommu->opt_ops;
++		rk_domain->iommu_dev = iommu->dev;
++	}
++
++	if (rk_domain->opt_ops && rk_domain->opt_ops->attach_dev) {
++		iommu->domain = domain;
++		spin_lock_irqsave(&rk_domain->iommus_lock, flags);
++		list_add_tail(&iommu->node, &rk_domain->iommus);
++		spin_unlock_irqrestore(&rk_domain->iommus_lock, flags);
++		return rk_domain->opt_ops->attach_dev(domain, rk_domain->iommu_dev);
++	}
++
+ 	dev_dbg(dev, "Attaching to iommu domain\n");
+ 
+ 	/* iommu already attached */
+@@ -1097,6 +1164,9 @@ static void rk_iommu_domain_free(struct
+ 	struct rk_iommu_domain *rk_domain = to_rk_domain(domain);
+ 	int i;
+ 
++  if (rk_domain->opt_ops && rk_domain->opt_ops->free)
++    rk_domain->opt_ops->free(domain, rk_domain->iommu_dev);
++
+ 	WARN_ON(!list_empty(&rk_domain->iommus));
+ 
+ 	for (i = 0; i < NUM_DT_ENTRIES; i++) {
+@@ -1173,6 +1243,7 @@ static const struct iommu_ops rk_iommu_o
+ 		.attach_dev	= rk_iommu_attach_device,
+ 		.map_pages	= rk_iommu_map,
+ 		.unmap_pages	= rk_iommu_unmap,
++		.flush_iotlb_all = rk_iommu_flush_tlb_all,
+ 		.iova_to_phys	= rk_iommu_iova_to_phys,
+ 		.free		= rk_iommu_domain_free,
+ 	}
+@@ -1208,6 +1279,13 @@ static int rk_iommu_probe(struct platfor
+ 	if (WARN_ON(rk_ops != ops))
+ 		return -EINVAL;
+ 
++	if (device_property_match_string(dev, "compatible", "rockchip,iommu-av1d") >= 0) {
++		iommu->opt_ops = av1d_iommu_get_ops();
++		if (iommu->opt_ops)
++			dev_info(dev, "av1d iommu enabled\n");
++		goto alloc_group;
++	}
++
+ 	iommu->bases = devm_kcalloc(dev, num_res, sizeof(*iommu->bases),
+ 				    GFP_KERNEL);
+ 	if (!iommu->bases)
+@@ -1265,6 +1343,7 @@ static int rk_iommu_probe(struct platfor
+ 	if (err)
+ 		return err;
+ 
++alloc_group:
+ 	err = iommu_device_sysfs_add(&iommu->iommu, dev, NULL, dev_name(dev));
+ 	if (err)
+ 		goto err_unprepare_clocks;
+@@ -1281,6 +1360,12 @@ static int rk_iommu_probe(struct platfor
+ 	if (!dma_dev)
+ 		dma_dev = &pdev->dev;
+ 
++	if (iommu->opt_ops && iommu->opt_ops->probe) {
++		err = iommu->opt_ops->probe(pdev);
++		if (err)
++			goto err_remove_sysfs;
++	}
++
+ 	pm_runtime_enable(dev);
+ 
+ 	for (i = 0; i < iommu->num_irq; i++) {
+@@ -1312,8 +1397,15 @@ err_unprepare_clocks:
+ static void rk_iommu_shutdown(struct platform_device *pdev)
+ {
+ 	struct rk_iommu *iommu = platform_get_drvdata(pdev);
++  struct rk_iommu_domain *rk_domain;
+ 	int i;
+ 
++  if (iommu->domain) {
++    rk_domain = to_rk_domain(iommu->domain);
++    if (rk_domain->opt_ops && rk_domain->opt_ops->shutdown)
++      return rk_domain->opt_ops->shutdown(pdev);
++  }
++
+ 	for (i = 0; i < iommu->num_irq; i++) {
+ 		int irq = platform_get_irq(pdev, i);
+ 
+@@ -1326,7 +1418,14 @@ static void rk_iommu_shutdown(struct pla
+ static int __maybe_unused rk_iommu_suspend(struct device *dev)
+ {
+ 	struct rk_iommu *iommu = dev_get_drvdata(dev);
++  struct rk_iommu_domain *rk_domain;
+ 
++  if  (!iommu->domain)
++    return 0;
++
++  rk_domain = to_rk_domain(iommu->domain);
++  if (rk_domain->opt_ops && rk_domain->opt_ops->suspend)
++    return rk_domain->opt_ops->suspend(dev);
+ 	if (iommu->domain == &rk_identity_domain)
+ 		return 0;
+ 
+@@ -1337,6 +1436,14 @@ static int __maybe_unused rk_iommu_suspe
+ static int __maybe_unused rk_iommu_resume(struct device *dev)
+ {
+ 	struct rk_iommu *iommu = dev_get_drvdata(dev);
++  struct rk_iommu_domain *rk_domain;
++
++  if (!iommu->domain)
++    return 0;
++
++  rk_domain = to_rk_domain(iommu->domain);
++  if (rk_domain->opt_ops && rk_domain->opt_ops->resume)
++    return rk_domain->opt_ops->resume(dev);
+ 
+ 	if (iommu->domain == &rk_identity_domain)
+ 		return 0;
+@@ -1373,6 +1480,9 @@ static const struct of_device_id rk_iomm
+ 	{	.compatible = "rockchip,rk3568-iommu",
+ 		.data = &iommu_data_ops_v2,
+ 	},
++	{	.compatible = "rockchip,iommu-av1d",
++		.data = &iommu_data_ops_v2,
++	},
+ 	{ /* sentinel */ }
+ };
+ 

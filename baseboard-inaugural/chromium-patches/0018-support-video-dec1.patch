@@ -1,0 +1,20 @@
+Index: src/media/gpu/v4l2/v4l2_utils.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2_utils.cc
++++ src/media/gpu/v4l2/v4l2_utils.cc
+@@ -584,8 +584,13 @@ std::optional<SupportedVideoDecoderConfi
+   std::vector<std::string> candidate_paths;
+ 
+ #if BUILDFLAG(IS_CHROMEOS)
+-  constexpr char kVideoDevicePattern[] = "/dev/video-dec0";
+-  candidate_paths.push_back(kVideoDevicePattern);
++  constexpr char kVideoDevicePattern[] = "/dev/video-dec";
++  constexpr int kMaxDevices = 3;
++  candidate_paths.reserve(kMaxDevices);
++  for (int i = 0; i < kMaxDevices; ++i) {
++    candidate_paths.push_back(
++       base::StringPrintf("%s%d", kVideoDevicePattern, i));
++  }
+ #else
+   constexpr char kVideoDevicePattern[] = "/dev/video";
+   constexpr int kMaxDevices = 256;
