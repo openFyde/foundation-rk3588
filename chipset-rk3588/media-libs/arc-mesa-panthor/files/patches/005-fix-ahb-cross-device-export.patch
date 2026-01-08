@@ -1,0 +1,101 @@
+Index: mesa3d/src/panfrost/vulkan/panvk_device_memory.c
+===================================================================
+--- mesa3d.orig/src/panfrost/vulkan/panvk_device_memory.c
++++ mesa3d/src/panfrost/vulkan/panvk_device_memory.c
+@@ -149,6 +149,7 @@ panvk_AllocateMemory(VkDevice _device,
+ 
+    mem->is_for_wsi = false;
+    mem->dumb_handle = 0;
++   mem->imported_ahb_fd = -1;
+ 
+    const struct wsi_memory_allocate_info *wsi_info =
+       vk_find_struct_const(pAllocateInfo->pNext, WSI_MEMORY_ALLOCATE_INFO_MESA);
+@@ -178,8 +179,6 @@ panvk_AllocateMemory(VkDevice _device,
+       /* Import Android hardware buffer by getting its native handle and
+        * extracting the dma-buf fd from it.
+        */
+-      mesa_logd("%s: ENTER - importing from AHB, alloc_size=%lu", __func__,
+-                (unsigned long)pAllocateInfo->allocationSize);
+       const native_handle_t *handle =
+          AHardwareBuffer_getNativeHandle(mem->vk.ahardware_buffer);
+       if (!handle || handle->numFds == 0) {
+@@ -188,8 +187,6 @@ panvk_AllocateMemory(VkDevice _device,
+                    __func__, handle, handle ? handle->numFds : 0);
+          goto err_destroy_mem;
+       }
+-      mesa_logd("%s: got native handle: fd=%d, numFds=%d, numInts=%d",
+-                __func__, handle->data[0], handle->numFds, handle->numInts);
+ 
+       /* Import the dma-buf fd as a buffer object */
+       mem->bo = pan_kmod_bo_import(device->kmod.dev, handle->data[0], 0);
+@@ -198,9 +195,9 @@ panvk_AllocateMemory(VkDevice _device,
+          mesa_loge("%s: pan_kmod_bo_import FAILED for fd=%d", __func__, handle->data[0]);
+          goto err_destroy_mem;
+       }
+-      mesa_logd("%s: pan_kmod_bo_import SUCCESS - bo=%p, size=%lu",
+-                __func__, mem->bo, (unsigned long)pan_kmod_bo_size(mem->bo));
+-      close(handle->data[0]);
++      mem->imported_ahb_fd = handle->data[0];
++      mesa_logd("%s: saved original AHB fd=%d (not closing it)",
++                __func__, mem->imported_ahb_fd);
+ #else
+       result = panvk_error(device, VK_ERROR_FEATURE_NOT_PRESENT);
+       goto err_destroy_mem;
+@@ -322,6 +319,12 @@ panvk_FreeMemory(VkDevice _device, VkDev
+ 
+    panvk_memory_munmap(mem);
+ 
++   /* Close saved AHB fd if this was an AHB import */
++   if (mem->imported_ahb_fd >= 0) {
++      mesa_logd("%s: closing saved AHB fd=%d", __func__, mem->imported_ahb_fd);
++      close(mem->imported_ahb_fd);
++   }
++
+    /* Free WSI dumb buffer if this was a WSI allocation */
+    if (mem->is_for_wsi && mem->dumb_handle) {
+       struct panvk_physical_device *pdevice =
+@@ -440,9 +443,25 @@ panvk_GetMemoryFdKHR(VkDevice _device, c
+       pGetFdInfo->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT ||
+       pGetFdInfo->handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT);
+ 
+-   int prime_fd = pan_kmod_bo_export(memory->bo);
+-   if (prime_fd < 0)
+-      return panvk_error(device, VK_ERROR_OUT_OF_DEVICE_MEMORY);
++   int prime_fd;
++
++   /* If this memory was imported from an AHB, return the original fd
++    * to avoid cross-device import issues. The original fd references the
++    * device where the buffer was allocated (e.g., renderD128/realtek),
++    * which SurfaceFlinger can import successfully. */
++   if (memory->imported_ahb_fd >= 0) {
++      prime_fd = dup(memory->imported_ahb_fd);
++      if (prime_fd < 0) {
++         mesa_loge("%s: failed to dup imported AHB fd=%d: %s",
++                   __func__, memory->imported_ahb_fd, strerror(errno));
++         return panvk_error(device, VK_ERROR_OUT_OF_DEVICE_MEMORY);
++      }
++   } else {
++      /* Normal case: export the BO from our device */
++      prime_fd = pan_kmod_bo_export(memory->bo);
++      if (prime_fd < 0)
++         return panvk_error(device, VK_ERROR_OUT_OF_DEVICE_MEMORY);
++   }
+ 
+    *pFd = prime_fd;
+    return VK_SUCCESS;
+Index: mesa3d/src/panfrost/vulkan/panvk_device_memory.h
+===================================================================
+--- mesa3d.orig/src/panfrost/vulkan/panvk_device_memory.h
++++ mesa3d/src/panfrost/vulkan/panvk_device_memory.h
+@@ -28,6 +28,11 @@ struct panvk_device_memory {
+ 
+    bool is_for_wsi;
+    uint32_t dumb_handle;  /* DRM dumb buffer handle for WSI allocations */
++
++   /* For imported AHB buffers, keep the original dmabuf fd to avoid
++    * cross-device import issues when re-exporting. The fd is dup'd to
++    * keep it valid after the original handle is closed. */
++   int imported_ahb_fd;
+ };
+ 
+ VK_DEFINE_NONDISP_HANDLE_CASTS(panvk_device_memory, vk.base, VkDeviceMemory,

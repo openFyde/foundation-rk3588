@@ -4,12 +4,12 @@
 EAPI=7
 
 EGIT_REPO_URI="git://anongit.freedesktop.org/mesa/mesa"
-CROS_WORKON_COMMIT="769e51468b49b2a42f0a0eaf71cf9eed5ff4e5de"
+CROS_WORKON_COMMIT="35721f19866d07dc671d4a83d6f6b77240629cb6"
 CROS_WORKON_TREE="b0d9c48cf8158a238fc4cf3f39e58c4bd5717c49"
 CROS_WORKON_PROJECT="chromiumos/third_party/mesa"
 CROS_WORKON_LOCALNAME="mesa"
 CROS_WORKON_MANUAL_UPREV="1"
-CROS_WORKON_EGIT_BRANCH="upstream/mesa-24.3.4"
+CROS_WORKON_EGIT_BRANCH="cros/upstream/25.0"
 
 KEYWORDS="*"
 
@@ -64,7 +64,6 @@ src_configure() {
 		-Dgbm=disabled
 		-Dgles1=disabled
 		-Dgles2=enabled
-		-Dshared-glapi=enabled
 		-Dgallium-drivers=panfrost
 		-Dgallium-vdpau=disabled
 		-Dperfetto=$(usex perfetto true false)
@@ -82,4 +81,9 @@ src_configure() {
 src_install() {
 	meson_src_install
 	rm -v -rf "${ED}/usr/include"
+}
+
+src_prepare() {
+  default
+  eapply ${FILESDIR}/*.patch
 }

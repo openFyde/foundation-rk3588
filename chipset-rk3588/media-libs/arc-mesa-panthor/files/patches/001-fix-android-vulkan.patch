@@ -1,0 +1,666 @@
+diff --git a/src/panfrost/vulkan/panvk_device_memory.c b/src/panfrost/vulkan/panvk_device_memory.c
+index 76fdf3c0d08..1b907e779d5 100644
+--- a/src/panfrost/vulkan/panvk_device_memory.c
++++ b/src/panfrost/vulkan/panvk_device_memory.c
+@@ -13,6 +13,10 @@
+ 
+ #include "vk_log.h"
+ 
++#if DETECT_OS_ANDROID
++#include <vndk/hardware_buffer.h>
++#endif
++
+ static void *
+ panvk_memory_mmap(struct panvk_device_memory *mem)
+ {
+@@ -61,7 +65,8 @@ panvk_AllocateMemory(VkDevice _device,
+    if (export_info) {
+       if (export_info->handleTypes &
+           ~(VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT |
+-            VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT))
++            VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT |
++            VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID))
+          return panvk_error(device, VK_ERROR_INVALID_EXTERNAL_HANDLE);
+       else if (export_info->handleTypes)
+          can_be_exported = true;
+@@ -88,6 +93,38 @@ panvk_AllocateMemory(VkDevice _device,
+          result = panvk_error(device, VK_ERROR_INVALID_EXTERNAL_HANDLE);
+          goto err_destroy_mem;
+       }
++   } else if (mem->vk.ahardware_buffer) {
++#if DETECT_OS_ANDROID
++      /* Import Android hardware buffer by getting its native handle and
++       * extracting the dma-buf fd from it.
++       */
++      mesa_logd("%s: ENTER - importing from AHB, alloc_size=%lu", __func__,
++                (unsigned long)pAllocateInfo->allocationSize);
++      const native_handle_t *handle =
++         AHardwareBuffer_getNativeHandle(mem->vk.ahardware_buffer);
++      if (!handle || handle->numFds == 0) {
++         result = panvk_error(device, VK_ERROR_INVALID_EXTERNAL_HANDLE);
++         mesa_loge("%s: failed to get native handle (handle=%p, numFds=%d)",
++                   __func__, handle, handle ? handle->numFds : 0);
++         goto err_destroy_mem;
++      }
++      mesa_logd("%s: got native handle: fd=%d, numFds=%d, numInts=%d",
++                __func__, handle->data[0], handle->numFds, handle->numInts);
++
++      /* Import the dma-buf fd as a buffer object */
++      mem->bo = pan_kmod_bo_import(device->kmod.dev, handle->data[0], 0);
++      if (!mem->bo) {
++         result = panvk_error(device, VK_ERROR_INVALID_EXTERNAL_HANDLE);
++         mesa_loge("%s: pan_kmod_bo_import FAILED for fd=%d", __func__, handle->data[0]);
++         goto err_destroy_mem;
++      }
++      mesa_logd("%s: pan_kmod_bo_import SUCCESS - bo=%p, size=%lu",
++                __func__, mem->bo, (unsigned long)pan_kmod_bo_size(mem->bo));
++      close(handle->data[0]);
++#else
++      result = panvk_error(device, VK_ERROR_FEATURE_NOT_PRESENT);
++      goto err_destroy_mem;
++#endif
+    } else {
+       mem->bo = pan_kmod_bo_alloc(device->kmod.dev,
+                                   can_be_exported ? NULL : device->kmod.vm,
+@@ -126,12 +163,21 @@ panvk_AllocateMemory(VkDevice _device,
+    int ret =
+       pan_kmod_vm_bind(device->kmod.vm, PAN_KMOD_VM_OP_MODE_IMMEDIATE, &op, 1);
+    if (ret) {
++      mesa_loge("%s: pan_kmod_vm_bind FAILED ret=%d, va=0x%lx, size=%lu",
++                __func__, ret, (unsigned long)op.va.start, (unsigned long)op.va.size);
+       result = panvk_error(device, VK_ERROR_OUT_OF_DEVICE_MEMORY);
+       goto err_return_va;
+    }
+ 
+    mem->addr.dev = op.va.start;
+ 
++#if DETECT_OS_ANDROID
++   if (mem->vk.ahardware_buffer) {
++      mesa_logd("%s: AHB memory mapped - dev_addr=0x%lx, size=%lu",
++                __func__, (unsigned long)mem->addr.dev, (unsigned long)pan_kmod_bo_size(mem->bo));
++   }
++#endif
++
+    if (fd_info) {
+       /* From the Vulkan spec:
+        *
+diff --git a/src/panfrost/vulkan/panvk_image.c b/src/panfrost/vulkan/panvk_image.c
+index 4aec8d970c3..c31b5f27aa1 100644
+--- a/src/panfrost/vulkan/panvk_image.c
++++ b/src/panfrost/vulkan/panvk_image.c
+@@ -45,6 +45,10 @@
+ #include "vk_object.h"
+ #include "vk_util.h"
+ 
++#if DETECT_OS_ANDROID
++#include "vk_android.h"
++#endif
++
+ static bool
+ panvk_image_can_use_mod(struct panvk_image *image, uint64_t mod)
+ {
+@@ -158,12 +162,40 @@ static uint64_t
+ panvk_image_get_mod(struct panvk_image *image,
+                     const VkImageCreateInfo *pCreateInfo)
+ {
++   const VkImageDrmFormatModifierExplicitCreateInfoEXT *explicit_mod = NULL;
++   VkImageDrmFormatModifierExplicitCreateInfoEXT eci;
++   VkSubresourceLayout a_plane_layouts[PANVK_MAX_PLANES];
++   if (vk_image_is_android_native_buffer(&image->vk)) {
++     mesa_logd("%s: detected ANB, getting layout from gralloc (fmt=%d, extent=%ux%ux%u)",
++               __func__, pCreateInfo->format, pCreateInfo->extent.width,
++               pCreateInfo->extent.height, pCreateInfo->extent.depth);
++     VkResult result = vk_android_get_anb_layout(
++       pCreateInfo, &eci, a_plane_layouts, PANVK_MAX_PLANES);
++     if (result == VK_SUCCESS) {
++       mesa_logd("%s: ANB layout retrieved - modifier=0x%lx, planes=%u",
++                 __func__, (unsigned long)eci.drmFormatModifier, eci.drmFormatModifierPlaneCount);
++       for (uint32_t p = 0; p < eci.drmFormatModifierPlaneCount; p++) {
++          mesa_logd("%s: ANB plane[%u] from gralloc - offset=%lu, rowPitch=%lu, arrayPitch=%lu, depthPitch=%lu",
++                    __func__, p,
++                    (unsigned long)eci.pPlaneLayouts[p].offset,
++                    (unsigned long)eci.pPlaneLayouts[p].rowPitch,
++                    (unsigned long)eci.pPlaneLayouts[p].arrayPitch,
++                    (unsigned long)eci.pPlaneLayouts[p].depthPitch);
++       }
++       explicit_mod = &eci;
++       /* For ANB, use the modifier from gralloc */
++       mesa_logd("%s: ANB using gralloc modifier 0x%lx", __func__,
++                 (unsigned long)eci.drmFormatModifier);
++       return panvk_image_get_explicit_mod(image, &eci);
++     } else {
++       mesa_loge("%s: vk_android_get_anb_layout FAILED result=%d", __func__, result);
++     }
++   }
+    if (pCreateInfo->tiling == VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT) {
+       const VkImageDrmFormatModifierListCreateInfoEXT *mod_list =
+          vk_find_struct_const(pCreateInfo->pNext,
+                               IMAGE_DRM_FORMAT_MODIFIER_LIST_CREATE_INFO_EXT);
+-      const VkImageDrmFormatModifierExplicitCreateInfoEXT *explicit_mod =
+-         vk_find_struct_const(
++      explicit_mod = vk_find_struct_const(
+             pCreateInfo->pNext,
+             IMAGE_DRM_FORMAT_MODIFIER_EXPLICIT_CREATE_INFO_EXT);
+ 
+@@ -208,6 +240,11 @@ panvk_image_init_layouts(struct panvk_image *image,
+          pCreateInfo->pNext,
+          IMAGE_DRM_FORMAT_MODIFIER_EXPLICIT_CREATE_INFO_EXT);
+ 
++   mesa_logd("%s: ENTER - fmt=%d, extent=%ux%ux%u, modifier=0x%lx, explicit_info=%p",
++             __func__, pCreateInfo->format, pCreateInfo->extent.width,
++             pCreateInfo->extent.height, pCreateInfo->extent.depth,
++             (unsigned long)image->vk.drm_format_mod, explicit_info);
++
+    image->plane_count = vk_format_get_plane_count(pCreateInfo->format);
+ 
+    /* Z32_S8X24 is not supported on v9+, and we don't want to use it
+@@ -224,11 +261,15 @@ panvk_image_init_layouts(struct panvk_image *image,
+          image->vk.format;
+ 
+       struct pan_image_explicit_layout plane_layout;
+-      if (explicit_info)
++      if (explicit_info) {
+          plane_layout = (struct pan_image_explicit_layout){
+             .offset = explicit_info->pPlaneLayouts[plane].offset,
+             .row_stride = explicit_info->pPlaneLayouts[plane].rowPitch,
+          };
++         mesa_logd("%s: using explicit layout for plane[%u] - offset=%lu, rowPitch=%lu",
++                   __func__, plane, (unsigned long)plane_layout.offset,
++                   (unsigned long)plane_layout.row_stride);
++      }
+ 
+       image->planes[plane].layout = (struct pan_image_layout){
+          .format = vk_format_to_pipe_format(format),
+@@ -244,7 +285,15 @@ panvk_image_init_layouts(struct panvk_image *image,
+       image->planes[plane].layout.modifier = image->vk.drm_format_mod;
+       pan_image_layout_init(arch, &image->planes[plane].layout,
+                             explicit_info ? &plane_layout : NULL);
++      mesa_logd("%s: plane[%u] layout initialized - data_size=%lu, row_stride=%u",
++                __func__, plane, (unsigned long)image->planes[plane].layout.data_size,
++                image->planes[plane].layout.slices[0].row_stride);
+    }
++   uint64_t total_size = 0;
++   for (uint8_t p = 0; p < image->plane_count; p++)
++      total_size += image->planes[p].layout.data_size;
++   mesa_logd("%s: all %u planes initialized, total_size=%lu", __func__,
++             image->plane_count, (unsigned long)total_size);
+ }
+ 
+ static void
+@@ -330,10 +379,50 @@ panvk_image_init(struct panvk_device *dev, struct panvk_image *image,
+     * usage/create_flags influence the modifier selection logic. */
+    panvk_image_pre_mod_select_meta_adjustments(image);
+ 
++   /* For ANB, get the layout from gralloc before calling panvk_image_get_mod */
++   VkImageDrmFormatModifierExplicitCreateInfoEXT anb_explicit_layout;
++   VkSubresourceLayout anb_plane_layouts[PANVK_MAX_PLANES];
++   const VkImageDrmFormatModifierExplicitCreateInfoEXT *anb_layout_ptr = NULL;
++
++#if DETECT_OS_ANDROID
++   if (vk_image_is_android_native_buffer(&image->vk)) {
++      VkResult result = vk_android_get_anb_layout(pCreateInfo, &anb_explicit_layout,
++                                                   anb_plane_layouts, PANVK_MAX_PLANES);
++      if (result == VK_SUCCESS) {
++         mesa_logd("%s: ANB storing explicit layout - modifier=0x%lx, plane[0].rowPitch=%lu",
++                   __func__, (unsigned long)anb_explicit_layout.drmFormatModifier,
++                   (unsigned long)anb_explicit_layout.pPlaneLayouts[0].rowPitch);
++         anb_layout_ptr = &anb_explicit_layout;
++      }
++   }
++#endif
++
+    /* Now that we've patched the create/usage flags, we can proceed with the
+     * modifier selection. */
+    image->vk.drm_format_mod = panvk_image_get_mod(image, pCreateInfo);
+-   panvk_image_init_layouts(image, pCreateInfo);
++
++   /* At this time, an AHB handle is not yet provided.
++    * Image layout will be filled up during vkBindImageMemory2
++    * This section is removed by the optimizer for non-ANDROID builds
++    */
++   if (vk_image_is_android_hardware_buffer(&image->vk)) {
++      mesa_logd("%s: AHB image detected, deferring layout init to BindImageMemory2 (mod=0x%lx, fmt=%d)",
++                __func__, (unsigned long)image->vk.drm_format_mod, image->vk.format);
++      return;
++   }
++
++   /* For ANB, we need to pass the explicit layout to panvk_image_init_layouts.
++    * We do this by temporarily adding it to a modified pCreateInfo. */
++   VkImageCreateInfo modified_create_info;
++   if (anb_layout_ptr) {
++      modified_create_info = *pCreateInfo;
++      modified_create_info.pNext = anb_layout_ptr;
++      anb_explicit_layout.pNext = pCreateInfo->pNext;
++      mesa_logd("%s: ANB using modified pCreateInfo with explicit layout", __func__);
++      panvk_image_init_layouts(image, &modified_create_info);
++   } else {
++      panvk_image_init_layouts(image, pCreateInfo);
++   }
+ }
+ 
+ VKAPI_ATTR VkResult VKAPI_CALL
+@@ -344,8 +433,14 @@ panvk_CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
+    struct panvk_physical_device *phys_dev =
+       to_panvk_physical_device(dev->vk.physical);
+ 
++#if DETECT_OS_ANDROID
++   /* VkImageSwapchainCreateInfoKHR is not useful on Android */
++   const VkImageSwapchainCreateInfoKHR *swapchain_info = NULL;
++#else
+    const VkImageSwapchainCreateInfoKHR *swapchain_info =
+       vk_find_struct_const(pCreateInfo->pNext, IMAGE_SWAPCHAIN_CREATE_INFO_KHR);
++#endif
++
+    if (swapchain_info && swapchain_info->swapchain != VK_NULL_HANDLE) {
+       return wsi_common_create_swapchain_image(&phys_dev->wsi_device,
+                                                pCreateInfo,
+@@ -371,6 +466,21 @@ panvk_CreateImage(VkDevice device, const VkImageCreateInfo *pCreateInfo,
+       return panvk_error(device, VK_ERROR_OUT_OF_DEVICE_MEMORY);
+    }
+ 
++   /* Android native buffer import is handled by the vk_image framework */
++   if (vk_image_is_android_native_buffer(&image->vk)) {
++      mesa_logd("%s: ENTER ANB import - fmt=%d, extent=%ux%ux%u, usage=0x%x",
++                __func__, pCreateInfo->format, pCreateInfo->extent.width,
++                pCreateInfo->extent.height, pCreateInfo->extent.depth, pCreateInfo->usage);
++      VkResult result = vk_android_import_anb(&dev->vk, pCreateInfo,
++                                              pAllocator, &image->vk);
++      if (result != VK_SUCCESS) {
++         mesa_loge("%s: vk_android_import_anb FAILED result=%d", __func__, result);
++         vk_image_destroy(&dev->vk, pAllocator, &image->vk);
++         return result;
++      }
++      mesa_logd("%s: vk_android_import_anb SUCCESS", __func__);
++   }
++
+    *pImage = panvk_image_to_handle(image);
+    return VK_SUCCESS;
+ }
+@@ -526,6 +636,68 @@ panvk_image_plane_bind(struct pan_image *plane, struct pan_kmod_bo *bo,
+    }
+ }
+ 
++static bool
++panvk_image_update_layouts(struct panvk_image *image,
++                           const VkImageDrmFormatModifierExplicitCreateInfoEXT *explicit_info)
++{
++	 struct panvk_physical_device *phys_dev =
++      to_panvk_physical_device(image->vk.base.device->physical);
++   unsigned arch = pan_arch(phys_dev->kmod.props.gpu_prod_id);
++	 image->plane_count = explicit_info->drmFormatModifierPlaneCount;
++	 if (image->vk.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
++      image->plane_count = 2;
++
++   mesa_logd("%s: ENTER - fmt=%d, modifier=0x%lx, plane_count=%u, arch=%u",
++             __func__, image->vk.format, (unsigned long)explicit_info->drmFormatModifier,
++             image->plane_count, arch);
++
++   for (uint8_t plane = 0; plane < image->plane_count; plane++) {
++      VkFormat format =
++         (image->vk.format == VK_FORMAT_D32_SFLOAT_S8_UINT) ?
++         ((plane == 0) ? VK_FORMAT_D32_SFLOAT : VK_FORMAT_S8_UINT) :
++         image->vk.format;
++
++      struct pan_image_explicit_layout plane_layout;
++      if (explicit_info)
++         plane_layout = (struct pan_image_explicit_layout){
++            .offset = explicit_info->pPlaneLayouts[plane].offset,
++            .row_stride = explicit_info->pPlaneLayouts[plane].rowPitch,
++         };
++
++      mesa_logd("%s: plane[%u] - offset=%lu, rowPitch=%lu, fmt=%d",
++                __func__, plane, (unsigned long)plane_layout.offset,
++                (unsigned long)plane_layout.row_stride, format);
++
++      image->planes[plane].layout = (struct pan_image_layout){
++         .format = vk_format_to_pipe_format(format),
++         .dim = panvk_image_type_to_mali_tex_dim(image->vk.image_type),
++         .width = image->vk.extent.width,
++         .height = image->vk.extent.height,
++         .depth = image->vk.extent.depth,
++         .array_size = image->vk.array_layers,
++         .nr_samples = image->vk.samples,
++         .nr_slices = image->vk.mip_levels,
++      };
++
++      image->planes[plane].layout.modifier = image->vk.drm_format_mod;
++      if (!pan_image_layout_init(arch, &image->planes[plane].layout,
++                            &plane_layout)) {
++         mesa_loge("%s: pan_image_layout_init FAILED for plane %u", __func__, plane);
++				return false;
++      }
++      mesa_logd("%s: plane[%u] layout init SUCCESS - data_size=%lu, row_stride=%u, slice_stride=%u",
++                __func__, plane, (unsigned long)image->planes[plane].layout.data_size,
++                image->planes[plane].layout.slices[0].row_stride,
++                image->planes[plane].layout.slices[0].surface_stride);
++   }
++   uint64_t total_size = 0;
++   for (uint8_t plane = 0; plane < image->plane_count; plane++) {
++      total_size += image->planes[plane].layout.data_size;
++   }
++   mesa_logd("%s: all planes initialized successfully - total_size=%lu", __func__, (unsigned long)total_size);
++	 return true;
++}
++
+ VKAPI_ATTR VkResult VKAPI_CALL
+ panvk_BindImageMemory2(VkDevice device, uint32_t bindInfoCount,
+                        const VkBindImageMemoryInfo *pBindInfos)
+@@ -537,7 +709,40 @@ panvk_BindImageMemory2(VkDevice device, uint32_t bindInfoCount,
+       VK_FROM_HANDLE(panvk_image, image, pBindInfos[i].image);
+       struct pan_kmod_bo *old_bo = image->bo;
+ 
++      if (vk_image_is_android_hardware_buffer(&image->vk)) {
++        VK_FROM_HANDLE(panvk_device_memory, mem, pBindInfos[i].memory);
++        VkImageDrmFormatModifierExplicitCreateInfoEXT eci;
++        VkSubresourceLayout a_plane_layouts[PANVK_MAX_PLANES];
++
++        mesa_logd("%s: binding AHB image - ahb=%p, mem=%p, mem_bo=%p, bo_size=%lu, offset=%lu",
++                  __func__, mem->vk.ahardware_buffer, mem, mem->bo,
++                  (unsigned long)pan_kmod_bo_size(mem->bo), (unsigned long)pBindInfos[i].memoryOffset);
++
++        VkResult result = vk_android_get_ahb_layout(mem->vk.ahardware_buffer,
++                                &eci, a_plane_layouts, PANVK_MAX_PLANES);
++        if (result != VK_SUCCESS) {
++          mesa_loge("%s: vk_android_get_ahb_layout FAILED result=%d", __func__, result);
++          return result;
++        }
++        mesa_logd("%s: AHB layout retrieved - modifier=0x%lx, planes=%u",
++                  __func__, (unsigned long)eci.drmFormatModifier, eci.drmFormatModifierPlaneCount);
++        for (uint32_t p = 0; p < eci.drmFormatModifierPlaneCount; p++) {
++           mesa_logd("%s: AHB plane[%u] from gralloc - offset=%lu, rowPitch=%lu, arrayPitch=%lu, depthPitch=%lu",
++                     __func__, p,
++                     (unsigned long)eci.pPlaneLayouts[p].offset,
++                     (unsigned long)eci.pPlaneLayouts[p].rowPitch,
++                     (unsigned long)eci.pPlaneLayouts[p].arrayPitch,
++                     (unsigned long)eci.pPlaneLayouts[p].depthPitch);
++        }
++	      if (!panvk_image_update_layouts(image, &eci)) {
++          mesa_loge("%s: panvk_image_update_layouts FAILED", __func__);
++          return VK_ERROR_FORMAT_NOT_SUPPORTED;
++        }
++        mesa_logd("%s: AHB image layouts updated successfully", __func__);
++      }
++
+       if (swapchain_info && swapchain_info->swapchain != VK_NULL_HANDLE) {
++#if !DETECT_OS_ANDROID
+          VkImage wsi_vk_image = wsi_common_get_image(swapchain_info->swapchain,
+                                                    swapchain_info->imageIndex);
+          VK_FROM_HANDLE(panvk_image, wsi_image, wsi_vk_image);
+@@ -549,21 +754,53 @@ panvk_BindImageMemory2(VkDevice device, uint32_t bindInfoCount,
+          panvk_image_plane_bind(&image->planes[0], image->bo,
+                                 wsi_image->planes[0].data.base,
+                                 wsi_image->planes[0].data.offset);
++#endif
+       } else {
+          VK_FROM_HANDLE(panvk_device_memory, mem, pBindInfos[i].memory);
+          assert(mem);
+          image->bo = pan_kmod_bo_get(mem->bo);
+          uint64_t offset = pBindInfos[i].memoryOffset;
++
++         /* Calculate total required size */
++         uint64_t total_image_size = 0;
++         for (unsigned p = 0; p < image->plane_count; p++) {
++            total_image_size += image->planes[p].layout.data_size;
++         }
++
++         mesa_logd("%s: binding image to memory - bo=%p, bo_size=%lu, dev_addr=0x%lx, offset=%lu, plane_count=%u",
++                   __func__, image->bo, (unsigned long)pan_kmod_bo_size(mem->bo),
++                   (unsigned long)mem->addr.dev, (unsigned long)offset, image->plane_count);
++
++         if (total_image_size > pan_kmod_bo_size(mem->bo)) {
++            mesa_loge("%s: SIZE MISMATCH! image needs %lu bytes but BO only has %lu bytes (deficit: %ld)",
++                      __func__, (unsigned long)total_image_size,
++                      (unsigned long)pan_kmod_bo_size(mem->bo),
++                      (long)(total_image_size - pan_kmod_bo_size(mem->bo)));
++         }
+          if (is_disjoint(image)) {
+             const VkBindImagePlaneMemoryInfo *plane_info =
+                vk_find_struct_const(pBindInfos[i].pNext,
+                                     BIND_IMAGE_PLANE_MEMORY_INFO);
+             uint8_t plane =
+                panvk_plane_index(image->vk.format, plane_info->planeAspect);
++            mesa_logd("%s: binding disjoint plane %u", __func__, plane);
+             panvk_image_plane_bind(&image->planes[plane], image->bo,
+                                    mem->addr.dev, offset);
+          } else {
+             for (unsigned plane = 0; plane < image->plane_count; plane++) {
++               uint64_t plane_end_offset = offset + image->planes[plane].layout.data_size;
++               mesa_logd("%s: binding plane[%u] - base=0x%lx, offset=%lu, data_size=%lu, end_offset=%lu",
++                         __func__, plane, (unsigned long)mem->addr.dev, (unsigned long)offset,
++                         (unsigned long)image->planes[plane].layout.data_size,
++                         (unsigned long)plane_end_offset);
++
++               if (plane_end_offset > pan_kmod_bo_size(mem->bo)) {
++                  mesa_loge("%s: PLANE %u EXCEEDS BO! plane_end=%lu > bo_size=%lu (overflow: %ld bytes)",
++                            __func__, plane, (unsigned long)plane_end_offset,
++                            (unsigned long)pan_kmod_bo_size(mem->bo),
++                            (long)(plane_end_offset - pan_kmod_bo_size(mem->bo)));
++               }
++
+                panvk_image_plane_bind(&image->planes[plane], image->bo,
+                                       mem->addr.dev, offset);
+                offset += image->planes[plane].layout.data_size;
+diff --git a/src/panfrost/vulkan/panvk_instance.c b/src/panfrost/vulkan/panvk_instance.c
+index 062d0ebd8a3..16e81c0c671 100644
+--- a/src/panfrost/vulkan/panvk_instance.c
++++ b/src/panfrost/vulkan/panvk_instance.c
+@@ -15,6 +15,11 @@
+ #include "vk_alloc.h"
+ #include "vk_log.h"
+ 
++#if DETECT_OS_ANDROID
++#include "vk_android.h"
++#include "util/u_gralloc/u_gralloc.h"
++#endif
++
+ #include "panvk_entrypoints.h"
+ #include "panvk_instance.h"
+ #include "panvk_macros.h"
+@@ -208,6 +213,22 @@ panvk_CreateInstance(const VkInstanceCreateInfo *pCreateInfo,
+    STATIC_ASSERT(sizeof(instance->driver_build_sha) == SHA1_DIGEST_LENGTH);
+    memcpy(instance->driver_build_sha, build_id_data(note), SHA1_DIGEST_LENGTH);
+ 
++#if DETECT_OS_ANDROID
++   mesa_logd("%s: initializing u_gralloc for Android", __func__);
++   struct u_gralloc *u_gralloc = vk_android_init_ugralloc();
++
++   if (!u_gralloc) {
++      mesa_loge("%s: vk_android_init_ugralloc returned NULL!", __func__);
++   } else {
++      mesa_logd("%s: u_gralloc initialized - type=%d", __func__, u_gralloc_get_type(u_gralloc));
++      if (u_gralloc_get_type(u_gralloc) == U_GRALLOC_TYPE_FALLBACK) {
++         mesa_logw(
++            "panvk: Gralloc is not supported. Android extensions are disabled.");
++         vk_android_destroy_ugralloc();
++      }
++   }
++#endif
++
+    *pInstance = panvk_instance_to_handle(instance);
+ 
+    return VK_SUCCESS;
+@@ -222,6 +243,11 @@ panvk_DestroyInstance(VkInstance _instance,
+    if (!instance)
+       return;
+ 
++#if DETECT_OS_ANDROID
++   mesa_logd("%s: destroying u_gralloc", __func__);
++   vk_android_destroy_ugralloc();
++#endif
++
+    vk_instance_finish(&instance->vk);
+    vk_free(&instance->vk.alloc, instance);
+ }
+diff --git a/src/panfrost/vulkan/panvk_physical_device.c b/src/panfrost/vulkan/panvk_physical_device.c
+index 373f0849e5d..ea405940d33 100644
+--- a/src/panfrost/vulkan/panvk_physical_device.c
++++ b/src/panfrost/vulkan/panvk_physical_device.c
+@@ -24,6 +24,12 @@
+ #include "vk_shader_module.h"
+ #include "vk_util.h"
+ 
++#if DETECT_OS_ANDROID
++#include "vk_android.h"
++#include <vndk/hardware_buffer.h>
++#include "util/u_gralloc/u_gralloc.h"
++#endif
++
+ #include "panvk_device.h"
+ #include "panvk_entrypoints.h"
+ #include "panvk_instance.h"
+@@ -251,6 +257,20 @@ get_device_extensions(const struct panvk_physical_device *device,
+       .GOOGLE_hlsl_functionality1 = true,
+       .GOOGLE_user_type = true,
+    };
++
++#if DETECT_OS_ANDROID
++   /* Android WSI requires hardware buffer and native buffer support */
++   struct u_gralloc *gralloc = vk_android_get_ugralloc();
++   mesa_logd("%s: Android gralloc=%p", __func__, gralloc);
++   if (gralloc != NULL) {
++      mesa_logd("%s: enabling ANDROID_external_memory_android_hardware_buffer and ANDROID_native_buffer extensions",
++                __func__);
++      ext->ANDROID_external_memory_android_hardware_buffer = true;
++      ext->ANDROID_native_buffer = true;
++   } else {
++      mesa_logw("%s: gralloc is NULL, Android extensions disabled", __func__);
++   }
++#endif
+ }
+ 
+ static bool
+@@ -486,6 +506,24 @@ get_device_properties(const struct panvk_instance *instance,
+    /* Ensure that the max threads count per workgroup is valid for Bifrost */
+    assert(arch > 8 || device->kmod.props.max_threads_per_wg <= 1024);
+ 
++#if DETECT_OS_ANDROID
++   /* Used to determine the sharedImage prop in
++    * VkPhysicalDevicePresentationPropertiesANDROID
++    */
++   uint64_t front_rendering_usage = 0;
++   mesa_logd("%s: creating temporary gralloc for front_rendering_usage query", __func__);
++   struct u_gralloc *gralloc = u_gralloc_create(U_GRALLOC_TYPE_AUTO);
++   if (gralloc != NULL) {
++      u_gralloc_get_front_rendering_usage(gralloc, &front_rendering_usage);
++      mesa_logd("%s: front_rendering_usage=0x%lx", __func__, (unsigned long)front_rendering_usage);
++      u_gralloc_destroy(&gralloc);
++   } else {
++      mesa_logw("%s: u_gralloc_create returned NULL", __func__);
++   }
++   VkBool32 shared_image = front_rendering_usage ? VK_TRUE : VK_FALSE;
++   mesa_logd("%s: sharedImage property set to %s", __func__, shared_image ? "VK_TRUE" : "VK_FALSE");
++#endif
++
+    *properties = (struct vk_properties){
+       .apiVersion = get_vk_version(arch),
+       .driverVersion = vk_get_driver_version(),
+@@ -867,6 +905,10 @@ get_device_properties(const struct panvk_instance *instance,
+ 
+       /* VK_KHR_push_descriptor */
+       .maxPushDescriptors = MAX_PUSH_DESCRIPTORS,
++#if DETECT_OS_ANDROID
++      /* VkPhysicalDevicePresentationPropertiesANDROID */
++      .sharedImage = shared_image,
++#endif
+    };
+ 
+    snprintf(properties->deviceName, sizeof(properties->deviceName), "%s",
+@@ -1458,9 +1500,14 @@ panvk_get_external_image_format_properties(
+ {
+    const VkExternalMemoryHandleTypeFlags supported_handle_types =
+       VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT |
++      VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID |
+       VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT;
+ 
++   mesa_logd("%s: ENTER - handleType=0x%x, format=%d, tiling=%d",
++             __func__, handleType, pImageFormatInfo->format, pImageFormatInfo->tiling);
++
+    if (!(handleType & supported_handle_types)) {
++      mesa_loge("%s: unsupported handleType=0x%x", __func__, handleType);
+       return panvk_errorf(physical_device, VK_ERROR_FORMAT_NOT_SUPPORTED,
+                           "VkExternalMemoryTypeFlagBits(0x%x) unsupported",
+                           handleType);
+@@ -1488,6 +1535,18 @@ panvk_get_external_image_format_properties(
+                   VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT;
+    } else if (pImageFormatInfo->tiling == VK_IMAGE_TILING_LINEAR) {
+       features |= VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT;
++   } else if (handleType == VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID) {
++     mesa_logd("%s: AHB handle type - setting dedicated-only import/export features", __func__);
++     features = VK_EXTERNAL_MEMORY_FEATURE_DEDICATED_ONLY_BIT |
++        VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT |
++        VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT;
++     *external_properties = (VkExternalMemoryProperties){
++      .externalMemoryFeatures = features,
++      .exportFromImportedHandleTypes = 0,
++      .compatibleHandleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID,
++     };
++     mesa_logd("%s: AHB external properties configured successfully", __func__);
++     return VK_SUCCESS;
+    }
+ 
+    if (!features) {
+@@ -1516,6 +1575,7 @@ panvk_GetPhysicalDeviceImageFormatProperties2(
+    const VkPhysicalDeviceExternalImageFormatInfo *external_info = NULL;
+    const VkPhysicalDeviceImageViewImageFormatInfoEXT *image_view_info = NULL;
+    VkExternalImageFormatProperties *external_props = NULL;
++   UNUSED VkAndroidHardwareBufferUsageANDROID *android_usage = NULL;
+    VkFilterCubicImageViewImageFormatPropertiesEXT *cubic_props = NULL;
+    VkFormatFeatureFlags format_feature_flags;
+    VkSamplerYcbcrConversionImageFormatProperties *ycbcr_props = NULL;
+@@ -1537,6 +1597,7 @@ panvk_GetPhysicalDeviceImageFormatProperties2(
+          image_view_info = (const void *)s;
+          break;
+       default:
++         vk_debug_ignored_stype(s->sType);
+          break;
+       }
+    }
+@@ -1553,7 +1614,11 @@ panvk_GetPhysicalDeviceImageFormatProperties2(
+       case VK_STRUCTURE_TYPE_SAMPLER_YCBCR_CONVERSION_IMAGE_FORMAT_PROPERTIES:
+          ycbcr_props = (void *)s;
+          break;
++      case VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_USAGE_ANDROID:
++         android_usage = (void *)s;
++         break;
+       default:
++         vk_debug_ignored_stype(s->sType);
+          break;
+       }
+    }
+@@ -1582,6 +1647,14 @@ panvk_GetPhysicalDeviceImageFormatProperties2(
+       base_props->imageFormatProperties.maxMipLevels = 1;
+       base_props->imageFormatProperties.maxArrayLayers = 1;
+       base_props->imageFormatProperties.sampleCounts = 1;
++      if (android_usage) {
++#if DETECT_OS_ANDROID
++        uint64_t ahb_usage = vk_image_usage_to_ahb_usage(base_info->flags, base_info->usage);
++        mesa_logd("%s: setting androidHardwareBufferUsage=0x%lx (flags=0x%x, usage=0x%x)",
++                  __func__, (unsigned long)ahb_usage, base_info->flags, base_info->usage);
++        android_usage->androidHardwareBufferUsage = ahb_usage;
++#endif
++      }
+    }
+ 
+    if (cubic_props) {
+diff --git a/src/panfrost/vulkan/panvk_vX_device.c b/src/panfrost/vulkan/panvk_vX_device.c
+index 0ddcba404e3..1e58d252746 100644
+--- a/src/panfrost/vulkan/panvk_vX_device.c
++++ b/src/panfrost/vulkan/panvk_vX_device.c
+@@ -236,12 +236,17 @@ panvk_per_arch(create_device)(struct panvk_physical_device *physical_device,
+                                                 false);
+    }
+ 
++   mesa_logd("%s: building device dispatch table", __func__);
+    vk_device_dispatch_table_from_entrypoints(
+       &dispatch_table, &panvk_per_arch(device_entrypoints), PAN_ARCH > 9);
+    vk_device_dispatch_table_from_entrypoints(&dispatch_table,
+                                              &panvk_device_entrypoints, false);
++   mesa_logd("%s: adding vk_common_device_entrypoints to dispatch table", __func__);
++   vk_device_dispatch_table_from_entrypoints(&dispatch_table,
++                                             &vk_common_device_entrypoints, false);
+    vk_device_dispatch_table_from_entrypoints(&dispatch_table,
+                                              &wsi_device_entrypoints, false);
++   mesa_logd("%s: dispatch table built successfully", __func__);
+ 
+    result = vk_device_init(&device->vk, &physical_device->vk, &dispatch_table,
+                            pCreateInfo, pAllocator);

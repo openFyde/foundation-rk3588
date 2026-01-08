@@ -1,0 +1,16 @@
+diff --git a/src/panfrost/vulkan/panvk_image.c b/src/panfrost/vulkan/panvk_image.c
+index c31b5f27aa1..e444328ffc7 100644
+--- a/src/panfrost/vulkan/panvk_image.c
++++ b/src/panfrost/vulkan/panvk_image.c
+@@ -679,7 +679,10 @@ panvk_image_update_layouts(struct panvk_image *image,
+          .nr_slices = image->vk.mip_levels,
+       };
+ 
+-      image->planes[plane].layout.modifier = image->vk.drm_format_mod;
++      image->planes[plane].layout.modifier = explicit_info->drmFormatModifier;
++      mesa_logd("%s: using modifier from gralloc: 0x%lx (image->vk.drm_format_mod was 0x%lx)",
++                __func__, (unsigned long)explicit_info->drmFormatModifier,
++                (unsigned long)image->vk.drm_format_mod);
+       if (!pan_image_layout_init(arch, &image->planes[plane].layout,
+                             &plane_layout)) {
+          mesa_loge("%s: pan_image_layout_init FAILED for plane %u", __func__, plane);
