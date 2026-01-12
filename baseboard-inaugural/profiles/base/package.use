@@ -4,7 +4,7 @@ media-libs/libv4lplugins rockchip_v2
 media-libs/mesa egl -gbm gles2 shared-glapi
 media-libs/mesa-img egl -gbm gles2 shared-glapi
 media-libs/piglit waffle
-media-libs/waffle gbm
+#media-libs/waffle gbm
 sys-apps/flashrom use_os_timer
 net-wireless/wpa_supplicant-cros supplicant-next
 sys-apps/gptfdisk -ncurses
