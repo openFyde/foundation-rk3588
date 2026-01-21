@@ -108,11 +108,11 @@ Index: kernel-6_12/drivers/misc/jw_io_core.c
 +	devm_gpio_request(&pdev->dev, mobile_w_disable, "mobile_w_disable");
 +	gpio_direction_output(mobile_w_disable, 1);
 +	msleep(100);
-+	
++
 +	gpio_direction_output(mobile_reset, 1);
 +	msleep(100);
 +
-+	printk("jw_io_control_probe ok\n");
++	pr_info("USB modem GPIO Driver is ready.\n");
 +
 +	return 0;
 +}

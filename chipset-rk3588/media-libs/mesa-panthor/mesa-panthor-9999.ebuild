@@ -31,6 +31,7 @@ COMMON_DEPEND="
 RDEPEND="${COMMON_DEPEND}
 	libglvnd? ( media-libs/libglvnd )
 	!libglvnd? ( !media-libs/libglvnd )
+  dev-util/spirv-tools
 	zstd? ( app-arch/zstd )
 "
 

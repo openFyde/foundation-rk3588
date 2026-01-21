@@ -180,7 +180,7 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/power/supply/bq25700_charger.c
-@@ -0,0 +1,2215 @@
+@@ -0,0 +1,2220 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * TI BQ257000 charger driver
@@ -207,7 +207,7 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +#include <linux/gpio.h>
 +#include <linux/of_gpio.h>
 +
-+static int dbg_enable = 0;
++static int dbg_enable = 1;
 +module_param_named(dbg_level, dbg_enable, int, 0644);
 +
 +#define DBG(args...) \
@@ -806,7 +806,7 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +  if (IS_ERR_OR_NULL(battery) ||
 +      IS_ERR_OR_NULL(battery->desc->external_power_changed))
 +    return;
-+ // battery->desc->external_power_changed(battery);
++  battery->desc->external_power_changed(battery);
 +}
 +
 +static int bq25700_field_read(struct bq25700_device *charger,
@@ -1360,11 +1360,15 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +static void bq25700_enable_charger(struct bq25700_device *charger,
 +				   u32 input_current)
 +{
-+  if (charger->delay_charge_current) {
-+    charger->target_current = charger->init_data.ichg;
-+    charger->target_input_current = input_current;
-+    return;
-+  }
++	int vol_idx = bq25700_find_idx(DEFAULT_INPUTVOL, TBL_INPUTVOL);
++
++	if (charger->delay_charge_current) {
++		charger->target_current = charger->init_data.ichg;
++		charger->target_input_current = input_current;
++		charger->target_input_vol = vol_idx;
++		return;
++	}
++	bq25700_field_write(charger, INPUT_VOLTAGE, vol_idx);
 +	bq25700_field_write(charger, INPUT_CURRENT, input_current);
 +	bq25700_field_write(charger, CHARGE_CURRENT, charger->init_data.ichg);
 +}
@@ -1537,6 +1541,7 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +	if (ret != 0)
 +		return NOTIFY_OK;
 +	/* online=0: USB out */
++  dev_info(bq->dev, "POWER_SUPPLY_PROP_ONLINE:%d\n", prop.intval);
 +	if (prop.intval == 0) {
 +		queue_delayed_work(bq->usb_charger_wq, &bq->discnt_work,
 +				   msecs_to_jiffies(10));
@@ -1553,7 +1558,7 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +						&prop);
 +		if (ret != 0)
 +			return NOTIFY_OK;
-+		vol_idx = bq25700_find_idx((prop.intval - 1280000 - 3200000), TBL_INPUTVOL);
++		vol_idx = bq25700_find_idx(prop.intval, TBL_INPUTVOL);
 +		ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_CURRENT_NOW,
 +						&prop);
 +		if (ret != 0)
@@ -1923,7 +1928,7 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +			notify_psy = power_supply_get_by_phandle(charger->dev->of_node,
 +							"ti,usb-charger-detection");
 +			if (IS_ERR_OR_NULL(notify_psy)) {
-+				dev_info(charger->dev, "bq25700 notify_psy is error\n");
++				dev_dbg(charger->dev, "No USB PD power supply, charger will work in basic mode\n");
 +				notify_psy = NULL;
 +			}
 +		} else if (charger->plat_data.notify_device) {
@@ -1937,13 +1942,13 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +					POWER_SUPPLY_PROP_CURRENT_MAX, &prop);
 +		if (ret != 0)
 +			return ret;
++		cur_idx = bq25700_find_idx(prop.intval, TBL_INPUTCUR);
++
 +		ret = power_supply_get_property(notify_psy,
 +					POWER_SUPPLY_PROP_VOLTAGE_MAX, &prop);
 +		if (ret != 0)
 +			return ret;
-+
-+		cur_idx = bq25700_find_idx(prop.intval, TBL_INPUTCUR);
-+		vol_idx = bq25700_find_idx((prop.intval - 1280000 - 3200000), TBL_INPUTVOL);
++		vol_idx = bq25700_find_idx(prop.intval, TBL_INPUTVOL);
 +    if (charger->delay_charge_current) {
 +      charger->target_current = charger->init_data.ichg;
 +      charger->target_input_current = cur_idx;
@@ -2102,7 +2107,7 @@ Index: kernel-6_12/drivers/power/supply/bq25700_charger.c
 +	edev1 = extcon_get_edev_by_phandle(dev, 1);
 +	if (IS_ERR(edev1)) {
 +		if (PTR_ERR(edev1) != -EPROBE_DEFER)
-+			dev_err(dev, "Invalid or missing extcon dev1\n");
++			dev_dbg(dev, "No second extcon device (single Type-C port configuration)\n");
 +		charger->cable_edev_1 = NULL;
 +	} else {
 +		charger->cable_edev_1 = edev1;

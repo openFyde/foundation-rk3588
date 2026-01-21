@@ -10,7 +10,7 @@ Index: kernel-6_12/sound/soc/codecs/Kconfig
  	imply SND_SOC_ES8316
  	imply SND_SOC_ES8326
  	imply SND_SOC_ES8328_SPI
-@@ -1119,6 +1120,13 @@ config SND_SOC_DMIC
+@@ -1118,6 +1119,13 @@ config SND_SOC_DMIC
  	  Enable support for the Generic Digital Microphone CODEC.
  	  Select this if your sound card has DMICs.
  
@@ -24,7 +24,7 @@ Index: kernel-6_12/sound/soc/codecs/Kconfig
  config SND_SOC_HDMI_CODEC
  	tristate
  	select SND_PCM_ELD
-@@ -1160,6 +1168,10 @@ config SND_SOC_ES8328_SPI
+@@ -1159,6 +1167,10 @@ config SND_SOC_ES8328_SPI
  	depends on SPI_MASTER
  	select SND_SOC_ES8328
  

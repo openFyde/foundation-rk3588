@@ -2,7 +2,7 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
-@@ -0,0 +1,208 @@
+@@ -0,0 +1,212 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * Haoyu pi3dpx1207c RTC driver
@@ -32,7 +32,8 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 +    struct i2c_client       *client;
 +    struct device *dev;
 +    unsigned long typec_state;
-+    unsigned int flip;
++    unsigned int new_flip;
++    unsigned int current_flip;
 +    struct mutex i2c_rw_lock;
 +    struct typec_mux_dev *mux;
 +    struct typec_switch_dev *sw;
@@ -46,7 +47,7 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 +	},
 +
 +	{
-+		{0x13 ,0x11 ,0x20 ,0x23 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
++		{0x13 ,0x11 ,0x20 ,0x22 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
 +		{0x13 ,0x11 ,0x20 ,0x52 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
 +		{0x13 ,0x11 ,0x20 ,0x82 ,0x00 ,0xa7 ,0xa7 ,0xa7 ,0xa7},
 +	}
@@ -72,17 +73,19 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 +
 +static void set_pi3pdx_state(struct pi3dpx_priv *priv)
 +{
++    priv->current_flip = priv->new_flip;
 +	  switch (priv->typec_state) {
 +    case TYPEC_DP_STATE_E:
 +    case TYPEC_DP_STATE_C:
-+      pi3dpx_i2c_write(priv, PI3DPX_BYTES_NUM, &redriver_config[priv->flip].full_dp_config);
++      pi3dpx_i2c_write(priv, PI3DPX_BYTES_NUM, &redriver_config[priv->current_flip].full_dp_config);
 +      break;
 +    case TYPEC_DP_STATE_D:
-+      pi3dpx_i2c_write(priv, PI3DPX_BYTES_NUM, &redriver_config[priv->flip].usb_dp_config);
++      pi3dpx_i2c_write(priv, PI3DPX_BYTES_NUM, &redriver_config[priv->current_flip].usb_dp_config);
 +      break;
 +    default:
-+      pi3dpx_i2c_write(priv, PI3DPX_BYTES_NUM, &redriver_config[priv->flip].no_dp_config);
++      pi3dpx_i2c_write(priv, PI3DPX_BYTES_NUM, &redriver_config[priv->current_flip].no_dp_config);
 +  }
++  dev_info(priv->dev, "%s set flip:%d state:%ld\n", __func__, priv->current_flip, priv->typec_state);
 +}
 +
 +static int pi3dpx_typec_mux_set(struct typec_mux_dev *mux,
@@ -96,15 +99,15 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 +      typec != TYPEC_DP_STATE_C &&
 +      typec != TYPEC_DP_STATE_D)
 +    typec = TYPEC_STATE_SAFE;
-+  if (typec == priv->typec_state)
++  if ((typec == priv->typec_state) && (priv->new_flip == priv->current_flip))
 +    return 0;
 +  mutex_lock(&priv->i2c_rw_lock);
 +  priv->typec_state = typec;
-+  pr_info("typec state:%lu, flip:%d", priv->typec_state, priv->flip);
 +	set_pi3pdx_state(priv);
 +  mutex_unlock(&priv->i2c_rw_lock);
 +  return 0;
 +}
++
 +
 +static int pi3dpx_orien_sw_set(struct typec_switch_dev *sw,
 +            enum typec_orientation orien)
@@ -113,11 +116,10 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 +  if (orien == TYPEC_ORIENTATION_NONE)
 +    return 0;
 +  mutex_lock(&priv->i2c_rw_lock);
-+  priv->flip = (orien == TYPEC_ORIENTATION_REVERSE) ? 1: 0;
++  priv->new_flip = (orien == TYPEC_ORIENTATION_REVERSE) ? 1: 0;
 +  mutex_unlock(&priv->i2c_rw_lock);
 +	return 0;
 +}
-+
 +static void pi3dpx_orien_sw_unregister(void *data)
 +{
 +	struct pi3dpx_priv *priv = data;
@@ -139,6 +141,7 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 +  }
 +  return devm_add_action_or_reset(priv->dev, pi3dpx_orien_sw_unregister, priv);
 +}
++
 +
 +static void pi3dpx_typec_mux_unregister(void *data)
 +{
@@ -182,6 +185,7 @@ Index: kernel-6_12/drivers/usb/typec/mux/pi3dpx1207c.c
 +    ret = pi3dpx_typec_mux_register(priv);
 +    if (ret)
 +      return ret;
++    dev_info(priv->dev, "driver probed.\n");
 +	return 0;
 +}
 +

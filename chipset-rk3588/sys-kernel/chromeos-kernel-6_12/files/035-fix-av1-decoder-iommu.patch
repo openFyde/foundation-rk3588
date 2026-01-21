@@ -120,7 +120,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
    vbus_typec: vbus-typec {
      compatible = "regulator-fixed";
      regulator-name = "vbus_typec";
-@@ -1296,6 +1246,44 @@
+@@ -1298,6 +1248,44 @@
    status = "okay";
  };
  

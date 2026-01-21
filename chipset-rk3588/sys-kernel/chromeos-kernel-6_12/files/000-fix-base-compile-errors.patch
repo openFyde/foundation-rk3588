@@ -50,7 +50,7 @@ Index: kernel-6_12/drivers/base/dd.c
 ===================================================================
 --- kernel-6_12.orig/drivers/base/dd.c
 +++ kernel-6_12/drivers/base/dd.c
-@@ -753,7 +753,7 @@ static int really_probe_debug(struct dev
+@@ -752,7 +752,7 @@ static int really_probe_debug(struct dev
   *
   * Should somehow figure out how to use a semaphore, not an atomic variable...
   */
@@ -78,7 +78,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  struct rk_iommu_ops {
  	phys_addr_t (*pt_address)(u32 dte);
  	u32 (*mk_dtentries)(dma_addr_t pt_dma);
-@@ -1230,7 +1230,7 @@ static int rk_iommu_probe(struct platfor
+@@ -1231,7 +1231,7 @@ static int rk_iommu_probe(struct platfor
  
  	iommu->reset_disabled = device_property_read_bool(dev,
  					"rockchip,disable-mmu-reset");
@@ -87,7 +87,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	iommu->num_clocks = ARRAY_SIZE(rk_iommu_clocks);
  	iommu->clocks = devm_kcalloc(iommu->dev, iommu->num_clocks,
  				     sizeof(*iommu->clocks), GFP_KERNEL);
-@@ -1251,6 +1251,15 @@ static int rk_iommu_probe(struct platfor
+@@ -1252,6 +1252,15 @@ static int rk_iommu_probe(struct platfor
  	else if (err)
  		return err;
  

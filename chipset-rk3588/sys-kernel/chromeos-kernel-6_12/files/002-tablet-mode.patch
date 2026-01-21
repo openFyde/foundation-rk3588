@@ -38,7 +38,7 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/usb/misc/fyde-vdtb.c
-@@ -0,0 +1,239 @@
+@@ -0,0 +1,261 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + *  Fydeos detachable emulator driver
@@ -64,17 +64,25 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +MODULE_DESCRIPTION("Detachable device driver Emulator");
 +
 +struct vdtb_priv {
-+  atomic_t in_suspend;
++//  atomic_t in_suspend;
++  atomic_t keyboards_num;
 +  struct input_dev *input_dev;
 +  struct notifier_block nb;
 +  struct notifier_block power_nb;
++  struct miscdevice misc;
 +};
 +
 +//static int vdtb_open(struct inode *inode, struct file *file) {return 0;}
 +static int vdtb_release(struct inode *inode, struct file *file) {return 0;}
 +
 +static inline int is_usb_device(const struct device *dev) {
++  if (!dev->type || !dev->type->name)
++    return 0;
 +  return !strcmp(dev->type->name, "usb_device");
++}
++
++static inline struct vdtb_priv *to_vdtb_priv(struct miscdevice *misc) {
++  return container_of(misc, struct vdtb_priv, misc);
 +}
 +
 +static void set_tablet_mode(struct vdtb_priv *priv, bool mode) {
@@ -87,8 +95,8 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +}
 +
 +static ssize_t vdtb_write(struct file *file, const char *buf, size_t count, loff_t *ppos) {
-+  struct miscdevice *vdtb = (struct miscdevice *) file->private_data;
-+  struct vdtb_priv *priv = dev_get_drvdata(vdtb->this_device);
++  struct miscdevice *misc = (struct miscdevice *) file->private_data;
++  struct vdtb_priv *priv = to_vdtb_priv(misc);
 +  char tmp_buf[3];
 +  unsigned long n;
 +  if (count > 3) return -1;
@@ -133,16 +141,14 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  },
 +};
 +*/
-+static struct miscdevice vdtb_dev = {
-+  .minor = VDTB_DEVICE_MINOR,
-+  .name = VDTB_DEVICE_ID,
-+  .fops = &vdtb_fops,
-+};
++static struct vdtb_priv *vdtb_priv_global;
 +
 +static bool contains_kbd_interface(const struct usb_device* usb_dev) {
 +  struct usb_interface *intf;
 +  struct usb_host_interface *interface;
 +  int i;
++  if (!usb_dev)
++    return false;
 +  if (!is_usb_device(&usb_dev->dev))
 +    return false;
 +  if (!usb_dev->actconfig)
@@ -161,8 +167,6 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +
 +static int check_usb_kbd(struct usb_device *usb_dev, void *data) {
 +  int *kbd_num = (int *)data;
-+  if (*kbd_num)
-+    return 0;
 +  if (contains_kbd_interface(usb_dev))
 +    (*kbd_num)++;
 +  return 0;
@@ -171,30 +175,36 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +static void detect_usb_kbd(struct vdtb_priv *priv) {
 +  int kbd_num = 0;
 +  usb_for_each_dev(&kbd_num, check_usb_kbd);
-+  set_tablet_mode(priv, !kbd_num);
++  atomic_set(&priv->keyboards_num, kbd_num);
++  if (priv->input_dev)
++    set_tablet_mode(priv, !kbd_num);
 +}
 +
 +static int usb_notifier_nb(struct notifier_block *nb,
 +      unsigned long action, void *data) {
 +  const struct usb_device *usb_dev = data;
 +  struct vdtb_priv *priv = container_of(nb, struct vdtb_priv, nb);
++#if 0
 +  if (atomic_read(&priv->in_suspend)) {
 +    pr_info("vdtb suspend skip");
 +    return NOTIFY_DONE;
 +  }
-+  if (action == USB_DEVICE_REMOVE)
-+    dev_info(&usb_dev->dev, "is removed");
++#endif
 +  if (action > USB_DEVICE_REMOVE)
 +    return NOTIFY_DONE;
-+  if (action == USB_DEVICE_REMOVE) {
-+    detect_usb_kbd(priv);
-+  }else if (contains_kbd_interface(usb_dev)) {
-+    set_tablet_mode(priv, false);
++  if (contains_kbd_interface(usb_dev)) {
++    if (action == USB_DEVICE_REMOVE) {
++      if (atomic_dec_return(&priv->keyboards_num) <= 0)
++        set_tablet_mode(priv, true);
++    } else if (action == USB_DEVICE_ADD){
++      if (atomic_inc_return(&priv->keyboards_num) > 0)
++        set_tablet_mode(priv, false);
++    }
 +  }
 +  return NOTIFY_DONE;
 +}
 +
-+#ifdef CONFIG_PM_SLEEP
++#if 0 //def CONFIG_PM_SLEEP
 +static int power_notifier_nb(struct notifier_block *nb,
 +    unsigned long action, void *data) {
 +  struct vdtb_priv *priv = container_of(nb, struct vdtb_priv, power_nb);
@@ -208,6 +218,7 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +    case PM_POST_SUSPEND:
 +      atomic_set(&priv->in_suspend, 0);
 +      pr_info("fyde_vtb resumed.");
++      detect_usb_kbd(priv);
 +      break;
 +    default:
 +      break;
@@ -217,30 +228,39 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +#endif
 +
 +static void remove_vdtb(void) {
-+  struct vdtb_priv *priv;
-+  if (!vdtb_dev.this_device)
++  struct vdtb_priv *priv = vdtb_priv_global;
++  if (!priv || !priv->misc.this_device)
 +    return;
-+  priv = (struct vdtb_priv *)dev_get_drvdata(vdtb_dev.this_device);
 +  input_unregister_device(priv->input_dev);
 +  usb_unregister_notify(&priv->nb);
 +#ifdef CONFIG_PM_SLEEP
-+  unregister_pm_notifier(&priv->power_nb);
++ // unregister_pm_notifier(&priv->power_nb);
 +#endif
-+  misc_deregister(&vdtb_dev);
++  misc_deregister(&priv->misc);
++  kfree(priv);
++  vdtb_priv_global = NULL;
 +}
 +
 +static int __init init_vdtb_module(void) {
 +  int err = 0;
 +  struct input_dev *idev;
 +  struct vdtb_priv *priv;
-+  err = misc_register(&vdtb_dev);
++
++  priv = kzalloc(sizeof(*priv), GFP_KERNEL);
++  if (!priv)
++    return -ENOMEM;
++
++  priv->misc.minor = VDTB_DEVICE_MINOR;
++  priv->misc.name = VDTB_DEVICE_ID;
++  priv->misc.fops = &vdtb_fops;
++
++  err = misc_register(&priv->misc);
 +  if (err)
 +    goto error_register;
-+	priv = devm_kzalloc(vdtb_dev.this_device, sizeof(*priv), GFP_KERNEL);
-+  if (!priv)
-+    goto error_alloc;
-+  dev_set_drvdata(vdtb_dev.this_device, priv);
-+  idev = devm_input_allocate_device(vdtb_dev.this_device);
++
++  vdtb_priv_global = priv;
++
++  idev = devm_input_allocate_device(priv->misc.this_device);
 +  if (!idev)
 +    goto error_alloc;
 +  idev->name = VDTB_DEV_NAME;
@@ -254,17 +274,19 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  detect_usb_kbd(priv);
 +  priv->nb.notifier_call = usb_notifier_nb;
 +  usb_register_notify(&priv->nb);
-+  atomic_set(&priv->in_suspend, 0);
++//  atomic_set(&priv->in_suspend, 0);
 +#ifdef CONFIG_PM_SLEEP
-+  priv->power_nb.notifier_call = power_notifier_nb;
-+  register_pm_notifier(&priv->power_nb);
++ // priv->power_nb.notifier_call = power_notifier_nb;
++ // register_pm_notifier(&priv->power_nb);
 +#endif
-+  dev_info(vdtb_dev.this_device, "device is working.\n");
++  dev_info(priv->misc.this_device, "device is working.\n");
 +  return 0;
 +
 +error_alloc:
 +  remove_vdtb();
++  return err;
 +error_register:
++  kfree(priv);
 +  return err;
 +}
 +

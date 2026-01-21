@@ -360,8 +360,8 @@ Index: kernel-6_12/drivers/usb/typec/tcpm/tcpci_husb311.c
 +
 +static int husb311_pm_suspend(struct device *dev)
 +{
-+	struct husb311_chip *chip = dev->driver_data;
 +	struct i2c_client *client = to_i2c_client(dev);
++	struct husb311_chip *chip = i2c_get_clientdata(client);
 +
 +	if (device_may_wakeup(dev) && (!chip->vbus_on || chip->wakeup))
 +		enable_irq_wake(client->irq);
@@ -378,8 +378,8 @@ Index: kernel-6_12/drivers/usb/typec/tcpm/tcpci_husb311.c
 +
 +static int husb311_pm_resume(struct device *dev)
 +{
-+	struct husb311_chip *chip = dev->driver_data;
 +	struct i2c_client *client = to_i2c_client(dev);
++	struct husb311_chip *chip = i2c_get_clientdata(client);
 +	int ret = 0;
 +	u8 filter;
 +

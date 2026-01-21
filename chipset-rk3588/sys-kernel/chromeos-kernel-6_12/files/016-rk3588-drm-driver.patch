@@ -82,13 +82,14 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/Kconfig
  	help
  	  This selects support for Rockchip SoC specific extensions
  	  for the Synopsys DesignWare HDMI driver. If you want to
-@@ -72,11 +100,16 @@ config ROCKCHIP_DW_MIPI_DSI
+@@ -72,11 +100,17 @@ config ROCKCHIP_DW_MIPI_DSI
  	  enable MIPI DSI on RK3288 or RK3399 based SoC, you should
  	  select this option.
  
 +config ROCKCHIP_DW_DP
 +	bool "Rockchip specific extensions for Synopsys DW DPTX"
 +	select DRM_DISPLAY_HDCP_HELPER
++  select DRM_DISPLAY_DP_HELPER
 +	select DRM_DISPLAY_HDMI_HELPER
 +	help
 +	  Choose this option for Synopsys DesignWare Cores DisplayPort
@@ -102,7 +103,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/Kconfig
  	help
  	  This selects support for Rockchip SoC specific extensions
  	  for the Innosilicon HDMI driver. If you want to enable
-@@ -84,22 +117,24 @@ config ROCKCHIP_INNO_HDMI
+@@ -84,22 +118,24 @@ config ROCKCHIP_INNO_HDMI
  
  config ROCKCHIP_LVDS
  	bool "Rockchip LVDS support"
@@ -133,7 +134,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/Kconfig
  	help
  	  Choose this option to enable support for Rockchip RGB output.
  	  Some Rockchip CRTCs, like rv1108, can directly output parallel
-@@ -108,9 +143,34 @@ config ROCKCHIP_RGB
+@@ -108,9 +144,34 @@ config ROCKCHIP_RGB
  
  config ROCKCHIP_RK3066_HDMI
  	bool "Rockchip specific extensions for RK3066 HDMI"
@@ -2460,7 +2461,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
 ===================================================================
 --- /dev/null
 +++ kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
-@@ -0,0 +1,6061 @@
+@@ -0,0 +1,6087 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Synopsys DesignWare Cores DisplayPort Transmitter Controller
@@ -3918,12 +3919,20 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
 +		num_modes = drm_panel_get_modes(dp->panel, connector);
 +
 +	if (!num_modes) {
-+		edid = drm_get_edid(connector, &dp->aux.ddc);
-+		if (edid) {
-+			drm_connector_update_edid_property(connector, edid);
-+			num_modes = drm_add_edid_modes(connector, edid);
-+			dw_dp_update_hdr_property(connector);
-+			kfree(edid);
++		int ret;
++
++		ret = phy_power_on(dp->phy);
++		if (ret) {
++			dev_err(dp->dev, "failed to power on PHY for EDID: %d\n", ret);
++		} else {
++			edid = drm_get_edid(connector, &dp->aux.ddc);
++			if (edid) {
++				drm_connector_update_edid_property(connector, edid);
++				num_modes = drm_add_edid_modes(connector, edid);
++				dw_dp_update_hdr_property(connector);
++				kfree(edid);
++			}
++			phy_power_off(dp->phy);
 +		}
 +	}
 +
@@ -6944,8 +6953,19 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
 +	int ret;
 +
 +	ret = phy_power_on(dp->phy);
-+	if (ret)
++	if (ret) {
++		dev_err(dp->dev, "phy_power_on failed: %d\n", ret);
 +		goto fail_power_on;
++	}
++
++	/*
++	 * After phy_power_on, the USBDP PHY may perform a full reconfiguration
++	 * if switching from USB to DP mode. The built-in 10ms delay in the PHY
++	 * isn't sufficient for mode changes. Give extra time for stabilization.
++	 */
++	if (dp->usbdp_hpd) {
++		dev_info(dp->dev, "Waiting for USBDP PHY stabilization after mode change\n");
++	}
 +
 +	ret = drm_dp_dpcd_readb(&dp->aux, DP_DPCD_REV, &value);
 +	if (ret < 0) {
@@ -8134,30 +8154,34 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
 +	struct dw_dp *dp = typec_mux_get_drvdata(mux);
 +
 +	mutex_lock(&dp->irq_lock);
++	dev_info(dp->dev, "DW-DP mux_set: mode=%lu alt=%p\n", state->mode, state->alt);
 +	if (state->alt && state->alt->svid == USB_TYPEC_DP_SID) {
 +		struct typec_displayport_data *data = state->data;
 +
 +		if (!data) {
-+			dev_dbg(dp->dev, "hotunplug from the usbdp\n");
++			dev_info(dp->dev, "hotunplug from the usbdp (no data)\n");
 +			dp->hotplug.long_hpd = true;
 +			dp->hotplug.status = false;
 +			schedule_work(&dp->hpd_work);
 +		} else if (data->status & DP_STATUS_IRQ_HPD) {
-+			dev_dbg(dp->dev, "IRQ from the usbdp\n");
++			dev_info(dp->dev, "IRQ from the usbdp status=0x%x\n", data->status);
 +			dp->hotplug.long_hpd = false;
 +			dp->hotplug.status = true;
 +			schedule_work(&dp->hpd_work);
 +		} else if (data->status & DP_STATUS_HPD_STATE) {
-+			dev_dbg(dp->dev, "hotplug from the usbdp\n");
++			dev_info(dp->dev, "hotplug from the usbdp status=0x%x conf=0x%x\n",
++				 data->status, data->conf);
 +			dp->hotplug.long_hpd = true;
 +			dp->hotplug.status = true;
 +			schedule_work(&dp->hpd_work);
 +		} else {
-+			dev_dbg(dp->dev, "hotunplug from the usbdp\n");
++			dev_info(dp->dev, "hotunplug from the usbdp status=0x%x\n", data->status);
 +			dp->hotplug.long_hpd = true;
 +			dp->hotplug.status = false;
 +			schedule_work(&dp->hpd_work);
 +		}
++	} else {
++		dev_info(dp->dev, "DP mux_set: not DP Alt Mode\n");
 +	}
 +	mutex_unlock(&dp->irq_lock);
 +
@@ -8309,7 +8333,7 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
 +	if (ret)
 +		return ret;
 +
-+	if (device_property_present(dev, "svid")) {
++	if (device_property_present(dev, "mode-switch")) {
 +		ret = dw_dp_setup_typec_mux(dp);
 +		if (ret)
 +			return ret;
@@ -8318,6 +8342,9 @@ Index: kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
 +		if (ret)
 +			return ret;
 +		dp->usbdp_hpd = true;
++		dev_info(dev, "DW-DP: usbdp_hpd enabled\n");
++	} else {
++		dev_warn(dev, "DW-DP: mode-switch property NOT found\n");
 +	}
 +
 +	if (dp->hpd_gpio || dp->force_hpd || dp->usbdp_hpd)

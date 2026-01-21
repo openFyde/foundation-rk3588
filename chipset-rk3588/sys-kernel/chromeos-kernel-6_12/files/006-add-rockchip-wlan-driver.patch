@@ -426808,7 +426808,7 @@ Index: kernel-6_12/drivers/gpio/gpiolib-of.c
 ===================================================================
 --- kernel-6_12.orig/drivers/gpio/gpiolib-of.c
 +++ kernel-6_12/drivers/gpio/gpiolib-of.c
-@@ -482,6 +482,19 @@ static unsigned long of_convert_gpio_fla
+@@ -493,6 +493,19 @@ static unsigned long of_convert_gpio_fla
  	return lflags;
  }
  

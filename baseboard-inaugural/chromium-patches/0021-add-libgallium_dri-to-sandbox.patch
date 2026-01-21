@@ -2,27 +2,31 @@ Index: src/content/common/gpu_pre_sandbox_hook_linux.cc
 ===================================================================
 --- src.orig/content/common/gpu_pre_sandbox_hook_linux.cc
 +++ src/content/common/gpu_pre_sandbox_hook_linux.cc
-@@ -93,6 +93,7 @@ static const char kLibMaliPath[] = "/usr
+@@ -93,6 +93,8 @@ static const char kLibMaliPath[] = "/usr
  static const char kLibTegraPath[] = "/usr/lib64/libtegrav4l2.so";
  static const char kLibV4l2Path[] = "/usr/lib64/libv4l2.so";
  static const char kLibRkmppPath[] = "/usr/lib64/libv4l/plugins/libv4l-encplugin.so";
 +static const char kLibMesaPath[] = "/usr/lib64/libgallium_dri.so";
++static const char kLibSpirvPath[] = "/usr/lib64/libSPIRV-Tools.so";
  #else
  static const char kLibGlesPath[] = "/usr/lib/libGLESv2.so.2";
  static const char kLibEglPath[] = "/usr/lib/libEGL.so.1";
-@@ -100,6 +101,7 @@ static const char kLibMaliPath[] = "/usr
+@@ -100,6 +102,8 @@ static const char kLibMaliPath[] = "/usr
  static const char kLibTegraPath[] = "/usr/lib/libtegrav4l2.so";
  static const char kLibV4l2Path[] = "/usr/lib/libv4l2.so";
  static const char kLibRkmppPath[] = "/usr/lib/libv4l/plugins/libv4l-encplugin.so";
-+static const char kLibMesaPath[] = "/usr/lib/libgallium_dri.so"
++static const char kLibMesaPath[] = "/usr/lib/libgallium_dri.so";
++static const char kLibSpirvPath[] = "/usr/lib/libSPIRV-Tools.so";
  #endif
  
  constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
-@@ -406,6 +408,7 @@ void AddArmGpuPermissions(std::vector<Br
+@@ -406,7 +410,8 @@ void AddArmGpuPermissions(std::vector<Br
    permissions->push_back(BrokerFilePermission::ReadOnly(kLdSoCache));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibGlesPath));
    permissions->push_back(BrokerFilePermission::ReadOnly(kLibEglPath));
+-
 +  permissions->push_back(BrokerFilePermission::ReadOnly(kLibMesaPath));
- 
++  permissions->push_back(BrokerFilePermission::ReadOnly(kLibSpirvPath));
    AddArmMaliGpuPermissions(permissions);
  }
+ 

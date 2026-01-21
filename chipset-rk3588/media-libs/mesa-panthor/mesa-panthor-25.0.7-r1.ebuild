@@ -35,6 +35,7 @@ RDEPEND="${COMMON_DEPEND}
 	zstd? ( app-arch/zstd )
   dev-libs/libxml2
   app-arch/libarchive:=
+  dev-util/spirv-tools
   dev-libs/libconfig:=
   sys-libs/ncurses:=
   >=sys-libs/zlib-1.2.13

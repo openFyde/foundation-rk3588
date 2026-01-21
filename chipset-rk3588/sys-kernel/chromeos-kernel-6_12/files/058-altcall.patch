@@ -4065,3 +4065,151 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
      /*irqchip.gicv3_pseudo_nmi=0 rcupdate.rcu_expedited=1 rcu_nocbs=all */
    };
  
+@@ -615,8 +615,8 @@
+ 
+ &usbdp_phy0 {
+   status = "okay";
++  mode-switch;
+   orientation-switch;
+-  svid = <0xff01>;
+   sbu1-dc-gpios = <&gpio4 RK_PA0 GPIO_ACTIVE_HIGH>;
+   sbu2-dc-gpios = <&gpio4 RK_PA1 GPIO_ACTIVE_HIGH>;
+   pinctrl-names = "default";
+@@ -640,6 +640,8 @@
+   dr_mode = "otg";
+   status = "okay";
+   usb-role-switch;
++  snps,parkmode-disable-hs-quirk;
++  snps,parkmode-disable-ss-quirk;
+   port {
+     #address-cells = <1>;
+     #size-cells = <0>;
+@@ -696,7 +698,6 @@
+   rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART2>;
+ 	assigned-clocks = <&cru DCLK_VOP2_SRC>;
+ 	assigned-clock-parents = <&cru PLL_AUPLL>;
+- // assigned-clock-parents = <&cru PLL_V0PLL>;
+ 	assigned-clock-rates = <275000000>;
+ };
+ 
+@@ -755,6 +756,15 @@
+ 
+ &dp0 {
+   status = "okay";
++
++  ports {
++    port@2 {
++      reg = <2>;
++      dp0_typec_mux: endpoint {
++        remote-endpoint = <&usbc0_dp_mux>;
++      };
++    };
++  };
+ };
+ 
+ &dp0_in_vp1 {
+@@ -1018,18 +1028,6 @@
+     wakeup-source;
+     status = "okay";
+ 
+-    ports {
+-      #address-cells = <1>;
+-      #size-cells = <0>;
+-
+-      port@0 {
+-        reg = <0>;
+-        usbc0_role_sw: endpoint@0 {
+-          remote-endpoint = <&dwc3_0_role_switch>;
+-        };
+-      };
+-    };
+-
+     usb_con: connector {
+       compatible = "usb-c-connector";
+       label = "USB-C";
+@@ -1050,7 +1048,7 @@
+ 
+         altmode@0 {
+           reg = <0>;
+-          svid = <0xff01>;
++          svid = /bits/ 16 <0xff01>;
+           vdo = <0xffffffff>;
+         };
+       };
+@@ -1061,17 +1059,45 @@
+ 
+         port@0 {
+           reg = <0>;
+-          usbc0_orien_sw: endpoint {
+-            remote-endpoint = <&usbdp_phy0_orientation_switch>;
++          usbc0_mux_pi3dpx: endpoint@0 {
++            remote-endpoint = <&pi3dpx_mux>;
+           };
+         };
+ 
+         port@1 {
+           reg = <1>;
+-          dp_altmode_mux: endpoint {
++          usbc0_switch_pi3dpx: endpoint@0 {
++            remote-endpoint = <&pi3dpx_switch>;
++          };
++        };
++
++        port@2 {
++          reg = <2>;
++          usbc0_orien_sw: endpoint@0 {
++            remote-endpoint = <&usbdp_phy0_orientation_switch>;
++          };
++        };
++
++        port@3 {
++          reg = <3>;
++          dp_altmode_mux: endpoint@0 {
+             remote-endpoint = <&usbdp_phy0_dp_altmode_mux>;
+           };
+         };
++
++        port@4 {
++          reg = <4>;
++          usbc0_role_sw: endpoint@0 {
++            remote-endpoint = <&dwc3_0_role_switch>;
++          };
++        };
++
++        port@5 {
++          reg = <5>;
++          usbc0_dp_mux: endpoint@0 {
++            remote-endpoint = <&dp0_typec_mux>;
++          };
++        };
+       };
+     };
+   };
+@@ -1096,6 +1122,27 @@
+     reg = <0x50>;
+     pinctrl-names = "default";
+     status = "okay";
++    mode-switch;
++    orientation-switch;
++
++    ports {
++      #address-cells = <1>;
++      #size-cells = <0>;
++
++      port@0 {
++        reg = <0>;
++        pi3dpx_mux: endpoint {
++          remote-endpoint = <&usbc0_mux_pi3dpx>;
++        };
++      };
++
++      port@1 {
++        reg = <1>;
++        pi3dpx_switch: endpoint {
++          remote-endpoint = <&usbc0_switch_pi3dpx>;
++        };
++      };
++    };
+   };
+ 
+   sc8886: sc8886@6b {

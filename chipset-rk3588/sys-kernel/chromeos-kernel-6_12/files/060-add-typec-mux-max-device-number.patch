@@ -1,0 +1,13 @@
+Index: kernel-6_12/drivers/usb/typec/mux.c
+===================================================================
+--- kernel-6_12.orig/drivers/usb/typec/mux.c
++++ kernel-6_12/drivers/usb/typec/mux.c
+@@ -17,7 +17,7 @@
+ #include "class.h"
+ #include "mux.h"
+ 
+-#define TYPEC_MUX_MAX_DEVS	3
++#define TYPEC_MUX_MAX_DEVS	8
+ 
+ struct typec_switch {
+ 	struct typec_switch_dev *sw_devs[TYPEC_MUX_MAX_DEVS];

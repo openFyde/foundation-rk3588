@@ -933,7 +933,15 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 ===================================================================
 --- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
 +++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
-@@ -949,25 +949,7 @@
+@@ -690,6 +690,7 @@
+     resets = <&cru SRST_DP0>;
+     phys = <&usbdp_phy0 PHY_TYPE_DP>;
+     power-domains = <&power RK3588_PD_VO0>;
++    mode-switch;
+     #sound-dai-cells = <1>;
+     status = "disabled";
+ 
+@@ -949,25 +950,7 @@
      compatible = "rockchip,rk3588-mipidcphy-grf", "syscon";
      reg = <0x0 0xfd5ec000 0x0 0x100>;
    };
@@ -960,7 +968,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
    /* Updated to use existing aliases from rk3588-base.dtsi */
    /* Removed duplicate phy@fed60000 and phy@fed80000 nodes - they exist in rk3588-base.dtsi */
  
-@@ -1388,7 +1370,7 @@
+@@ -1388,7 +1371,7 @@
  &hdptxphy_hdmi0 {
    #clock-cells = <0>;
  };
@@ -969,7 +977,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
  &cru {
      assigned-clocks =
        <&cru PLL_PPLL>, <&cru PLL_AUPLL>,
-@@ -1415,204 +1397,8 @@
+@@ -1415,204 +1398,8 @@
        <12000000>, <99000000>,
        <20000000>;
  };
@@ -1175,7 +1183,7 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-rockchip.dtsi
      mclkin_i2s0: mclkin-i2s0 {
        compatible = "fixed-clock";
        #clock-cells = <0>;
-@@ -1693,4 +1479,34 @@
+@@ -1693,4 +1480,34 @@
        rockchip,bit-set-to-disable;
      };
  };
