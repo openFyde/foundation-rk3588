@@ -1,0 +1,74 @@
+Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+===================================================================
+--- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
++++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+@@ -1393,3 +1393,9 @@
+     };
+   };
+ };
++
++&uart9 {
++  status = "okay";
++  pinctrl-names = "default";
++  pinctrl-0 = <&uart9m2_xfer &uart9m2_ctsn>;
++};
+Index: kernel-6_12/drivers/tty/serial/8250/8250_dw.c
+===================================================================
+--- kernel-6_12.orig/drivers/tty/serial/8250/8250_dw.c
++++ kernel-6_12/drivers/tty/serial/8250/8250_dw.c
+@@ -24,6 +24,7 @@
+ #include <linux/reset.h>
+ #include <linux/slab.h>
+ #include <linux/workqueue.h>
++#include <linux/of.h>
+ 
+ #include <asm/byteorder.h>
+ 
+@@ -58,6 +59,12 @@
+ #define DW_UART_QUIRK_IS_DMA_FC		BIT(3)
+ #define DW_UART_QUIRK_APMC0D08		BIT(4)
+ #define DW_UART_QUIRK_CPR_VALUE		BIT(5)
++/*
++* In your kernel config, set:
++* CONFIG_SERIAL_8250_NR_UARTS and CONFIG_SERIAL_8250_RUNTIME_UARTS
++* bigger than your serial id to make this quirk work.
++*/
++#define DW_UART_QUIRK_LINE_NUM_AS_ID BIT(6)
+ 
+ struct dw8250_platform_data {
+ 	u8 usr_reg;
+@@ -463,6 +470,13 @@ static void dw8250_quirks(struct uart_po
+ {
+ 	unsigned int quirks = data->pdata ? data->pdata->quirks : 0;
+ 	u32 cpr_value = data->pdata ? data->pdata->cpr_value : 0;
++  struct device_node *np = p->dev->of_node;
++
++  if (quirks & DW_UART_QUIRK_LINE_NUM_AS_ID && np) {
++    int id = of_alias_get_id(np, "serial");
++    if (id >= 0)
++      p->line = id;
++  }
+ 
+ 	if (quirks & DW_UART_QUIRK_CPR_VALUE)
+ 		data->data.cpr_value = cpr_value;
+@@ -757,6 +771,12 @@ static const struct dev_pm_ops dw8250_pm
+ 	RUNTIME_PM_OPS(dw8250_runtime_suspend, dw8250_runtime_resume, NULL)
+ };
+ 
++static const struct dw8250_platform_data dw8250_dw_apb_rk = {
++  .usr_reg = DW_UART_USR,
++  .cpr_value = 0x00023ff2,
++  .quirks = DW_UART_QUIRK_LINE_NUM_AS_ID,
++};
++
+ static const struct dw8250_platform_data dw8250_dw_apb = {
+ 	.usr_reg = DW_UART_USR,
+ };
+@@ -783,6 +803,7 @@ static const struct dw8250_platform_data
+ };
+ 
+ static const struct of_device_id dw8250_of_match[] = {
++  { .compatible = "rockchip,rk3588-uart", .data = &dw8250_dw_apb_rk },
+ 	{ .compatible = "snps,dw-apb-uart", .data = &dw8250_dw_apb },
+ 	{ .compatible = "cavium,octeon-3860-uart", .data = &dw8250_octeon_3860_data },
+ 	{ .compatible = "marvell,armada-38x-uart", .data = &dw8250_armada_38x_data },
