@@ -2,7 +2,40 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
 ===================================================================
 --- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
 +++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
-@@ -1393,3 +1393,9 @@
+@@ -366,21 +366,28 @@
+     status = "okay";
+     compatible = "simple-audio-card";
+     simple-audio-card,name = "rockchip-dmic";
++    #address-cells = <1>;
++    #size-cells = <0>;
+ 
+     simple-audio-card,dai-link@0 {
++      reg = <0>;
+       format = "pdm";
+-      simple-audio-card,cpu {
++      bitclock-master = <&link1_cpu>;
++      frame-master = <&link1_cpu>;
++
++      link1_cpu: cpu {
+           sound-dai = <&pdm1>;
+       };
+-	    simple-audio-card,codec {
++	    link1_codec: codec {
+   	     sound-dai = <&pdmics>;
+       };
+     };
+   };
+ 
+-  pdmics: dummy-codec {
++  pdmics: dmic-codec {
+     status = "okay";
+-    compatible = "rockchip,dummy-codec";
++    compatible = "dmic-codec";
++    num-channels = <6>;
+     #sound-dai-cells = <0>;
+   };
+ 
+@@ -1393,3 +1400,9 @@
      };
    };
  };
