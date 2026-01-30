@@ -6307,7 +6307,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 + */
 +
 +/****** useful functions ******/
-+int count_char(char *input)
++static int count_char(char *input)
 +{
 +	int count = 0;
 +	int i = 0;
@@ -6345,7 +6345,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	return;
 +}
 +
-+bool chk_normal_str(char *str)
++static bool chk_normal_str(char *str)
 +{
 +	int i = 0;
 +	bool result = false;
@@ -6369,7 +6369,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	}
 +	return result;
 +}
-+bool chk_normal_char(char c)
++static bool chk_normal_char(char c)
 +{
 +	bool result = false;
 +
@@ -7227,15 +7227,15 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +{
 +	diag_mutual_old = kzalloc(x_num * y_num * sizeof(int32_t), GFP_KERNEL);
 +}
-+void setSelfBuffer(uint8_t x_num, uint8_t y_num)
++static void setSelfBuffer(uint8_t x_num, uint8_t y_num)
 +{
 +	diag_self = kzalloc((x_num + y_num) * sizeof(int32_t), GFP_KERNEL);
 +}
-+void setSelfNewBuffer(uint8_t x_num, uint8_t y_num)
++static void setSelfNewBuffer(uint8_t x_num, uint8_t y_num)
 +{
 +	diag_self_new = kzalloc((x_num + y_num) * sizeof(int32_t), GFP_KERNEL);
 +}
-+void setSelfOldBuffer(uint8_t x_num, uint8_t y_num)
++static void setSelfOldBuffer(uint8_t x_num, uint8_t y_num)
 +{
 +	diag_self_old = kzalloc((x_num + y_num) * sizeof(int32_t), GFP_KERNEL);
 +}
@@ -7252,7 +7252,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +}
 +#endif
 +
-+int himax_set_diag_cmd(struct himax_ic_data *ic_data,
++static int himax_set_diag_cmd(struct himax_ic_data *ic_data,
 +		struct himax_report_data *hx_touch_data)
 +{
 +	struct himax_ts_data *ts = private_ts;
@@ -7302,7 +7302,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +}
 +
 +/* #if defined(HX_DEBUG_LEVEL) */
-+void himax_log_touch_data(int start)
++static void himax_log_touch_data(int start)
 +{
 +	int i = 0;
 +	int print_size = 0;
@@ -7379,7 +7379,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	kfree(buf);
 +}
 +
-+void himax_log_touch_event(struct himax_ts_data *ts, int start)
++static void himax_log_touch_event(struct himax_ts_data *ts, int start)
 +{
 +	int i = 0;
 +
@@ -7412,7 +7412,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +		I("%s : wrong input!\n", __func__);
 +	}
 +}
-+void himax_log_touch_int_devation(int touched)
++static void himax_log_touch_int_devation(int touched)
 +{
 +	if (touched == HX_FINGER_ON) {
 +		ktime_get_ts64(&timeStart);
@@ -7437,7 +7437,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	}
 +}
 +
-+void himax_log_touch_event_detail(struct himax_ts_data *ts, int start)
++static void himax_log_touch_event_detail(struct himax_ts_data *ts, int start)
 +{
 +	int i = 0;
 +
@@ -7472,7 +7472,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	}
 +}
 +
-+void himax_ts_dbg_func(struct himax_ts_data *ts, int start)
++static void himax_ts_dbg_func(struct himax_ts_data *ts, int start)
 +{
 +	if (ts->debug_log_level & BIT(0)) {
 +		/* I("debug level 1\n"); */
@@ -7685,7 +7685,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	return len;
 +}
 +
-+void himax_get_mutual_edge(void)
++static void himax_get_mutual_edge(void)
 +{
 +	int i = 0;
 +
@@ -7698,7 +7698,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	}
 +}
 +
-+void himax_get_self_edge(void)
++static void himax_get_self_edge(void)
 +{
 +	int i = 0;
 +
@@ -7886,7 +7886,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +}
 +
 +/* DSRAM thread */
-+bool himax_ts_diag_func(int dsram_type)
++static bool himax_ts_diag_func(int dsram_type)
 +{
 +	int i = 0, j = 0;
 +	unsigned int index = 0;
@@ -8222,7 +8222,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +
 +
 +
-+void hx_dump_prog_set(uint8_t prog)
++static void hx_dump_prog_set(uint8_t prog)
 +{
 +	g_flash_progress = prog;
 +	if (prog == ONGOING)
@@ -8449,7 +8449,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +}
 +__CREATE_RW_NODE_HX(flash_dump);
 +
-+void himax_ts_dump_func(void)
++static void himax_ts_dump_func(void)
 +{
 +	uint8_t tmp_addr[DATA_LEN_4] = {0};
 +	int ret = NO_ERR;
@@ -9237,7 +9237,7 @@ Index: kernel-6_12/drivers/input/touchscreen/hxchipset/himax_debug.c
 +	}
 +}
 +
-+void dbg_func_ptr_init(void)
++static void dbg_func_ptr_init(void)
 +{
 +	/*debug function ptr init*/
 +	int idx = 1;

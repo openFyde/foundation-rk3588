@@ -2,7 +2,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 ===================================================================
 --- kernel-6_12.orig/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +++ kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
-@@ -8,613 +8,1696 @@
+@@ -8,613 +8,1717 @@
   * Author: Simon Xue <xxm@rock-chips.com>
   */
  
@@ -379,7 +379,8 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +#if RK_PCIE_DBG
 +	u32 loop;
 +	struct dw_pcie *pci = rk_pcie->pci;
-+
+ 
+-static int rockchip_pcie_init_irq_domain(struct rockchip_pcie *rockchip)
 +	dev_info(pci->dev, "ltssm = 0x%x\n",
 +		 rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
 +	for (loop = 0; loop < 64; loop++)
@@ -387,8 +388,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +			 rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_DBG_FIFO_STATUS));
 +#endif
 +}
- 
--static int rockchip_pcie_init_irq_domain(struct rockchip_pcie *rockchip)
++
 +static int rk_pcie_establish_link(struct dw_pcie *pci)
  {
 -	struct device *dev = rockchip->pci.dev;
@@ -445,6 +445,27 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +				gpiod_set_value_cansleep(rk_pcie->rst_gpio, 1);
 +				return 0;
 +			}
++		}
++
++		/*
++		 * During resume, don't waste time on lengthy link training
++		 * retries if no endpoint is present. Release PERST#, give a
++		 * brief window for link-up, and return 0 regardless so the
++		 * controller stays initialized for later hotplug/rescan.
++		 */
++		if (rk_pcie->in_suspend) {
++			msleep(rk_pcie->perst_inactive_ms);
++			gpiod_set_value_cansleep(rk_pcie->rst_gpio, 1);
++			usleep_range(1000, 1100);
++			if (dw_pcie_link_up(pci)) {
++				msleep(50);
++				dev_info(pci->dev, "PCIe Link up on resume, LTSSM is 0x%x\n",
++					rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
++			} else {
++				dev_info(pci->dev, "PCIe link not up on resume, LTSSM is 0x%x\n",
++					rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
++			}
++			return 0;
 +		}
 +
 +		/*
@@ -507,18 +528,21 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
  
 -	return 0;
 +	return rk_pcie->is_signal_test == true ? 0 : -EINVAL;
-+}
-+
+ }
+ 
+-static u32 rockchip_pcie_get_ltssm(struct rockchip_pcie *rockchip)
 +static bool rk_pcie_udma_enabled(struct rk_pcie *rk_pcie)
-+{
+ {
+-	return rockchip_pcie_readl_apb(rockchip, PCIE_CLIENT_LTSSM_STATUS);
 +	return dw_pcie_readl_dbi(rk_pcie->pci, PCIE_DMA_OFFSET +
 +				 PCIE_DMA_CTRL_OFF);
  }
  
--static u32 rockchip_pcie_get_ltssm(struct rockchip_pcie *rockchip)
+-static void rockchip_pcie_enable_ltssm(struct rockchip_pcie *rockchip)
 +static int rk_pcie_init_dma_trx(struct rk_pcie *rk_pcie)
  {
--	return rockchip_pcie_readl_apb(rockchip, PCIE_CLIENT_LTSSM_STATUS);
+-	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_ENABLE_LTSSM,
+-				 PCIE_CLIENT_GENERAL_CONTROL);
 +	if (!rk_pcie_udma_enabled(rk_pcie))
 +		return 0;
 +
@@ -540,11 +564,11 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	return 0;
  }
  
--static void rockchip_pcie_enable_ltssm(struct rockchip_pcie *rockchip)
+-static void rockchip_pcie_disable_ltssm(struct rockchip_pcie *rockchip)
 +#ifdef MODULE
 +void dw_pcie_write_dbi2(struct dw_pcie *pci, u32 reg, size_t size, u32 val)
  {
--	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_ENABLE_LTSSM,
+-	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_DISABLE_LTSSM,
 -				 PCIE_CLIENT_GENERAL_CONTROL);
 +	int ret;
 +
@@ -561,11 +585,11 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +
 +static struct dw_pcie_host_ops rk_pcie_host_ops;
  
--static void rockchip_pcie_disable_ltssm(struct rockchip_pcie *rockchip)
+-static int rockchip_pcie_link_up(struct dw_pcie *pci)
 +static int rk_add_pcie_port(struct rk_pcie *rk_pcie, struct platform_device *pdev)
  {
--	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_DISABLE_LTSSM,
--				 PCIE_CLIENT_GENERAL_CONTROL);
+-	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
+-	u32 val = rockchip_pcie_get_ltssm(rockchip);
 +	int ret;
 +	struct dw_pcie *pci = rk_pcie->pci;
 +	struct dw_pcie_rp *pp = &pci->pp;
@@ -585,55 +609,52 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +		dev_err(dev, "failed to initialize host\n");
 +		return ret;
 +	}
-+
-+	/* Disable BAR0 BAR1 */
-+	dw_pcie_writel_dbi2(pci, PCI_BASE_ADDRESS_0, 0x0);
-+	dw_pcie_writel_dbi2(pci, PCI_BASE_ADDRESS_1, 0x0);
-+
-+	return 0;
- }
- 
--static int rockchip_pcie_link_up(struct dw_pcie *pci)
-+static int rk_pcie_clk_init(struct rk_pcie *rk_pcie)
- {
--	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
--	u32 val = rockchip_pcie_get_ltssm(rockchip);
-+	struct device *dev = rk_pcie->pci->dev;
-+	int ret;
  
 -	if ((val & PCIE_LINKUP) == PCIE_LINKUP)
 -		return 1;
-+	rk_pcie->clk_cnt = devm_clk_bulk_get_all(dev, &rk_pcie->clks);
-+	if (rk_pcie->clk_cnt < 1)
-+		return -ENODEV;
-+
-+	ret = clk_bulk_prepare_enable(rk_pcie->clk_cnt, rk_pcie->clks);
-+	if (ret) {
-+		dev_err(dev, "failed to prepare enable pcie bulk clks: %d\n", ret);
-+		return ret;
-+	}
++	/* Disable BAR0 BAR1 */
++	dw_pcie_writel_dbi2(pci, PCI_BASE_ADDRESS_0, 0x0);
++	dw_pcie_writel_dbi2(pci, PCI_BASE_ADDRESS_1, 0x0);
  
  	return 0;
  }
  
 -static int rockchip_pcie_start_link(struct dw_pcie *pci)
-+static int rk_pcie_resource_get(struct platform_device *pdev,
-+					 struct rk_pcie *rk_pcie)
++static int rk_pcie_clk_init(struct rk_pcie *rk_pcie)
  {
 -	struct rockchip_pcie *rockchip = to_rockchip_pcie(pci);
-+	struct resource *dbi_base;
-+	struct resource *apb_base;
++	struct device *dev = rk_pcie->pci->dev;
++	int ret;
  
 -	/* Reset device */
 -	gpiod_set_value_cansleep(rockchip->rst_gpio, 0);
++	rk_pcie->clk_cnt = devm_clk_bulk_get_all(dev, &rk_pcie->clks);
++	if (rk_pcie->clk_cnt < 1)
++		return -ENODEV;
+ 
+-	rockchip_pcie_enable_ltssm(rockchip);
++	ret = clk_bulk_prepare_enable(rk_pcie->clk_cnt, rk_pcie->clks);
++	if (ret) {
++		dev_err(dev, "failed to prepare enable pcie bulk clks: %d\n", ret);
++		return ret;
++	}
++
++	return 0;
++}
++
++static int rk_pcie_resource_get(struct platform_device *pdev,
++					 struct rk_pcie *rk_pcie)
++{
++	struct resource *dbi_base;
++	struct resource *apb_base;
++
 +	dbi_base = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 +						"pcie-dbi");
 +	if (!dbi_base) {
 +		dev_err(&pdev->dev, "get pcie-dbi failed\n");
 +		return -ENODEV;
 +	}
- 
--	rockchip_pcie_enable_ltssm(rockchip);
++
 +	rk_pcie->dbi_base = devm_ioremap_resource(&pdev->dev, dbi_base);
 +	if (IS_ERR(rk_pcie->dbi_base))
 +		return PTR_ERR(rk_pcie->dbi_base);
@@ -742,11 +763,11 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +		return ret;
 +	}
 +	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: phy_init OK\n");
- 
++
 +	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: calling phy_power_on()\n");
 +	ret = phy_power_on(rk_pcie->phy);
 +	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: phy_power_on returned %d\n", ret);
-+
+ 
 +	dev_dbg(dev, "[DEBUG] rk_pcie_phy_init: COMPLETE\n");
  	return 0;
  }
@@ -757,8 +778,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +static void rk_pcie_start_dma_rd(struct dma_trx_obj *obj, struct dma_table *cur, int ctr_off)
 +{
 +	struct rk_pcie *rk_pcie = dev_get_drvdata(obj->dev);
- 
--static void rockchip_pcie_ep_init(struct dw_pcie_ep *ep)
++
 +	dw_pcie_writel_dbi(rk_pcie->pci, PCIE_DMA_OFFSET + PCIE_DMA_RD_ENB,
 +			   cur->enb.asdword);
 +	dw_pcie_writel_dbi(rk_pcie->pci, ctr_off + PCIE_DMA_RD_CTRL_LO,
@@ -841,7 +861,8 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	table->start.stop = 0x0;
 +	table->start.chnl = table->chn;
 +}
-+
+ 
+-static void rockchip_pcie_ep_init(struct dw_pcie_ep *ep)
 +static void rk_pcie_hot_rst_work(struct work_struct *work)
  {
 -	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
@@ -870,9 +891,12 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +			(PCIE_LTSSM_APP_DLY2_DONE) | ((PCIE_LTSSM_APP_DLY2_DONE) << 16));
 +	}
 +}
-+
+ 
+-static int rockchip_pcie_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
+-				   unsigned int type, u16 interrupt_num)
 +static irqreturn_t rk_pcie_sys_irq_handler(int irq, void *arg)
-+{
+ {
+-	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
 +	struct rk_pcie *rk_pcie = arg;
 +	u32 chn;
 +	union int_status status;
@@ -889,7 +913,16 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +			if (rk_pcie->dma_obj && rk_pcie->dma_obj->cb)
 +				rk_pcie->dma_obj->cb(rk_pcie->dma_obj, chn, DMA_TO_BUS);
 +		}
-+
+ 
+-	switch (type) {
+-	case PCI_IRQ_INTX:
+-		return dw_pcie_ep_raise_intx_irq(ep, func_no);
+-	case PCI_IRQ_MSI:
+-		return dw_pcie_ep_raise_msi_irq(ep, func_no, interrupt_num);
+-	case PCI_IRQ_MSIX:
+-		return dw_pcie_ep_raise_msix_irq(ep, func_no, interrupt_num);
+-	default:
+-		dev_err(pci->dev, "UNKNOWN IRQ type\n");
 +		if (status.abortsta & BIT(chn)) {
 +			dev_err(rk_pcie->pci->dev, "%s, abort\n", __func__);
 +			clears.abortclr = 0x1 << chn;
@@ -908,9 +941,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +			if (rk_pcie->dma_obj && rk_pcie->dma_obj->cb)
 +				rk_pcie->dma_obj->cb(rk_pcie->dma_obj, chn, DMA_FROM_BUS);
 +		}
- 
--static int rockchip_pcie_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
--				   unsigned int type, u16 interrupt_num)
++
 +		if (status.abortsta & BIT(chn)) {
 +			dev_err(rk_pcie->pci->dev, "%s, abort\n", __func__);
 +			clears.abortclr = 0x1 << chn;
@@ -931,20 +962,10 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +
 +static int rk_pcie_request_sys_irq(struct rk_pcie *rk_pcie,
 +					struct platform_device *pdev)
- {
--	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
++{
 +	int irq;
 +	int ret;
- 
--	switch (type) {
--	case PCI_IRQ_INTX:
--		return dw_pcie_ep_raise_intx_irq(ep, func_no);
--	case PCI_IRQ_MSI:
--		return dw_pcie_ep_raise_msi_irq(ep, func_no, interrupt_num);
--	case PCI_IRQ_MSIX:
--		return dw_pcie_ep_raise_msix_irq(ep, func_no, interrupt_num);
--	default:
--		dev_err(pci->dev, "UNKNOWN IRQ type\n");
++
 +	irq = platform_get_irq_byname(pdev, "sys");
 +	if (irq < 0) {
 +		dev_err(rk_pcie->pci->dev, "missing sys IRQ resource\n");
@@ -1103,24 +1124,24 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 -	if (ret < 0)
 -		return dev_err_probe(dev, ret, "failed to get clocks\n");
 +	chained_irq_enter(chip, desc);
-+
-+	reg = rk_pcie_readl_apb(rockchip, PCIE_CLIENT_INTR_STATUS_LEGACY);
-+	reg = reg & 0xf;
  
 -	rockchip->clk_cnt = ret;
-+	while (reg) {
-+		hwirq = ffs(reg) - 1;
-+		reg &= ~BIT(hwirq);
++	reg = rk_pcie_readl_apb(rockchip, PCIE_CLIENT_INTR_STATUS_LEGACY);
++	reg = reg & 0xf;
  
 -	ret = clk_bulk_prepare_enable(rockchip->clk_cnt, rockchip->clks);
 -	if (ret)
 -		return dev_err_probe(dev, ret, "failed to enable clocks\n");
++	while (reg) {
++		hwirq = ffs(reg) - 1;
++		reg &= ~BIT(hwirq);
+ 
+-	return 0;
 +		ret = generic_handle_domain_irq(rockchip->irq_domain, hwirq);
 +		if (ret)
 +			dev_err(dev, "unexpected IRQ, INT%d\n", hwirq);
 +	}
- 
--	return 0;
++
 +	chained_irq_exit(chip, desc);
  }
  
@@ -1165,14 +1186,14 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
  {
 -	struct device *dev = rockchip->pci.dev;
 -	int ret;
--
++	int ret = 0;
++	struct device *dev = rk_pcie->pci->dev;
+ 
 -	rockchip->phy = devm_phy_get(dev, "pcie-phy");
 -	if (IS_ERR(rockchip->phy))
 -		return dev_err_probe(dev, PTR_ERR(rockchip->phy),
 -				     "missing PHY\n");
-+	int ret = 0;
-+	struct device *dev = rk_pcie->pci->dev;
- 
+-
 -	ret = phy_init(rockchip->phy);
 -	if (ret < 0)
 +	if (IS_ERR(rk_pcie->vpcie3v3))
@@ -1245,7 +1266,8 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +		dev_err(pcie->pci->dev, "Not able to find RASDES CAP!\n");
 +		return 0;
 +	}
-+
+ 
+-static irqreturn_t rockchip_pcie_ep_sys_irq_thread(int irq, void *arg)
 +	RAS_DES_EVENT("EBUF Overflow: ", 0);
 +	RAS_DES_EVENT("EBUF Under-run: ", 0x0010000);
 +	RAS_DES_EVENT("Decode Error: ", 0x0020000);
@@ -1273,8 +1295,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	RAS_DES_EVENT("Unsupported Request: ", 0x3030000);
 +	RAS_DES_EVENT("Completer Abort: ", 0x3040000);
 +	RAS_DES_EVENT("Completion Timeout: ", 0x3050000);
- 
--static irqreturn_t rockchip_pcie_ep_sys_irq_thread(int irq, void *arg)
++
 +	return 0;
 +}
 +static int rockchip_pcie_rasdes_open(struct inode *inode, struct file *file)
@@ -1367,7 +1388,10 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	debugfs_remove_recursive(pcie->debugfs);
 +	pcie->debugfs = NULL;
 +}
-+
+ 
+-	/* LTSSM enable control mode */
+-	val = HIWORD_UPDATE_BIT(PCIE_LTSSM_ENABLE_ENHANCE);
+-	rockchip_pcie_writel_apb(rockchip, val, PCIE_CLIENT_HOT_RESET_CTRL);
 +static int rockchip_pcie_debugfs_init(struct rk_pcie *pcie)
 +{
 +	struct dentry *file;
@@ -1376,9 +1400,8 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	if (!pcie->debugfs)
 +		return -ENOMEM;
  
--	/* LTSSM enable control mode */
--	val = HIWORD_UPDATE_BIT(PCIE_LTSSM_ENABLE_ENHANCE);
--	rockchip_pcie_writel_apb(rockchip, val, PCIE_CLIENT_HOT_RESET_CTRL);
+-	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_RC_MODE,
+-				 PCIE_CLIENT_GENERAL_CONTROL);
 +	debugfs_create_devm_seqfile(pcie->pci->dev, "dumpfifo",
 +				    pcie->debugfs,
 +				    rockchip_pcie_fifo_show);
@@ -1387,16 +1410,14 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	if (!file)
 +		goto remove;
  
--	rockchip_pcie_writel_apb(rockchip, PCIE_CLIENT_RC_MODE,
--				 PCIE_CLIENT_GENERAL_CONTROL);
-+	return 0;
- 
 -	pp = &rockchip->pci.pp;
 -	pp->ops = &rockchip_pcie_host_ops;
-+remove:
-+	rockchip_pcie_debugfs_exit(pcie);
++	return 0;
  
 -	return dw_pcie_host_init(pp);
++remove:
++	rockchip_pcie_debugfs_exit(pcie);
++
 +	return -ENOMEM;
  }
  
@@ -1434,17 +1455,17 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	if (!rk_pcie) {
 +		ret = -ENOMEM;
 +		goto release_driver;
-+	}
-+
-+	pci = devm_kzalloc(dev, sizeof(*pci), GFP_KERNEL);
-+	if (!pci) {
-+		ret = -ENOMEM;
-+		goto release_driver;
  	}
  
 -	ret = devm_request_threaded_irq(dev, irq, NULL,
 -					rockchip_pcie_ep_sys_irq_thread,
 -					IRQF_ONESHOT, "pcie-sys", rockchip);
++	pci = devm_kzalloc(dev, sizeof(*pci), GFP_KERNEL);
++	if (!pci) {
++		ret = -ENOMEM;
++		goto release_driver;
++	}
++
 +	pci->dev = dev;
 +	pci->ops = &dw_pcie_ops;
 +
@@ -1496,11 +1517,11 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +			ret = PTR_ERR(rk_pcie->vpcie3v3);
 +			goto release_driver;
 +		}
- 
--	ret = dw_pcie_ep_init(&rockchip->pci.ep);
++
 +		dev_info(dev, "no vpcie3v3 regulator found\n");
 +	}
-+
+ 
+-	ret = dw_pcie_ep_init(&rockchip->pci.ep);
 +	ret = rk_pcie_enable_power(rk_pcie);
 +	if (ret)
 +		goto release_driver;
@@ -1511,16 +1532,16 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 -		return ret;
 +		dev_err(dev, "phy init failed\n");
 +		goto disable_vpcie3v3;
-+	}
-+
+ 	}
+ 
+-	ret = dw_pcie_ep_init_registers(&rockchip->pci.ep);
 +	rk_pcie->rsts = devm_reset_control_array_get_exclusive(dev);
 +	if (IS_ERR(rk_pcie->rsts)) {
 +		ret = PTR_ERR(rk_pcie->rsts);
 +		dev_err(dev, "failed to get reset lines\n");
 +		goto disable_phy;
- 	}
- 
--	ret = dw_pcie_ep_init_registers(&rockchip->pci.ep);
++	}
++
 +	reset_control_deassert(rk_pcie->rsts);
 +
 +	ret = rk_pcie_clk_init(rk_pcie);
@@ -1617,14 +1638,11 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +		dev_err(dev, "failed to create hot_rst workqueue\n");
 +		ret = -ENOMEM;
 +		goto remove_irq_domain;
- 	}
++	}
 +	INIT_WORK(&rk_pcie->hot_rst_work, rk_pcie_hot_rst_work);
- 
--	pci_epc_init_notify(rockchip->pci.ep.epc);
++
 +	ret = rk_add_pcie_port(rk_pcie, pdev);
- 
--	/* unmask DLL up/down indicator and hot reset/link-down reset */
--	rockchip_pcie_writel_apb(rockchip, 0x60000, PCIE_CLIENT_INTR_MASK_MISC);
++
 +	if (rk_pcie->is_signal_test == true)
 +		return 0;
 +
@@ -1640,12 +1658,15 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	if (rk_pcie->dma_obj) {
 +		rk_pcie->dma_obj->start_dma_func = rk_pcie_start_dma_dwc;
 +		rk_pcie->dma_obj->config_dma_func = rk_pcie_config_dma_dwc;
-+	}
-+
+ 	}
+ 
+-	pci_epc_init_notify(rockchip->pci.ep.epc);
 +	dw_pcie_dbi_ro_wr_dis(pci);
 +
 +	device_init_wakeup(dev, true);
-+
+ 
+-	/* unmask DLL up/down indicator and hot reset/link-down reset */
+-	rockchip_pcie_writel_apb(rockchip, 0x60000, PCIE_CLIENT_INTR_MASK_MISC);
 +	/* Enable async system PM for multiports SoC */
 +	device_enable_async_suspend(dev);
 +
@@ -1710,14 +1731,10 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 -		return -ENOMEM;
 +		return 0;
 +	}
- 
--	platform_set_drvdata(pdev, rockchip);
++
 +	return rk_pcie_really_probe(pdev);
 +}
- 
--	rockchip->pci.dev = dev;
--	rockchip->pci.ops = &dw_pcie_ops;
--	rockchip->data = data;
++
 +#ifdef CONFIG_PCIEASPM
 +static void rk_pcie_downstream_dev_to_d0(struct rk_pcie *rk_pcie, bool enable)
 +{
@@ -1725,8 +1742,7 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	struct pci_bus *child, *root_bus = NULL;
 +	struct pci_dev *pdev, *bridge;
 +	u32 val;
- 
--	ret = rockchip_pcie_resource_get(pdev, rockchip);
++
 +	list_for_each_entry(child, &pp->bridge->bus->children, node) {
 +		/* Bring downstream devices to D3 if they are not already in */
 +		if (child->parent == pp->bridge->bus) {
@@ -1835,7 +1851,8 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +		dev_err(dev, "Failed to send PME_Turn_Off\n");
 +		goto no_l2;
 +	}
-+
+ 
+-	platform_set_drvdata(pdev, rockchip);
 +	/* 3. Wait for PME_TO_Ack */
 +	ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_INTR_STATUS_MSG_RX,
 +				 status, status & BIT(9), 20, RK_PCIE_L2_TMOUT_US);
@@ -1843,7 +1860,10 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +		dev_err(dev, "Failed to receive PME_TO_Ack\n");
 +		goto no_l2;
 +	}
-+
+ 
+-	rockchip->pci.dev = dev;
+-	rockchip->pci.ops = &dw_pcie_ops;
+-	rockchip->data = data;
 +	/* 4. Clear PME_TO_Ack and Wait for ready to enter L23 message */
 +	rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_STATUS_MSG_RX, PME_TO_ACK);
 +	ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_POWER,
@@ -1852,7 +1872,8 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +		dev_err(dev, "Failed to ready to enter L23\n");
 +		goto no_l2;
 +	}
-+
+ 
+-	ret = rockchip_pcie_resource_get(pdev, rockchip);
 +	/* 5. Check we are in L2 */
 +	ret = readl_poll_timeout(rk_pcie->apb_base + PCIE_CLIENT_LTSSM_STATUS,
 +				 status, PORT_LOGIC_LTSSM_STATE_L2(status), 20, RK_PCIE_L2_TMOUT_US);
@@ -1879,11 +1900,11 @@ Index: kernel-6_12/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +	clk_bulk_disable_unprepare(rk_pcie->clk_cnt, rk_pcie->clks);
 +
 +	rk_pcie->in_suspend = true;
-+
-+	gpiod_set_value_cansleep(rk_pcie->rst_gpio, 0);
-+	ret = rk_pcie_disable_power(rk_pcie);
  
 -	ret = reset_control_assert(rockchip->rst);
++	gpiod_set_value_cansleep(rk_pcie->rst_gpio, 0);
++	ret = rk_pcie_disable_power(rk_pcie);
++
 +	return ret;
 +}
 +

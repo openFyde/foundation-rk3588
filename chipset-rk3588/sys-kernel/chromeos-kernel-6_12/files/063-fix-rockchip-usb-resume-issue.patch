@@ -1,0 +1,79 @@
+Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+===================================================================
+--- kernel-6_12.orig/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
++++ kernel-6_12/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
+@@ -2100,11 +2100,74 @@ static const struct of_device_id rockchi
+ };
+ MODULE_DEVICE_TABLE(of, rockchip_usb2phy_dt_match);
+ 
++static int __maybe_unused rockchip_usb2phy_pm_suspend(struct device *dev)
++{
++	struct rockchip_usb2phy *rphy = dev_get_drvdata(dev);
++	const struct rockchip_usb2phy_cfg *phy_cfg = rphy->phy_cfg;
++	struct rockchip_usb2phy_port *rport;
++	unsigned int index;
++
++	for (index = 0; index < phy_cfg->num_ports; index++) {
++		rport = &rphy->ports[index];
++		if (!rport->phy)
++			continue;
++
++		if (rport->port_id == USB2PHY_PORT_OTG)
++			cancel_delayed_work_sync(&rport->otg_sm_work);
++		else if (rport->port_id == USB2PHY_PORT_HOST)
++			cancel_delayed_work_sync(&rport->sm_work);
++	}
++
++	return 0;
++}
++
++static int __maybe_unused rockchip_usb2phy_pm_resume(struct device *dev)
++{
++	struct rockchip_usb2phy *rphy = dev_get_drvdata(dev);
++	const struct rockchip_usb2phy_cfg *phy_cfg = rphy->phy_cfg;
++	struct rockchip_usb2phy_port *rport;
++	unsigned int index;
++
++	if (phy_cfg->phy_tuning)
++		phy_cfg->phy_tuning(rphy);
++
++	for (index = 0; index < phy_cfg->num_ports; index++) {
++		rport = &rphy->ports[index];
++		if (!rport->phy)
++			continue;
++
++		if (rport->port_id == USB2PHY_PORT_HOST) {
++			/*
++			 * Re-enable disconnect detection IRQs and assume
++			 * device is connected. The disconnect rise IRQ will
++			 * correct this if no device is actually present.
++			 */
++			if (rport->port_cfg->disfall_en.offset) {
++				rport->host_disconnect = false;
++				rockchip_usb2phy_enable_host_disc_irq(rphy,
++								      rport,
++								      true);
++			}
++
++			schedule_delayed_work(&rport->sm_work,
++					      SCHEDULE_DELAY);
++		}
++	}
++
++	return 0;
++}
++
++static const struct dev_pm_ops rockchip_usb2phy_dev_pm_ops = {
++	SET_SYSTEM_SLEEP_PM_OPS(rockchip_usb2phy_pm_suspend,
++				rockchip_usb2phy_pm_resume)
++};
++
+ static struct platform_driver rockchip_usb2phy_driver = {
+ 	.probe		= rockchip_usb2phy_probe,
+ 	.driver		= {
+ 		.name	= "rockchip-usb2phy",
+ 		.of_match_table = rockchip_usb2phy_dt_match,
++		.pm	= &rockchip_usb2phy_dev_pm_ops,
+ 	},
+ };
+ module_platform_driver(rockchip_usb2phy_driver);
