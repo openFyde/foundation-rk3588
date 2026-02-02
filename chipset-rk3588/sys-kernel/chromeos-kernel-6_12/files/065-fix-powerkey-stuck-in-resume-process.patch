@@ -1,0 +1,19 @@
+Index: kernel-6_12/drivers/input/misc/rk805-pwrkey.c
+===================================================================
+--- kernel-6_12.orig/drivers/input/misc/rk805-pwrkey.c
++++ kernel-6_12/drivers/input/misc/rk805-pwrkey.c
+@@ -19,8 +19,12 @@ int suspended = 0;
+ static irqreturn_t pwrkey_fall_irq(int irq, void *_pwr)
+ {
+ 	struct input_dev *pwr = _pwr;
+-  if (suspended)
+-    pm_wakeup_dev_event(pwr->dev.parent, 4000, true);
++
++	if (suspended) {
++		pm_wakeup_dev_event(pwr->dev.parent, 4000, true);
++		return IRQ_HANDLED;
++	}
++
+ 	input_report_key(pwr, KEY_POWER, 1);
+ 	input_sync(pwr);
+ 
