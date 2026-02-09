@@ -1,0 +1,16 @@
+Index: src/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
+===================================================================
+--- src.orig/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
++++ src/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
+@@ -546,11 +546,6 @@ void V4L2StatefulVideoDecoder::Decode(sc
+       decoder_buffer_and_callbacks_.push(std::move(a));
+     }
+ 
+-  } else if (VideoCodecProfileToVideoCodec(config_.profile()) ==
+-             VideoCodec::kHEVC) {
+-    NOTIMPLEMENTED();
+-    std::move(decode_cb).Run(DecoderStatus::Codes::kUnsupportedCodec);
+-    return;
+   } else {
+     decoder_buffer_and_callbacks_.emplace(std::move(buffer),
+                                           std::move(decode_cb));
