@@ -1,0 +1,27 @@
+Index: libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+===================================================================
+--- libv4l-rkmpp.orig/src/libv4l-rkmpp-dec.c
++++ libv4l-rkmpp/src/libv4l-rkmpp-dec.c
+@@ -590,7 +590,21 @@ static int rkmpp_dec_streamon(struct rkm
+ 		goto err;
+ 	}
+ 
+-	ret = 1;
++	/*
++	 * FAST_MODE=1 lets libmpp dispatch hardware tasks during SPS/PPS
++	 * parsing to speed up bring-up. That dispatch happens before the
++	 * V4L2 capture queue has been REQBUFS'd, so the output frame
++	 * registers are zero and the rkvdec hardware reads from iova=0,
++	 * faulting the IOMMU. Symptom: first hardware-decoded video on the
++	 * Android side after a fresh boot fails with "Decoder failed:
++	 * c2.mojo-legacy.avc.decoder" (chrome HTML5 video happens to ship
++	 * SPS+PPS+IDR concatenated, masking the bug for that path).
++	 *
++	 * Disable FAST_MODE so libmpp uses the CPU parser for headers and
++	 * only dispatches hardware once chrome has signalled
++	 * MPP_DEC_SET_INFO_CHANGE_READY (i.e. capture buffers are ready).
++	 */
++	ret = 0;
+ 	ctx->mpi->control(ctx->mpp, MPP_DEC_SET_PARSER_FAST_MODE, &ret);
+ 
+ 	ret = mpp_init(ctx->mpp, MPP_CTX_DEC,

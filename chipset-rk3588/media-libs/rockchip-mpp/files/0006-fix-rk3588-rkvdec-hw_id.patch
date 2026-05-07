@@ -1,0 +1,30 @@
+Index: mpp/osal/mpp_platform.c
+===================================================================
+--- mpp.orig/osal/mpp_platform.c
++++ mpp/osal/mpp_platform.c
+@@ -266,6 +266,25 @@ rk_u32 mpp_get_client_hw_id(rk_s32 clien
+                     mpp_dbg_info("mpp_get_client_hw_id: applying RK3588 RKVENC hw_id workaround: 0x%08x", hw_id);
+                 }
+             }
++            /*
++             * Workaround: RK3588 platform service also fails to populate
++             * RKVDEC hw_id. Without this, hal_h264d_init falls through to
++             * the default rkvdpu (rkvdec1) HAL, which submits a malformed
++             * task with no buffer registers programmed, causing an IOMMU
++             * page fault at iova=0 on the first decode after boot. The
++             * Android-side codec then times out at 3.2s with
++             * "Decoder failed: c2.mojo-legacy.avc.decoder".
++             *
++             * RK3588 RKVDEC is HWID_VDPU38X (0x53813f05) per kernel
++             * /proc/mpp_service/supports-device, which selects the correct
++             * hal_h264d_vdpu34x HAL.
++             */
++            if (hw_id == 0 && client_type == 9 /* VPU_CLIENT_RKVDEC */) {
++                if ((srv->vcodec_type & 0x000d321a) == 0x000d321a) {
++                    hw_id = 0x53813f05; /* HWID_VDPU38X for RK3588 */
++                    mpp_dbg_info("mpp_get_client_hw_id: applying RK3588 RKVDEC hw_id workaround: 0x%08x", hw_id);
++                }
++            }
+         } else {
+             mpp_dbg_info("mpp_get_client_hw_id: client_type=%d not supported in vcodec_type=0x%08x", client_type, srv->vcodec_type);
+         }

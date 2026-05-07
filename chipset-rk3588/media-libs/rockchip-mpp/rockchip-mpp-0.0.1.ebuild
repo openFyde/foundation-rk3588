@@ -45,12 +45,13 @@ src_prepare() {
   if use debug; then
     eapply -p1 ${FILESDIR}/0004-add-debug-info.patch
   fi
-  eapply -p1 ${FILESDIR}/0005-fix-rk3588-vepu580-encoder-selection.patch
 }
 
 PATCHES=(
   "${FILESDIR}/0001-mpi_api-add-new-api-mpp_convert_mjpeg_to_nv12.patch"
   "${FILESDIR}/0003-use-drm-allocator-as-default.patch"
+  "${FILESDIR}/0005-fix-rk3588-vepu580-encoder-selection.patch"
+  "${FILESDIR}/0006-fix-rk3588-rkvdec-hw_id.patch"
 )
 #  "${FILESDIR}/0002-disable-output-for-debug.patch"
 #  "${FILESDIR}/0004-add-debug-info.patch"
