@@ -1,7 +1,5 @@
-Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-mpp.dtsi
-===================================================================
 --- /dev/null
-+++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-mpp.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-mpp.dtsi
 @@ -0,0 +1,640 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -643,19 +641,15 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-mpp.dtsi
 +    reg = <0x78000 0x77000>;
 +  };
 +};
-Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s.dtsi
-===================================================================
---- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s.dtsi
-+++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s.dtsi
+--- a/arch/arm64/boot/dts/rockchip/rk3588s.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588s.dtsi
 @@ -7,3 +7,4 @@
  #include "rk3588-base.dtsi"
  #include "rk3588-opp.dtsi"
  #include "rk3588s-rockchip.dtsi"
 +#include "rk3588s-mpp.dtsi"
-Index: kernel-6_12/drivers/video/rockchip/mpp/Kconfig
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/Kconfig
++++ b/drivers/video/rockchip/mpp/Kconfig
 @@ -0,0 +1,83 @@
 +# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +
@@ -740,10 +734,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/Kconfig
 +	  rockchip vdpp.
 +
 +endif
-Index: kernel-6_12/drivers/video/rockchip/mpp/Makefile
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/Makefile
++++ b/drivers/video/rockchip/mpp/Makefile
 @@ -0,0 +1,28 @@
 +# SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +
@@ -773,10 +765,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/Makefile
 +rk_vcodec-$(CONFIG_ROCKCHIP_MPP_VDPP)   += mpp_vdpp.o
 +
 +obj-$(CONFIG_ROCKCHIP_MPP_SERVICE) += rk_vcodec.o
-Index: kernel-6_12/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
++++ b/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 @@ -0,0 +1,203 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +// Copyright 2022 The FydeOS Authors.
@@ -981,10 +971,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/dummy_v4l2_devices.c
 +	misc_deregister(&v4l2_jpeg_dec_dev);
 +#endif
 +}
-Index: kernel-6_12/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
++++ b/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
 @@ -0,0 +1,13 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -999,10 +987,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/dummy_v4l2_devices.h
 +int init_dummy_v4l2_devices(void);
 +void cleanup_dummy_v4l2_devices(void);
 +#endif //__DUMMY_V4L2_DEVICES_H__
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_av1dec.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_av1dec.c
++++ b/drivers/video/rockchip/mpp/mpp_av1dec.c
 @@ -0,0 +1,1075 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -2079,10 +2065,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_av1dec.c
 +		.of_match_table = of_match_ptr(mpp_av1dec_dt_match),
 +	},
 +};
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_common.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_common.c
++++ b/drivers/video/rockchip/mpp/mpp_common.c
 @@ -0,0 +1,2604 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -4688,10 +4672,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_common.c
 +	mpp_procfs_create_u32("timing_check", 0644, parent, &mpp->timing_check);
 +}
 +#endif
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_common.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_common.h
++++ b/drivers/video/rockchip/mpp/mpp_common.h
 @@ -0,0 +1,856 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -5549,10 +5531,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_common.h
 +extern struct platform_driver rockchip_vdpp_driver;
 +
 +#endif
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_debug.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_debug.h
++++ b/drivers/video/rockchip/mpp/mpp_debug.h
 @@ -0,0 +1,138 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -5692,10 +5672,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_debug.h
 +	} while (0)
 +
 +#endif
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_iep2.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_iep2.c
++++ b/drivers/video/rockchip/mpp/mpp_iep2.c
 @@ -0,0 +1,1133 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -6830,10 +6808,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_iep2.c
 +};
 +EXPORT_SYMBOL(rockchip_iep2_driver);
 +
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_iommu.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_iommu.c
++++ b/drivers/video/rockchip/mpp/mpp_iommu.c
 @@ -0,0 +1,689 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -7524,10 +7500,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_iommu.c
 +	return 0;
 +
 +}
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_iommu.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_iommu.h
++++ b/drivers/video/rockchip/mpp/mpp_iommu.h
 @@ -0,0 +1,190 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -7719,10 +7693,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_iommu.h
 +}
 +
 +#endif
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_jpgdec.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_jpgdec.c
++++ b/drivers/video/rockchip/mpp/mpp_jpgdec.c
 @@ -0,0 +1,657 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -8381,10 +8353,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_jpgdec.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_jpgdec_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_jpgenc.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_jpgenc.c
++++ b/drivers/video/rockchip/mpp/mpp_jpgenc.c
 @@ -0,0 +1,650 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -9036,10 +9006,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_jpgenc.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_jpgenc_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec.c
 @@ -0,0 +1,1923 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -10964,10 +10932,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_rkvdec_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
 @@ -0,0 +1,2053 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -13022,10 +12988,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_rkvdec2_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2.h
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2.h
 @@ -0,0 +1,233 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -13260,10 +13224,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2.h
 +void mpp_devfreq_set_core_rate(struct mpp_dev *mpp, enum MPP_CLOCK_MODE mode);
 +
 +#endif
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2_link.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2_link.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2_link.c
 @@ -0,0 +1,2649 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -15914,10 +15876,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2_link.c
 +
 +	mpp_debug_leave();
 +}
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2_link.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2_link.h
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2_link.h
 @@ -0,0 +1,254 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -16173,10 +16133,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvdec2_link.h
 +int rkvdec_vdpu383_link_irq(struct mpp_dev *mpp);
 +
 +#endif
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvenc.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvenc.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc.c
 @@ -0,0 +1,1463 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -17641,10 +17599,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvenc.c
 +		.of_match_table = of_match_ptr(mpp_rkvenc_dt_match),
 +	},
 +};
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvenc2.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvenc2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc2.c
 @@ -0,0 +1,2975 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -20621,10 +20577,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_rkvenc2.c
 +		.of_match_table = of_match_ptr(mpp_rkvenc_dt_match),
 +	},
 +};
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_service.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_service.c
++++ b/drivers/video/rockchip/mpp/mpp_service.c
 @@ -0,0 +1,496 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -21122,10 +21076,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_service.c
 +MODULE_VERSION(MPP_VERSION);
 +MODULE_AUTHOR("Ding Wei leo.ding@rock-chips.com");
 +MODULE_DESCRIPTION("Rockchip mpp service driver");
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpp.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpp.c
++++ b/drivers/video/rockchip/mpp/mpp_vdpp.c
 @@ -0,0 +1,827 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -21954,10 +21906,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpp.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_vdpp_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpu1.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpu1.c
++++ b/drivers/video/rockchip/mpp/mpp_vdpu1.c
 @@ -0,0 +1,970 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -22929,10 +22879,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpu1.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_vdpu1_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpu2.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpu2.c
++++ b/drivers/video/rockchip/mpp/mpp_vdpu2.c
 @@ -0,0 +1,804 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -23738,10 +23686,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vdpu2.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_vdpu2_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vepu1.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_vepu1.c
++++ b/drivers/video/rockchip/mpp/mpp_vepu1.c
 @@ -0,0 +1,793 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -24536,10 +24482,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vepu1.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_vepu1_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vepu2.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/mpp_vepu2.c
++++ b/drivers/video/rockchip/mpp/mpp_vepu2.c
 @@ -0,0 +1,1280 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
@@ -25821,10 +25765,8 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/mpp_vepu2.c
 +	},
 +};
 +EXPORT_SYMBOL(rockchip_vepu2_driver);
-Index: kernel-6_12/drivers/video/rockchip/mpp/rockchip_iep2_regs.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/video/rockchip/mpp/rockchip_iep2_regs.h
++++ b/drivers/video/rockchip/mpp/rockchip_iep2_regs.h
 @@ -0,0 +1,184 @@
 +/* SPDX-License-Identifier: (GPL-2.0+ OR MIT) */
 +/*
@@ -26010,11 +25952,9 @@ Index: kernel-6_12/drivers/video/rockchip/mpp/rockchip_iep2_regs.h
 +
 +#endif
 +
-Index: kernel-6_12/drivers/video/Kconfig
-===================================================================
---- kernel-6_12.orig/drivers/video/Kconfig
-+++ kernel-6_12/drivers/video/Kconfig
-@@ -50,6 +50,10 @@ endmenu
+--- a/drivers/video/Kconfig
++++ b/drivers/video/Kconfig
+@@ -50,6 +50,10 @@
  
  source "drivers/video/backlight/Kconfig"
  
@@ -26025,11 +25965,9 @@ Index: kernel-6_12/drivers/video/Kconfig
  config VGASTATE
         tristate
         default n
-Index: kernel-6_12/drivers/video/Makefile
-===================================================================
---- kernel-6_12.orig/drivers/video/Makefile
-+++ kernel-6_12/drivers/video/Makefile
-@@ -14,6 +14,7 @@ obj-$(CONFIG_VT)		  += console/
+--- a/drivers/video/Makefile
++++ b/drivers/video/Makefile
+@@ -14,6 +14,7 @@
  obj-$(CONFIG_FB_STI)		  += console/
  obj-$(CONFIG_LOGO)		  += logo/
  obj-y				  += backlight/
@@ -26037,10 +25975,8 @@ Index: kernel-6_12/drivers/video/Makefile
  
  obj-y				  += fbdev/
  
-Index: kernel-6_12/include/uapi/linux/rk-mpp.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/include/uapi/linux/rk-mpp.h
++++ b/include/uapi/linux/rk-mpp.h
 @@ -0,0 +1,82 @@
 +/* SPDX-License-Identifier: ((GPL-2.0+ WITH Linux-syscall-note) OR MIT) */
 +/*
@@ -26124,10 +26060,8 @@ Index: kernel-6_12/include/uapi/linux/rk-mpp.h
 +};
 +
 +#endif /* _UAPI_RK_MPP_H */
-Index: kernel-6_12/drivers/pmdomain/rockchip/pm-domains.c
-===================================================================
---- kernel-6_12.orig/drivers/pmdomain/rockchip/pm-domains.c
-+++ kernel-6_12/drivers/pmdomain/rockchip/pm-domains.c
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
 @@ -20,6 +20,7 @@
  #include <linux/regmap.h>
  #include <linux/mfd/syscon.h>
@@ -26136,7 +26070,7 @@ Index: kernel-6_12/drivers/pmdomain/rockchip/pm-domains.c
  #include <dt-bindings/power/px30-power.h>
  #include <dt-bindings/power/rockchip,rv1126-power.h>
  #include <dt-bindings/power/rk3036-power.h>
-@@ -392,6 +393,27 @@ static int rockchip_pmu_set_idle_request
+@@ -392,6 +393,27 @@
  	return 0;
  }
  
@@ -26164,7 +26098,7 @@ Index: kernel-6_12/drivers/pmdomain/rockchip/pm-domains.c
  static int rockchip_pmu_save_qos(struct rockchip_pm_domain *pd)
  {
  	int i;
-@@ -441,6 +463,48 @@ static int rockchip_pmu_restore_qos(stru
+@@ -441,6 +463,48 @@
  	return 0;
  }
  
@@ -26213,7 +26147,7 @@ Index: kernel-6_12/drivers/pmdomain/rockchip/pm-domains.c
  static bool rockchip_pmu_domain_is_on(struct rockchip_pm_domain *pd)
  {
  	struct rockchip_pmu *pmu = pd->pmu;
-@@ -624,6 +688,77 @@ static int rockchip_pd_power_off(struct
+@@ -624,6 +688,77 @@
  	return rockchip_pd_power(pd, false);
  }
  
@@ -26291,10 +26225,8 @@ Index: kernel-6_12/drivers/pmdomain/rockchip/pm-domains.c
  static int rockchip_pd_attach_dev(struct generic_pm_domain *genpd,
  				  struct device *dev)
  {
-Index: kernel-6_12/include/soc/rockchip/pm_domains.h
-===================================================================
---- kernel-6_12.orig/include/soc/rockchip/pm_domains.h
-+++ kernel-6_12/include/soc/rockchip/pm_domains.h
+--- a/include/soc/rockchip/pm_domains.h
++++ b/include/soc/rockchip/pm_domains.h
 @@ -9,7 +9,13 @@
  #ifdef CONFIG_ROCKCHIP_PM_DOMAINS
  
@@ -26309,7 +26241,7 @@ Index: kernel-6_12/include/soc/rockchip/pm_domains.h
  
  #else /* CONFIG_ROCKCHIP_PM_DOMAINS */
  
-@@ -19,6 +25,23 @@ static inline int rockchip_pmu_block(voi
+@@ -19,6 +25,23 @@
  }
  
  static inline void rockchip_pmu_unblock(void) { }
@@ -26333,10 +26265,8 @@ Index: kernel-6_12/include/soc/rockchip/pm_domains.h
  
  #endif /* CONFIG_ROCKCHIP_PM_DOMAINS */
  
-Index: kernel-6_12/include/soc/rockchip/rockchip_ipa.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/include/soc/rockchip/rockchip_ipa.h
++++ b/include/soc/rockchip/rockchip_ipa.h
 @@ -0,0 +1,40 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
@@ -26378,11 +26308,9 @@ Index: kernel-6_12/include/soc/rockchip/rockchip_ipa.h
 +#endif /* CONFIG_ROCKCHIP_IPA */
 +
 +#endif
-Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
-===================================================================
---- kernel-6_12.orig/drivers/iommu/rockchip-iommu.c
-+++ kernel-6_12/drivers/iommu/rockchip-iommu.c
-@@ -119,6 +119,7 @@ struct rk_iommu {
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -119,6 +119,7 @@
  	struct list_head node; /* entry in rk_iommu_domain.iommus */
  	struct iommu_domain *domain; /* domain to which iommu is attached */
  	struct third_iommu_ops_wrap *opt_ops;
@@ -26390,7 +26318,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  };
  
  struct rk_iommudata {
-@@ -974,6 +975,7 @@ static void rk_iommu_disable(struct rk_i
+@@ -974,6 +975,7 @@
  	}
  	rk_iommu_disable_stall(iommu);
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -26398,7 +26326,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  }
  
  /* Must be called with iommu powered on and attached */
-@@ -1008,6 +1010,10 @@ out_disable_stall:
+@@ -1008,6 +1010,10 @@
  	rk_iommu_disable_stall(iommu);
  out_disable_clocks:
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -26409,7 +26337,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	return ret;
  }
  
-@@ -1451,6 +1457,98 @@ static int __maybe_unused rk_iommu_resum
+@@ -1451,6 +1457,98 @@
  	return rk_iommu_enable(iommu);
  }
  
@@ -26508,10 +26436,8 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  static const struct dev_pm_ops rk_iommu_pm_ops = {
  	SET_RUNTIME_PM_OPS(rk_iommu_suspend, rk_iommu_resume, NULL)
  	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
-===================================================================
---- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
-+++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
 @@ -219,91 +219,7 @@
      pinctrl-names = "default";
      pinctrl-0 = <&finger_rst_test_en>;
@@ -26668,20 +26594,3 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
  &dfi {
    status = "okay";
  };
-Index: kernel-6_12/drivers/gpu/drm/drm_ioctl.c
-===================================================================
---- kernel-6_12.orig/drivers/gpu/drm/drm_ioctl.c
-+++ kernel-6_12/drivers/gpu/drm/drm_ioctl.c
-@@ -633,9 +633,9 @@ static const struct drm_ioctl_desc drm_i
- 	DRM_IOCTL_DEF(DRM_IOCTL_MODE_CLOSEFB, drm_mode_closefb_ioctl, 0),
- 	DRM_IOCTL_DEF(DRM_IOCTL_MODE_PAGE_FLIP, drm_mode_page_flip_ioctl, DRM_MASTER),
- 	DRM_IOCTL_DEF(DRM_IOCTL_MODE_DIRTYFB, drm_mode_dirtyfb_ioctl, DRM_MASTER),
--	DRM_IOCTL_DEF(DRM_IOCTL_MODE_CREATE_DUMB, drm_mode_create_dumb_ioctl, 0),
--	DRM_IOCTL_DEF(DRM_IOCTL_MODE_MAP_DUMB, drm_mode_mmap_dumb_ioctl, 0),
--	DRM_IOCTL_DEF(DRM_IOCTL_MODE_DESTROY_DUMB, drm_mode_destroy_dumb_ioctl, 0),
-+	DRM_IOCTL_DEF(DRM_IOCTL_MODE_CREATE_DUMB, drm_mode_create_dumb_ioctl, DRM_RENDER_ALLOW),
-+	DRM_IOCTL_DEF(DRM_IOCTL_MODE_MAP_DUMB, drm_mode_mmap_dumb_ioctl, DRM_RENDER_ALLOW),
-+	DRM_IOCTL_DEF(DRM_IOCTL_MODE_DESTROY_DUMB, drm_mode_destroy_dumb_ioctl, DRM_RENDER_ALLOW),
- 	DRM_IOCTL_DEF(DRM_IOCTL_MODE_OBJ_GETPROPERTIES, drm_mode_obj_get_properties_ioctl, DRM_RENDER_ALLOW),
- 	DRM_IOCTL_DEF(DRM_IOCTL_MODE_OBJ_SETPROPERTY, drm_mode_obj_set_property_ioctl, DRM_MASTER),
- 	DRM_IOCTL_DEF(DRM_IOCTL_MODE_CURSOR2, drm_mode_cursor2_ioctl, DRM_MASTER),

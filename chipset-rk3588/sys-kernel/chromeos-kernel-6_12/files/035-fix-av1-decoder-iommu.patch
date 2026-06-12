@@ -1,7 +1,5 @@
-Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-===================================================================
---- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
-+++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
+--- a/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
 @@ -435,7 +435,7 @@
  		};
    };
@@ -59,10 +57,8 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588-base.dtsi
  	};
  
  	vop: vop@fdd90000 {
-Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
-===================================================================
---- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
-+++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+--- a/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
 @@ -74,56 +74,6 @@
      };
    };
@@ -165,11 +161,9 @@ Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
  &pinctrl {
    audio {
      hp_detect: headphone-detect {
-Index: kernel-6_12/drivers/iommu/Makefile
-===================================================================
---- kernel-6_12.orig/drivers/iommu/Makefile
-+++ kernel-6_12/drivers/iommu/Makefile
-@@ -18,7 +18,8 @@ obj-$(CONFIG_MTK_IOMMU) += mtk_iommu.o
+--- a/drivers/iommu/Makefile
++++ b/drivers/iommu/Makefile
+@@ -18,7 +18,8 @@
  obj-$(CONFIG_MTK_IOMMU_V1) += mtk_iommu_v1.o
  obj-$(CONFIG_OMAP_IOMMU) += omap-iommu.o
  obj-$(CONFIG_OMAP_IOMMU_DEBUG) += omap-iommu-debug.o
@@ -179,10 +173,8 @@ Index: kernel-6_12/drivers/iommu/Makefile
  obj-$(CONFIG_SUN50I_IOMMU) += sun50i-iommu.o
  obj-$(CONFIG_TEGRA_IOMMU_SMMU) += tegra-smmu.o
  obj-$(CONFIG_EXYNOS_IOMMU) += exynos-iommu.o
-Index: kernel-6_12/drivers/iommu/rockchip-iommu-av1d.c
-===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/iommu/rockchip-iommu-av1d.c
++++ b/drivers/iommu/rockchip-iommu-av1d.c
 @@ -0,0 +1,808 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
@@ -992,10 +984,8 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu-av1d.c
 +{
 +	return &av1d_iommu_ops;
 +}
-Index: kernel-6_12/include/soc/rockchip/rockchip_iommu.h
-===================================================================
 --- /dev/null
-+++ kernel-6_12/include/soc/rockchip/rockchip_iommu.h
++++ b/include/soc/rockchip/rockchip_iommu.h
 @@ -0,0 +1,89 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
@@ -1086,10 +1076,8 @@ Index: kernel-6_12/include/soc/rockchip/rockchip_iommu.h
 +#endif
 +
 +#endif
-Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
-===================================================================
---- kernel-6_12.orig/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
-+++ kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
+--- a/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec.c
 @@ -10,6 +10,34 @@
  #include "hantro_v4l2.h"
  #include "rockchip_vpu981_regs.h"
@@ -1125,7 +1113,7 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec
  #define AV1_DEC_MODE		17
  #define GM_GLOBAL_MODELS_PER_FRAME	7
  #define GLOBAL_MODEL_TOTAL_SIZE	(6 * 4 + 4 * 2)
-@@ -419,6 +447,39 @@ int rockchip_vpu981_av1_dec_init(struct
+@@ -419,6 +447,39 @@
  	return 0;
  }
  
@@ -1165,7 +1153,7 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec
  static int rockchip_vpu981_av1_dec_prepare_run(struct hantro_ctx *ctx)
  {
  	struct hantro_av1_dec_hw_ctx *av1_dec = &ctx->av1_dec;
-@@ -1567,6 +1628,11 @@ static void rockchip_vpu981_av1_dec_set_
+@@ -1567,6 +1628,11 @@
  	struct hantro_dev *vpu = ctx->dev;
  	int pic_width_in_cbs = DIV_ROUND_UP(frame->frame_width_minus_1 + 1, 8);
  	int pic_height_in_cbs = DIV_ROUND_UP(frame->frame_height_minus_1 + 1, 8);
@@ -1177,7 +1165,7 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec
  	int pic_width_pad = ALIGN(frame->frame_width_minus_1 + 1, 8)
  			    - (frame->frame_width_minus_1 + 1);
  	int pic_height_pad = ALIGN(frame->frame_height_minus_1 + 1, 8)
-@@ -2102,6 +2168,12 @@ int rockchip_vpu981_av1_dec_run(struct h
+@@ -2102,6 +2168,12 @@
  
  	hantro_start_prepare_run(ctx);
  
@@ -1190,7 +1178,7 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec
  	ret = rockchip_vpu981_av1_dec_prepare_run(ctx);
  	if (ret)
  		goto prepare_error;
-@@ -2168,11 +2240,43 @@ prepare_error:
+@@ -2168,11 +2240,43 @@
  static void rockchip_vpu981_postproc_enable(struct hantro_ctx *ctx)
  {
  	struct hantro_dev *vpu = ctx->dev;
@@ -1236,7 +1224,7 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec
  
  	vb2_dst = hantro_get_dst_buf(ctx);
  
-@@ -2180,14 +2284,19 @@ static void rockchip_vpu981_postproc_ena
+@@ -2180,14 +2284,19 @@
  	chroma_offset = ctx->dst_fmt.plane_fmt[0].bytesperline *
  	    ctx->dst_fmt.height;
  
@@ -1262,7 +1250,7 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec
  	hantro_reg_write(vpu, &av1_pp_out_height, height);
  	hantro_reg_write(vpu, &av1_pp_out_width, width);
  	hantro_reg_write(vpu, &av1_pp_out_y_stride,
-@@ -2197,12 +2306,16 @@ static void rockchip_vpu981_postproc_ena
+@@ -2197,12 +2306,16 @@
  	switch (ctx->dst_fmt.pixelformat) {
  	case V4L2_PIX_FMT_P010:
  		hantro_reg_write(vpu, &av1_pp_out_format, 1);
@@ -1280,11 +1268,9 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu981_hw_av1_dec
  	}
  
  	hantro_reg_write(vpu, &av1_ppd_blend_exist, 0);
-Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-===================================================================
---- kernel-6_12.orig/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-+++ kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
-@@ -417,14 +417,51 @@ static irqreturn_t rk3588_vpu981_irq(int
+--- a/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
++++ b/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
+@@ -416,14 +416,51 @@
  	state = (status & AV1_REG_INTERRUPT_DEC_RDY_INT) ?
  		VB2_BUF_STATE_DONE : VB2_BUF_STATE_ERROR;
  
@@ -1336,25 +1322,12 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
  static int rk3036_vpu_hw_init(struct hantro_dev *vpu)
  {
  	/* Bump ACLK to max. possible freq. to improve performance. */
-@@ -442,8 +479,28 @@ static int rk3066_vpu_hw_init(struct han
+@@ -439,6 +476,19 @@
+ 	return 0;
+ }
  
- static int rk3588_vpu981_hw_init(struct hantro_dev *vpu)
- {
-+	int ret;
-+	unsigned long rate;
-+
- 	/* Bump ACLKs to max. possible freq. to improve performance. */
--	clk_set_rate(vpu->clocks[0].clk, RK3588_ACLK_MAX_FREQ);
-+	dev_info(vpu->dev, "RK3588 VPU981: Setting clocks to 400MHz\n");
-+
-+	ret = clk_set_rate(vpu->clocks[0].clk, 400 * 1000 * 1000);  /* aclk to 400MHz */
-+	rate = clk_get_rate(vpu->clocks[0].clk);
-+	dev_info(vpu->dev, "RK3588 VPU981: aclk set_rate ret=%d, actual rate=%lu\n", ret, rate);
-+
-+	ret = clk_set_rate(vpu->clocks[1].clk, 400 * 1000 * 1000);  /* hclk to 400MHz */
-+	rate = clk_get_rate(vpu->clocks[1].clk);
-+	dev_info(vpu->dev, "RK3588 VPU981: hclk set_rate ret=%d, actual rate=%lu\n", ret, rate);
-+
++static int rk3588_vpu981_hw_init(struct hantro_dev *vpu)
++{
 +	/* Initialize cache and afbc register bases */
 +	if (vpu->variant->num_regs >= 3) {
 +		vpu->cache_base = vpu->reg_bases[1];  /* cache is 2nd region */
@@ -1363,10 +1336,13 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +			 vpu->cache_base, vpu->afbc_base);
 +	}
 +
- 	return 0;
- }
- 
-@@ -640,6 +697,8 @@ static const char * const rk3066_vpu_clk
++	return 0;
++}
++
+ static int rockchip_vpu_hw_init(struct hantro_dev *vpu)
+ {
+ 	/* Bump ACLK to max. possible freq. to improve performance. */
+@@ -632,6 +682,8 @@
  
  static const struct hantro_irq rk3588_vpu981_irqs[] = {
  	{ "vdpu", rk3588_vpu981_irq },
@@ -1375,7 +1351,7 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
  };
  
  static const char * const rockchip_vpu_clk_names[] = {
-@@ -796,6 +855,10 @@ const struct hantro_variant px30_vpu_var
+@@ -788,6 +840,10 @@
  	.num_clocks = ARRAY_SIZE(rockchip_vpu_clk_names)
  };
  
@@ -1386,9 +1362,11 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
  const struct hantro_variant rk3588_vpu981_variant = {
  	.dec_offset = 0x0,
  	.dec_fmts = rockchip_vpu981_dec_fmts,
-@@ -809,5 +872,8 @@ const struct hantro_variant rk3588_vpu98
+@@ -799,6 +855,10 @@
+ 	.codec_ops = rk3588_vpu981_codec_ops,
+ 	.irqs = rk3588_vpu981_irqs,
  	.num_irqs = ARRAY_SIZE(rk3588_vpu981_irqs),
- 	.init = rk3588_vpu981_hw_init,
++	.init = rk3588_vpu981_hw_init,
  	.clk_names = rk3588_vpu981_vpu_clk_names,
 -	.num_clocks = ARRAY_SIZE(rk3588_vpu981_vpu_clk_names)
 +	.num_clocks = ARRAY_SIZE(rk3588_vpu981_vpu_clk_names),
@@ -1396,11 +1374,9 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/rockchip_vpu_hw.c
 +	.num_regs = ARRAY_SIZE(rk3588_vpu981_reg_names),
 +	.late_postproc = true,
  };
-Index: kernel-6_12/drivers/media/platform/verisilicon/hantro.h
-===================================================================
---- kernel-6_12.orig/drivers/media/platform/verisilicon/hantro.h
-+++ kernel-6_12/drivers/media/platform/verisilicon/hantro.h
-@@ -206,6 +206,9 @@ struct hantro_dev {
+--- a/drivers/media/platform/verisilicon/hantro.h
++++ b/drivers/media/platform/verisilicon/hantro.h
+@@ -206,6 +206,9 @@
  	void __iomem *enc_base;
  	void __iomem *dec_base;
  	void __iomem *ctrl_base;
@@ -1410,11 +1386,9 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/hantro.h
  
  	struct mutex vpu_mutex;	/* video_device lock */
  	spinlock_t irqlock;
-Index: kernel-6_12/drivers/media/platform/verisilicon/hantro_v4l2.c
-===================================================================
---- kernel-6_12.orig/drivers/media/platform/verisilicon/hantro_v4l2.c
-+++ kernel-6_12/drivers/media/platform/verisilicon/hantro_v4l2.c
-@@ -585,6 +585,11 @@ static int hantro_set_fmt_cap(struct han
+--- a/drivers/media/platform/verisilicon/hantro_v4l2.c
++++ b/drivers/media/platform/verisilicon/hantro_v4l2.c
+@@ -585,6 +585,11 @@
  	if (ret)
  		return ret;
  
@@ -1426,10 +1400,8 @@ Index: kernel-6_12/drivers/media/platform/verisilicon/hantro_v4l2.c
  	ctx->vpu_dst_fmt = hantro_find_format(ctx, pix_mp->pixelformat);
  	ctx->dst_fmt = *pix_mp;
  
-Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
-===================================================================
---- kernel-6_12.orig/drivers/iommu/rockchip-iommu.c
-+++ kernel-6_12/drivers/iommu/rockchip-iommu.c
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
 @@ -25,6 +25,7 @@
  #include <linux/pm_runtime.h>
  #include <linux/slab.h>
@@ -1438,7 +1410,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  
  #include "iommu-pages.h"
  
-@@ -87,6 +88,8 @@ struct rk_iommu_domain {
+@@ -87,6 +88,8 @@
  	dma_addr_t dt_dma;
  	spinlock_t iommus_lock; /* lock for iommus list */
  	spinlock_t dt_lock; /* lock for modifying page directory table */
@@ -1447,7 +1419,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  
  	struct iommu_domain domain;
  };
-@@ -115,6 +118,7 @@ struct rk_iommu {
+@@ -115,6 +118,7 @@
  	struct iommu_device iommu;
  	struct list_head node; /* entry in rk_iommu_domain.iommus */
  	struct iommu_domain *domain; /* domain to which iommu is attached */
@@ -1455,7 +1427,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  };
  
  struct rk_iommudata {
-@@ -656,6 +660,10 @@ static phys_addr_t rk_iommu_iova_to_phys
+@@ -656,6 +660,10 @@
  	u32 dte, pte;
  	u32 *page_table;
  
@@ -1466,7 +1438,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
  
  	dte = rk_domain->dt[rk_iova_dte_index(iova)];
-@@ -828,6 +836,14 @@ static int rk_iommu_map(struct iommu_dom
+@@ -828,6 +836,14 @@
  	u32 dte_index, pte_index;
  	int ret;
  
@@ -1481,7 +1453,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
  
  	/*
-@@ -869,6 +885,10 @@ static size_t rk_iommu_unmap(struct iomm
+@@ -869,6 +885,10 @@
  	u32 *pte_addr;
  	size_t unmap_size;
  
@@ -1492,7 +1464,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
  
  	/*
-@@ -898,6 +918,40 @@ static size_t rk_iommu_unmap(struct iomm
+@@ -898,6 +918,40 @@
  	return unmap_size;
  }
  
@@ -1533,7 +1505,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  static struct rk_iommu *rk_iommu_from_dev(struct device *dev)
  {
  	struct rk_iommudata *data = dev_iommu_priv_get(dev);
-@@ -1018,6 +1072,19 @@ static int rk_iommu_attach_device(struct
+@@ -1018,6 +1072,19 @@
  	if (!iommu)
  		return 0;
  
@@ -1553,7 +1525,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	dev_dbg(dev, "Attaching to iommu domain\n");
  
  	/* iommu already attached */
-@@ -1097,6 +1164,9 @@ static void rk_iommu_domain_free(struct
+@@ -1097,6 +1164,9 @@
  	struct rk_iommu_domain *rk_domain = to_rk_domain(domain);
  	int i;
  
@@ -1563,7 +1535,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	WARN_ON(!list_empty(&rk_domain->iommus));
  
  	for (i = 0; i < NUM_DT_ENTRIES; i++) {
-@@ -1173,6 +1243,7 @@ static const struct iommu_ops rk_iommu_o
+@@ -1173,6 +1243,7 @@
  		.attach_dev	= rk_iommu_attach_device,
  		.map_pages	= rk_iommu_map,
  		.unmap_pages	= rk_iommu_unmap,
@@ -1571,7 +1543,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  		.iova_to_phys	= rk_iommu_iova_to_phys,
  		.free		= rk_iommu_domain_free,
  	}
-@@ -1208,6 +1279,13 @@ static int rk_iommu_probe(struct platfor
+@@ -1208,6 +1279,13 @@
  	if (WARN_ON(rk_ops != ops))
  		return -EINVAL;
  
@@ -1585,7 +1557,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	iommu->bases = devm_kcalloc(dev, num_res, sizeof(*iommu->bases),
  				    GFP_KERNEL);
  	if (!iommu->bases)
-@@ -1265,6 +1343,7 @@ static int rk_iommu_probe(struct platfor
+@@ -1265,6 +1343,7 @@
  	if (err)
  		return err;
  
@@ -1593,7 +1565,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	err = iommu_device_sysfs_add(&iommu->iommu, dev, NULL, dev_name(dev));
  	if (err)
  		goto err_unprepare_clocks;
-@@ -1281,6 +1360,12 @@ static int rk_iommu_probe(struct platfor
+@@ -1281,6 +1360,12 @@
  	if (!dma_dev)
  		dma_dev = &pdev->dev;
  
@@ -1606,7 +1578,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	pm_runtime_enable(dev);
  
  	for (i = 0; i < iommu->num_irq; i++) {
-@@ -1312,8 +1397,15 @@ err_unprepare_clocks:
+@@ -1312,8 +1397,15 @@
  static void rk_iommu_shutdown(struct platform_device *pdev)
  {
  	struct rk_iommu *iommu = platform_get_drvdata(pdev);
@@ -1622,7 +1594,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	for (i = 0; i < iommu->num_irq; i++) {
  		int irq = platform_get_irq(pdev, i);
  
-@@ -1326,7 +1418,14 @@ static void rk_iommu_shutdown(struct pla
+@@ -1326,7 +1418,14 @@
  static int __maybe_unused rk_iommu_suspend(struct device *dev)
  {
  	struct rk_iommu *iommu = dev_get_drvdata(dev);
@@ -1637,7 +1609,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  	if (iommu->domain == &rk_identity_domain)
  		return 0;
  
-@@ -1337,6 +1436,14 @@ static int __maybe_unused rk_iommu_suspe
+@@ -1337,6 +1436,14 @@
  static int __maybe_unused rk_iommu_resume(struct device *dev)
  {
  	struct rk_iommu *iommu = dev_get_drvdata(dev);
@@ -1652,7 +1624,7 @@ Index: kernel-6_12/drivers/iommu/rockchip-iommu.c
  
  	if (iommu->domain == &rk_identity_domain)
  		return 0;
-@@ -1373,6 +1480,9 @@ static const struct of_device_id rk_iomm
+@@ -1373,6 +1480,9 @@
  	{	.compatible = "rockchip,rk3568-iommu",
  		.data = &iommu_data_ops_v2,
  	},
