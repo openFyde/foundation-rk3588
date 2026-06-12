@@ -4,7 +4,7 @@
  #include <dlfcn.h>
  #include <sys/stat.h>
  
-+#include "base/types/cxx23_to_underlying.h"
++#include <utility>
  #include "base/process/process_metrics.h"
  #include "base/strings/stringprintf.h"
  #include "build/build_config.h"
@@ -61,7 +61,7 @@
    std::vector<BrokerFilePermission> permissions;
  
    bool result_for_platform_policy;
-+  LOG(INFO) << "policy type:" << base::to_underlying(policy_type);
++  LOG(INFO) << "policy type:" << std::to_underlying(policy_type);
    switch (policy_type) {
      case PolicyType::kVaapiOnIntel:
        result_for_platform_policy =
@@ -676,24 +676,29 @@
  
  namespace media {
  
-@@ -260,7 +261,7 @@
+@@ -251,8 +252,8 @@
    if (v4l2_buffer_.memory == V4L2_MEMORY_MMAP) {
      for (size_t i = 0; i < plane_mappings_.size(); i++) {
        if (plane_mappings_[i] != nullptr) {
--        munmap(plane_mappings_[i], v4l2_buffer_.m.planes[i].length);
-+        v4l2_munmap(plane_mappings_[i], v4l2_buffer_.m.planes[i].length);
+-        munmap(plane_mappings_[i],
+-               UNSAFE_TODO(v4l2_buffer_.m.planes[i].length));
++        v4l2_munmap(plane_mappings_[i],
++                    UNSAFE_TODO(v4l2_buffer_.m.planes[i].length));
        }
      }
    }
-@@ -757,7 +758,8 @@
+@@ -750,8 +751,10 @@
  
    size_t num_planes = self.PlanesCount();
    for (size_t i = 0; i < num_planes; i++) {
--    self.buffer_data_->v4l2_buffer_.m.planes[i].m.fd = planes[i].fd.get();
-+    self.buffer_data_->v4l2_buffer_.m.planes[i].m.fd = frame->GetDmabufFd(i);
-+    VLOGF(3) << "planes fd:" << planes[i].fd.get() << " frame dma:" << frame->GetDmabufFd(i);
+-    UNSAFE_TODO(self.buffer_data_->v4l2_buffer_.m.planes[i].m.fd =
+-                    planes[i].fd.get());
++    UNSAFE_TODO(self.buffer_data_->v4l2_buffer_.m.planes[i].m.fd =
++                    frame->GetDmabufFd(i));
++    VLOGF(3) << "planes fd:" << planes[i].fd.get()
++             << " frame dma:" << frame->GetDmabufFd(i);
    }
- 
+
    return std::move(self).DoQueue(request_ref, std::move(frame));
 --- a/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
 +++ b/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
