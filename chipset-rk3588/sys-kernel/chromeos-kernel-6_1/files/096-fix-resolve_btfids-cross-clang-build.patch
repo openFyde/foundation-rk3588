@@ -1,0 +1,24 @@
+Backport of chromeos-6.12 fef12e5a923e ("FROMLIST: tools/resolve_btfids:
+Fix build when cross compiling kernel with clang", Suleiman Souhlal).
+
+The cros kernel build passes CLANG_CROSS_FLAGS=--target=<cross> on the
+make command line, which propagates through MAKEFLAGS into the
+resolve_btfids sub-makes. tools/scripts/Makefile.include then adds it to
+the HOST libbpf/libsubcmd CFLAGS, so the host tool gets cross-compiled
+against the host sysroot and fails (__float128 unsupported, incomplete
+user_pt_regs, -Wformat errors). Only built when CONFIG_DEBUG_INFO_BTF=y
+(needed for AOSP13/tm bpfloader).
+
+Index: kernel-rockchip/tools/bpf/resolve_btfids/Makefile
+===================================================================
+--- kernel-rockchip.orig/tools/bpf/resolve_btfids/Makefile
++++ kernel-rockchip/tools/bpf/resolve_btfids/Makefile
+@@ -19,7 +19,7 @@
+
+ # Overrides for the prepare step libraries.
+ HOST_OVERRIDES := AR="$(HOSTAR)" CC="$(HOSTCC)" LD="$(HOSTLD)" ARCH="$(HOSTARCH)" \
+-		  CROSS_COMPILE="" EXTRA_CFLAGS="$(HOSTCFLAGS)"
++		  CROSS_COMPILE="" CLANG_CROSS_FLAGS="" EXTRA_CFLAGS="$(HOSTCFLAGS)"
+
+ RM      ?= rm
+ HOSTCC  ?= gcc
