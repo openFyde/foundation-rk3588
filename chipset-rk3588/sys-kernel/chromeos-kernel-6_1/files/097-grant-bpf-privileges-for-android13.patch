@@ -1,0 +1,58 @@
+Grant BPF filesystem privileges for the Android 13 (fydroid) container.
+
+The ARC++ (Android 13) container mounts its own bpffs at /sys/fs/bpf from
+inside its user + mount namespace; Android 13 netd hard-requires a writable
+/sys/fs/bpf for the in-container bpfloader. This 6.1 vendor tree is
+Android-common-based and predates mainline v6.8, which made bpffs
+userns-mountable (FS_USERNS_MOUNT) gated by an init-ns capable(CAP_SYS_ADMIN)
+check in bpf_fill_super. Without FS_USERNS_MOUNT the VFS rejects the
+container's mount outright:
+
+  libminijail[1]: cannot mount 'bpf' as '.../sys/fs/bpf' ...: Operation not
+                  permitted
+
+This backports both pieces at once and, like the fydroid 6.12 patch, relaxes
+the gate from init-ns capable() to ns_capable(fc->user_ns, CAP_SYS_ADMIN) so
+the container (which holds CAP_SYS_ADMIN only in its own userns) can mount
+bpffs. In init_user_ns this is identical to upstream behaviour. Inert on
+boards that do not run the Android container.
+
+Mirror of chromeos-kernel-6_12 069-grant-bpf-privileges-for-android13.patch
+(6.12 already carries FS_USERNS_MOUNT + the init-ns gate upstream, so that
+version only flips capable() -> ns_capable(); 6.1 needs the full backport and
+has no kernel/bpf/token.c). RE-CHECK ON KERNEL UPREV.
+
+Index: kernel-6_1/kernel/bpf/inode.c
+===================================================================
+--- kernel-6_1.orig/kernel/bpf/inode.c
++++ kernel-6_1/kernel/bpf/inode.c
+@@ -747,6 +747,21 @@ static int bpf_fill_super(struct super_block *sb, struct fs_context *fc)
+ 	struct inode *inode;
+ 	int ret;
+
++	/*
++	 * Mounting an instance of BPF FS requires privileges over the user
++	 * namespace that will own the superblock. Mainline gained this gate
++	 * together with FS_USERNS_MOUNT in v6.8; this 6.1 vendor tree predates
++	 * both. fydroid uses ns_capable() (rather than upstream's init-ns
++	 * capable()) so the ARC++ (Android 13) container can mount its own
++	 * bpffs from inside its user namespace -- Android 13 netd hard-requires
++	 * a writable /sys/fs/bpf for the in-container bpfloader. RE-CHECK ON
++	 * KERNEL UPREV (6.12 carries this upstream; see project-openfyde-patches
++	 * chromeos-kernel-6_12 069-grant-bpf-privileges-for-android13.patch).
++	 */
++	if (fc->user_ns != &init_user_ns &&
++	    !ns_capable(fc->user_ns, CAP_SYS_ADMIN))
++		return -EPERM;
++
+ 	ret = simple_fill_super(sb, BPF_FS_MAGIC, bpf_rfiles);
+ 	if (ret)
+ 		return ret;
+@@ -801,6 +816,7 @@ static struct file_system_type bpf_fs_type = {
+ 	.init_fs_context = bpf_init_fs_context,
+ 	.parameters	= bpf_fs_parameters,
+ 	.kill_sb	= kill_litter_super,
++	.fs_flags	= FS_USERNS_MOUNT,
+ };
+
+ static int __init bpf_init(void)
