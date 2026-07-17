@@ -11,7 +11,7 @@
             type = "kernel";
             arch = "arm64";
             os = "linux";
-            compression = "lzma";
+            compression = "lz4";
             load = <0xffffff01>;
             entry = <0xffffff01>;
             hash {
