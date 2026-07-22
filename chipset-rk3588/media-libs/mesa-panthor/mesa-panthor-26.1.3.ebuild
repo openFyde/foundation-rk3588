@@ -4,12 +4,12 @@
 EAPI=7
 
 EGIT_REPO_URI="git://anongit.freedesktop.org/mesa/mesa"
-CROS_WORKON_COMMIT="35721f19866d07dc671d4a83d6f6b77240629cb6"
-CROS_WORKON_TREE="b0d9c48cf8158a238fc4cf3f39e58c4bd5717c49"
+CROS_WORKON_COMMIT="bfce4dd45aa8658ca8a66d3a14ed9297fbab4a54"
+CROS_WORKON_TREE="3d0170ad612de025dc2519c075c642216624cb87"
 CROS_WORKON_PROJECT="chromiumos/third_party/mesa"
 CROS_WORKON_LOCALNAME="mesa"
 CROS_WORKON_MANUAL_UPREV="1"
-CROS_WORKON_EGIT_BRANCH="cros/upstream/25.0"
+CROS_WORKON_EGIT_BRANCH="cros/upstream/26.1"
 
 KEYWORDS="*"
 
@@ -50,6 +50,7 @@ BDEPEND="
 	sys-devel/bison
 	sys-devel/flex
 	virtual/pkgconfig
+	dev-util/mesa_clc
 "
 
 src_configure() {
@@ -66,7 +67,10 @@ src_configure() {
 		-Dgles1=disabled
 		-Dgles2=enabled
 		-Dgallium-drivers=panfrost
-		-Dgallium-vdpau=disabled
+		# Mesa 26's libpan compiles .cl kernels with mesa_clc; use the prebuilt
+		# host tool (dev-util/mesa_clc) so the in-tree CLC path does not pull in
+		# LLVM and conflict with -Dllvm=disabled ("CLC requires LLVM").
+		-Dmesa-clc=system
 		-Dperfetto=$(usex perfetto true false)
 		$(meson_feature zstd)
     -Degl-native-platform="surfaceless"
@@ -82,9 +86,4 @@ src_configure() {
 src_install() {
 	meson_src_install
 	rm -v -rf "${ED}/usr/include"
-}
-
-src_prepare() {
-  default
-  eapply ${FILESDIR}/*.patch
 }

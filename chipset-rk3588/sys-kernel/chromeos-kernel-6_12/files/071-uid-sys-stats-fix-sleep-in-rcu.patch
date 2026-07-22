@@ -1,0 +1,190 @@
+Index: kernel-6_12/drivers/misc/uid_sys_stats.c
+===================================================================
+--- kernel-6_12.orig/drivers/misc/uid_sys_stats.c
++++ kernel-6_12/drivers/misc/uid_sys_stats.c
+@@ -146,6 +146,19 @@ static void compute_io_bucket_stats(stru
+ }
+ 
+ #ifdef CONFIG_UID_SYS_STATS_DEBUG
++/*
++ * get_full_task_comm() sleeps: it takes mm->mmap_lock and calls get_cmdline(),
++ * which may fault in userspace memory. The task list walks below hold
++ * rcu_read_lock(), so the full comm cannot be fetched inline. Instead pin the
++ * task and queue it on a deferred list, then resolve the comms after
++ * rcu_read_unlock() (still under the sleeping uid_lock).
++ */
++struct task_comm_defer {
++	struct list_head node;
++	struct task_struct *task;
++	struct task_entry *task_entry;
++};
++
+ static void get_full_task_comm(struct task_entry *task_entry,
+ 		struct task_struct *task)
+ {
+@@ -202,8 +215,44 @@ static void get_full_task_comm(struct ta
+ 	task_entry->comm[i] = '\0';
+ }
+ 
++/*
++ * Queue a task whose full comm must be (re)fetched. Called from under
++ * rcu_read_lock(); the referenced task is released in
++ * resolve_deferred_task_comm() once the actual (sleeping) fetch is done.
++ */
++static void defer_full_task_comm(struct list_head *defer,
++		struct task_entry *task_entry, struct task_struct *task)
++{
++	struct task_comm_defer *d;
++
++	if (!defer)
++		return;
++
++	d = kmalloc(sizeof(*d), GFP_ATOMIC);
++	if (!d)
++		return;
++
++	get_task_struct(task);
++	d->task = task;
++	d->task_entry = task_entry;
++	list_add(&d->node, defer);
++}
++
++/* Fetch the deferred comms outside of the RCU read-side critical section. */
++static void resolve_deferred_task_comm(struct list_head *defer)
++{
++	struct task_comm_defer *d, *tmp;
++
++	list_for_each_entry_safe(d, tmp, defer, node) {
++		get_full_task_comm(d->task_entry, d->task);
++		put_task_struct(d->task);
++		list_del(&d->node);
++		kfree(d);
++	}
++}
++
+ static struct task_entry *find_task_entry(struct uid_entry *uid_entry,
+-		struct task_struct *task)
++		struct task_struct *task, struct list_head *defer)
+ {
+ 	struct task_entry *task_entry;
+ 
+@@ -215,7 +264,7 @@ static struct task_entry *find_task_entr
+ 				- task_entry->comm;
+ 
+ 			if (strncmp(task_entry->comm, task->comm, len))
+-				get_full_task_comm(task_entry, task);
++				defer_full_task_comm(defer, task_entry, task);
+ 			return task_entry;
+ 		}
+ 	}
+@@ -223,12 +272,12 @@ static struct task_entry *find_task_entr
+ }
+ 
+ static struct task_entry *find_or_register_task(struct uid_entry *uid_entry,
+-		struct task_struct *task)
++		struct task_struct *task, struct list_head *defer)
+ {
+ 	struct task_entry *task_entry;
+ 	pid_t pid = task->pid;
+ 
+-	task_entry = find_task_entry(uid_entry, task);
++	task_entry = find_task_entry(uid_entry, task, defer);
+ 	if (task_entry)
+ 		return task_entry;
+ 
+@@ -236,7 +285,7 @@ static struct task_entry *find_or_regist
+ 	if (!task_entry)
+ 		return NULL;
+ 
+-	get_full_task_comm(task_entry, task);
++	defer_full_task_comm(defer, task_entry, task);
+ 
+ 	task_entry->pid = pid;
+ 	hash_add(uid_entry->task_entries, &task_entry->hash, (unsigned int)pid);
+@@ -269,9 +318,10 @@ static void set_io_uid_tasks_zero(struct
+ }
+ 
+ static void add_uid_tasks_io_stats(struct uid_entry *uid_entry,
+-		struct task_struct *task, int slot)
++		struct task_struct *task, int slot, struct list_head *defer)
+ {
+-	struct task_entry *task_entry = find_or_register_task(uid_entry, task);
++	struct task_entry *task_entry = find_or_register_task(uid_entry, task,
++			defer);
+ 	struct io_stats *task_io_slot = &task_entry->io[slot];
+ 
+ 	task_io_slot->read_bytes += task->ioac.read_bytes;
+@@ -321,7 +371,8 @@ static void show_io_uid_tasks(struct seq
+ static void remove_uid_tasks(struct uid_entry *uid_entry) {};
+ static void set_io_uid_tasks_zero(struct uid_entry *uid_entry) {};
+ static void add_uid_tasks_io_stats(struct uid_entry *uid_entry,
+-		struct task_struct *task, int slot) {};
++		struct task_struct *task, int slot, struct list_head *defer) {};
++static void resolve_deferred_task_comm(struct list_head *defer) {};
+ static void compute_io_uid_tasks(struct uid_entry *uid_entry) {};
+ static void show_io_uid_tasks(struct seq_file *m,
+ 		struct uid_entry *uid_entry) {}
+@@ -478,7 +529,7 @@ static const struct proc_ops uid_remove_
+ 
+ 
+ static void add_uid_io_stats(struct uid_entry *uid_entry,
+-			struct task_struct *task, int slot)
++			struct task_struct *task, int slot, struct list_head *defer)
+ {
+ 	struct io_stats *io_slot = &uid_entry->io[slot];
+ 
+@@ -493,7 +544,7 @@ static void add_uid_io_stats(struct uid_
+ 	/* mainline v6.12 has no per-task fsync syscall counter */
+ 	io_slot->fsync += 0;
+ 
+-	add_uid_tasks_io_stats(uid_entry, task, slot);
++	add_uid_tasks_io_stats(uid_entry, task, slot, defer);
+ }
+ 
+ static void update_io_stats_all_locked(void)
+@@ -503,6 +554,7 @@ static void update_io_stats_all_locked(v
+ 	struct user_namespace *user_ns = current_user_ns();
+ 	unsigned long bkt;
+ 	uid_t uid;
++	LIST_HEAD(comm_defer);
+ 
+ 	hash_for_each(hash_table, bkt, uid_entry, hash) {
+ 		memset(&uid_entry->io[UID_STATE_TOTAL_CURR], 0,
+@@ -517,10 +569,13 @@ static void update_io_stats_all_locked(v
+ 			uid_entry = find_or_register_uid(uid);
+ 		if (!uid_entry)
+ 			continue;
+-		add_uid_io_stats(uid_entry, task, UID_STATE_TOTAL_CURR);
++		add_uid_io_stats(uid_entry, task, UID_STATE_TOTAL_CURR,
++				&comm_defer);
+ 	}
+ 	rcu_read_unlock();
+ 
++	resolve_deferred_task_comm(&comm_defer);
++
+ 	hash_for_each(hash_table, bkt, uid_entry, hash) {
+ 		compute_io_bucket_stats(&uid_entry->io[uid_entry->state],
+ 					&uid_entry->io[UID_STATE_TOTAL_CURR],
+@@ -534,6 +589,7 @@ static void update_io_stats_uid_locked(s
+ {
+ 	struct task_struct *task, *temp;
+ 	struct user_namespace *user_ns = current_user_ns();
++	LIST_HEAD(comm_defer);
+ 
+ 	memset(&uid_entry->io[UID_STATE_TOTAL_CURR], 0,
+ 		sizeof(struct io_stats));
+@@ -543,10 +599,13 @@ static void update_io_stats_uid_locked(s
+ 	for_each_process_thread(temp, task) {
+ 		if (from_kuid_munged(user_ns, task_uid(task)) != uid_entry->uid)
+ 			continue;
+-		add_uid_io_stats(uid_entry, task, UID_STATE_TOTAL_CURR);
++		add_uid_io_stats(uid_entry, task, UID_STATE_TOTAL_CURR,
++				&comm_defer);
+ 	}
+ 	rcu_read_unlock();
+ 
++	resolve_deferred_task_comm(&comm_defer);
++
+ 	compute_io_bucket_stats(&uid_entry->io[uid_entry->state],
+ 				&uid_entry->io[UID_STATE_TOTAL_CURR],
+ 				&uid_entry->io[UID_STATE_TOTAL_LAST],
