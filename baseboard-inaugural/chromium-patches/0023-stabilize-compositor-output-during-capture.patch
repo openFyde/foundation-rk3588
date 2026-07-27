@@ -1,0 +1,46 @@
+diff --git a/components/viz/service/display/display.cc b/components/viz/service/display/display.cc
+index ecd530cd32994..c7efd43c8b848 100644
+--- a/components/viz/service/display/display.cc
++++ b/components/viz/service/display/display.cc
+@@ -930,6 +930,18 @@ bool Display::DrawAndSwap(const DrawAndSwapParams& params) {
+   bool have_damage = false;
+   auto& last_render_pass = *frame.render_pass_list.back();
+ 
++  // While a FrameSinkVideoCapturer is attached to the root surface, expand
++  // any non-empty damage to the full output: partial-redraw (buffer-age
++  // catch-up) accounting is not reliable when capture readbacks alter the
++  // swap chain's buffer timing, and under-repaint shows one-frame stale
++  // regions on screen (observed on rk3588). Full redraw of damaged frames
++  // is exactly what --ui-disable-partial-swap provides, scoped here to
++  // capture sessions only; undamaged frames still skip drawing.
++  if (last_render_pass.video_capture_enabled &&
++      !last_render_pass.damage_rect.IsEmpty()) {
++    last_render_pass.damage_rect = last_render_pass.output_rect;
++  }
++
+   // The CompositorFrame provided by the SurfaceAggregator includes the display
+   // transform while |current_surface_size_| is the pre-transform size received
+   // from the client.
+diff --git a/components/viz/service/display/overlay_processor_using_strategy.cc b/components/viz/service/display/overlay_processor_using_strategy.cc
+index ae5d05b2f6025..0955033116e24 100644
+--- a/components/viz/service/display/overlay_processor_using_strategy.cc
++++ b/components/viz/service/display/overlay_processor_using_strategy.cc
+@@ -1015,8 +1015,17 @@ void OverlayProcessorUsingStrategy::UpdateDownscalingCapabilities(
+ 
+ bool OverlayProcessorUsingStrategy::BlockForCopyRequests(
+     const AggregatedRenderPass* root_render_pass) {
++  // HasCapture() (not just copy_requests): while a FrameSinkVideoCapturer is
++  // attached to the root surface, damage-driven capture produces copy
++  // requests only on some frames, so a copy_requests-only check re-promotes
++  // overlays whenever the screen goes briefly static and demotes them again
++  // at the next damage burst. Some display hardware (rk3588 vop2) shows a
++  // visible glitch on each promote/demote flip. video_capture_enabled holds
++  // the block steady for the capture session, matching what
++  // OverlayProcessorDelegated::BlockForCopyRequests, dc_layer_overlay and
++  // ca_layer_overlay already do.
+   bool has_copy = false;
+-  if (!root_render_pass->copy_requests.empty()) {
++  if (root_render_pass->HasCapture()) {
+     has_copy = true;
+   }
+ 
