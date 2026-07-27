@@ -1,8 +1,8 @@
-Index: kernel-6_12/drivers/usb/misc/Kconfig
+Index: v6.12/drivers/usb/misc/Kconfig
 ===================================================================
---- kernel-6_12.orig/drivers/usb/misc/Kconfig
-+++ kernel-6_12/drivers/usb/misc/Kconfig
-@@ -343,3 +343,19 @@ config USB_ONBOARD_DEV_USB5744
+--- v6.12.orig/drivers/usb/misc/Kconfig
++++ v6.12/drivers/usb/misc/Kconfig
+@@ -344,3 +344,19 @@ config USB_ONBOARD_DEV_USB5744
  	  during hub start-up configuration stage. It is must to enable this
  	  option on AMD Kria KR260 Robotics Starter Kit as this hub is
  	  connected to USB-SD converter which mounts the root filesystem.
@@ -22,10 +22,10 @@ Index: kernel-6_12/drivers/usb/misc/Kconfig
 +
 +	  To compile this driver as a module, choose M here: the
 +	  module will be called fyde-vdtb.
-Index: kernel-6_12/drivers/usb/misc/Makefile
+Index: v6.12/drivers/usb/misc/Makefile
 ===================================================================
---- kernel-6_12.orig/drivers/usb/misc/Makefile
-+++ kernel-6_12/drivers/usb/misc/Makefile
+--- v6.12.orig/drivers/usb/misc/Makefile
++++ v6.12/drivers/usb/misc/Makefile
 @@ -29,6 +29,7 @@ obj-$(CONFIG_USB_HUB_USB251XB)		+= usb25
  obj-$(CONFIG_USB_HSIC_USB3503)		+= usb3503.o
  obj-$(CONFIG_USB_HSIC_USB4604)		+= usb4604.o
@@ -34,11 +34,11 @@ Index: kernel-6_12/drivers/usb/misc/Makefile
  
  obj-$(CONFIG_USB_SISUSBVGA)		+= sisusbvga/
  obj-$(CONFIG_USB_LINK_LAYER_TEST)	+= lvstest.o
-Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
+Index: v6.12/drivers/usb/misc/fyde-vdtb.c
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/drivers/usb/misc/fyde-vdtb.c
-@@ -0,0 +1,269 @@
++++ v6.12/drivers/usb/misc/fyde-vdtb.c
+@@ -0,0 +1,367 @@
 +// SPDX-License-Identifier: GPL-2.0+
 +/*
 + *  Fydeos detachable emulator driver
@@ -53,11 +53,19 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +#include <linux/notifier.h>
 +#include <linux/usb.h>
 +#include <linux/suspend.h>
++#include <linux/workqueue.h>
 +#include <uapi/linux/hid.h>
 +
 +#define VDTB_DEV_NAME "fyde-vdtb"
 +#define VDTB_DEVICE_MINOR  MISC_DYNAMIC_MINOR
 +#define VDTB_DEVICE_ID "vdtb"
++
++/* USB devices are torn down on suspend and re-enumerated on resume. Give the
++ * re-enumeration time to complete before trusting the keyboard count again,
++ * and retry a few times if a keyboard we had before suspend is still missing.
++ */
++#define VDTB_RESUME_SETTLE_MS 1000
++#define VDTB_RESUME_RETRIES 5
 +
 +MODULE_LICENSE("GPL");
 +MODULE_AUTHOR("Yang Tsao <yang@fydeos.io>");
@@ -77,6 +85,13 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  struct notifier_block nb;
 +  struct notifier_block power_nb;
 +  struct miscdevice misc;
++  struct delayed_work resume_work;
++  struct mutex mode_lock;
++  bool reporting_frozen;  /* suppress reports across suspend/resume */
++  bool mode_valid;        /* cur_mode has been reported at least once */
++  bool cur_mode;          /* last state reported to userspace */
++  bool kbd_before_suspend;
++  int resume_retries;
 +};
 +
 +static void usb_kbd_add(struct usb_device *udev)
@@ -153,9 +168,29 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  return container_of(misc, struct vdtb_priv, misc);
 +}
 +
-+static void set_tablet_mode(struct vdtb_priv *priv, bool mode) {
++/* Report the switch state to userspace. Redundant reports are dropped, and
++ * reports are skipped entirely while frozen (see vdtb_pm_nb()) unless the
++ * caller forces them, as the /dev node writer does.
++ */
++static void report_tablet_mode(struct vdtb_priv *priv, bool mode, bool force) {
++  if (!priv->input_dev)
++    return;
++
++  mutex_lock(&priv->mode_lock);
++  if (priv->reporting_frozen && !force)
++    goto out;
++  if (priv->mode_valid && priv->cur_mode == mode)
++    goto out;
++  priv->cur_mode = mode;
++  priv->mode_valid = true;
 +  input_report_switch(priv->input_dev, SW_TABLET_MODE, mode);
 +  input_sync(priv->input_dev);
++out:
++  mutex_unlock(&priv->mode_lock);
++}
++
++static void set_tablet_mode(struct vdtb_priv *priv, bool mode) {
++  report_tablet_mode(priv, mode, false);
 +}
 +
 +static ssize_t vdtb_read(struct file *file, char *buf, size_t count, loff_t *ppos) {
@@ -171,7 +206,8 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  n = copy_from_user(tmp_buf, buf, count);
 +  if (n) return -1;
 +  if (priv) {
-+    set_tablet_mode(priv, strncmp(tmp_buf, "1", 1) == 0);
++    /* An explicit request from userspace always wins. */
++    report_tablet_mode(priv, strncmp(tmp_buf, "1", 1) == 0, true);
 +  }else{
 +    return -1;
 +  }
@@ -242,11 +278,69 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  return NOTIFY_DONE;
 +}
 +
++/* Runs after resume, once USB re-enumeration has had a chance to finish. If a
++ * keyboard was present before suspending but has not shown up yet, wait a bit
++ * longer instead of announcing a bogus tablet-mode transition.
++ */
++static void vdtb_resume_work_fn(struct work_struct *work) {
++  struct vdtb_priv *priv = container_of(to_delayed_work(work),
++                                        struct vdtb_priv, resume_work);
++  bool has_kbd;
++
++  usb_for_each_dev(NULL, check_usb_kbd);
++  has_kbd = usb_keyboard_count() > 0;
++
++  if (!has_kbd && priv->kbd_before_suspend && priv->resume_retries > 0) {
++    priv->resume_retries--;
++    queue_delayed_work(system_wq, &priv->resume_work,
++                       msecs_to_jiffies(VDTB_RESUME_SETTLE_MS));
++    return;
++  }
++
++  mutex_lock(&priv->mode_lock);
++  priv->reporting_frozen = false;
++  mutex_unlock(&priv->mode_lock);
++
++  /* Re-read the count: a device may have arrived while we were unfreezing. */
++  dev_info(priv->misc.this_device, "resume settled, current keyboards:%d\n",
++           usb_keyboard_count());
++  set_tablet_mode(priv, !usb_keyboard_count());
++}
++
++static int vdtb_pm_nb(struct notifier_block *nb,
++      unsigned long action, void *data) {
++  struct vdtb_priv *priv = container_of(nb, struct vdtb_priv, power_nb);
++
++  switch (action) {
++  case PM_SUSPEND_PREPARE:
++  case PM_HIBERNATION_PREPARE:
++  case PM_RESTORE_PREPARE:
++    cancel_delayed_work_sync(&priv->resume_work);
++    priv->kbd_before_suspend = usb_keyboard_count() > 0;
++    mutex_lock(&priv->mode_lock);
++    priv->reporting_frozen = true;
++    mutex_unlock(&priv->mode_lock);
++    break;
++  case PM_POST_SUSPEND:
++  case PM_POST_HIBERNATION:
++  case PM_POST_RESTORE:
++    /* Stay frozen until the USB bus has settled. */
++    priv->resume_retries = VDTB_RESUME_RETRIES;
++    mod_delayed_work(system_wq, &priv->resume_work,
++                     msecs_to_jiffies(VDTB_RESUME_SETTLE_MS));
++    break;
++  }
++  return NOTIFY_DONE;
++}
++
 +static void remove_vdtb(void) {
 +  struct vdtb_priv *priv = vdtb_priv_global;
 +  if (!priv || !priv->misc.this_device)
 +    return;
-+  input_unregister_device(priv->input_dev);
++  unregister_pm_notifier(&priv->power_nb);
++  cancel_delayed_work_sync(&priv->resume_work);
++  if (priv->input_dev)
++    input_unregister_device(priv->input_dev);
 +  usb_unregister_notify(&priv->nb);
 +  usb_kdb_free_list();
 +  misc_deregister(&priv->misc);
@@ -266,6 +360,9 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  priv->misc.minor = VDTB_DEVICE_MINOR;
 +  priv->misc.name = VDTB_DEVICE_ID;
 +  priv->misc.fops = &vdtb_fops;
++  mutex_init(&priv->mode_lock);
++  INIT_DELAYED_WORK(&priv->resume_work, vdtb_resume_work_fn);
++  priv->power_nb.notifier_call = vdtb_pm_nb;
 +
 +  err = misc_register(&priv->misc);
 +  if (err)
@@ -287,6 +384,7 @@ Index: kernel-6_12/drivers/usb/misc/fyde-vdtb.c
 +  detect_usb_kbd(priv);
 +  priv->nb.notifier_call = usb_notifier_nb;
 +  usb_register_notify(&priv->nb);
++  register_pm_notifier(&priv->power_nb);
 +  dev_info(priv->misc.this_device, "device is working.\n");
 +  return 0;
 +
