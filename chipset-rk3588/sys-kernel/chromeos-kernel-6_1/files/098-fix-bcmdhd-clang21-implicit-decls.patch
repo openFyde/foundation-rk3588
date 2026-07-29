@@ -1,0 +1,14 @@
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd.h
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd.h
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/dhd.h
+@@ -90,9 +90,7 @@
+ #include <dhdioctl.h>
+ #include <wlfc_proto.h>
+ #include <hnd_armtrap.h>
+-#if defined(DUMP_IOCTL_IOV_LIST) || defined(DHD_DEBUG)
+ #include <bcmutils.h>
+-#endif /* DUMP_IOCTL_IOV_LIST || DHD_DEBUG */
+ 
+ #if defined(BCMWDF)
+ #include <wdf.h>
