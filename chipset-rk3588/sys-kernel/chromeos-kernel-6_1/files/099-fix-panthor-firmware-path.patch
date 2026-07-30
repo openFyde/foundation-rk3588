@@ -1,0 +1,25 @@
+Index: kernel-rockchip/drivers/gpu/drm/panthor/panthor_fw.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panthor/panthor_fw.c
++++ kernel-rockchip/drivers/gpu/drm/panthor/panthor_fw.c
+@@ -707,9 +707,17 @@
+ 
+ 	ret = request_firmware(&fw, fw_path, ptdev->base.dev);
+ 	if (ret) {
+-		drm_err(&ptdev->base, "Failed to load firmware image '%s'\n",
+-			CSF_FW_NAME);
+-		return ret;
++		/*
++		 * FydeOS ships the CSF firmware as a flat /lib/firmware/
++		 * mali_csffw.bin (and embeds it via CONFIG_EXTRA_FIRMWARE),
++		 * not under the arch-versioned path, so retry the bare name.
++		 */
++		ret = request_firmware(&fw, CSF_FW_NAME, ptdev->base.dev);
++		if (ret) {
++			drm_err(&ptdev->base, "Failed to load firmware image '%s'\n",
++				CSF_FW_NAME);
++			return ret;
++		}
+ 	}
+ 
+ 	iter.data = fw->data;
