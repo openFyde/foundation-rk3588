@@ -1,0 +1,286 @@
+CHROMIUM: netfilter: make xt_quota2 counters per-network-namespace
+
+xt_quota2 keeps one global counter list and creates its procfs
+directory once, in init_net:
+
+	static struct proc_dir_entry *proc_xt_quota;
+	proc_xt_quota = proc_mkdir("xt_quota", init_net.proc_net);
+
+Every counter file therefore lands in the host's /proc/net/xt_quota no
+matter which netns installed the rule. The fydroid (Android 13)
+container runs in its own netns, so netd's
+
+	iptables -m quota2 --name globalAlert
+
+succeeds but materialises the counter in the host, and netd's later
+BandwidthController::updateQuota() ->
+fopen("/proc/net/xt_quota/globalAlert", "we") gets ENOENT inside the
+container. procfs cannot create a file on open, so this never
+recovers. NetworkStatsService then fails boot phase 550 and takes
+system_server down in a permanent crash loop
+("FATAL EXCEPTION IN SYSTEM PROCESS: NetworkStats"), which kills every
+app launch.
+
+Move the counter list, its lock and the procfs directory into per-netns
+state via register_pernet_subsys(), matching what upstream did for the
+other named-counter xtables matches. Each netns gets its own
+/proc/net/xt_quota, owned by uid/gid 0 of that netns' user namespace so
+the entries resolve to the container's root instead of overflowuid
+(unchanged global root for init_net).
+
+quota2_net_exit() runs before quota_mt2_destroy() during netns
+teardown, so it clears ->proc_xt_quota under the lock and drops the
+subtree in one shot; destroy() snapshots the pointer and skips its
+per-counter remove_proc_entry() when the directory is already gone.
+
+This is the same port already carried by chromeos-kernel-6_12 as
+070-port-xt-quota2.patch, minus that patch's v6.12-only API churn
+(strlcpy/strscpy, linux/atomic.h) which does not apply to v6.1. The
+module init/exit error paths gained the missing netlink_kernel_release()
+along with it.
+
+BUG=none
+TEST=emerge-orangepi5-fydeos-io chromeos-kernel-6_1
+TEST=fydroid: /proc/net/xt_quota/globalAlert exists inside the
+     container, no NetworkStats exception, F-Droid launches
+Index: kernel-rockchip/net/netfilter/xt_quota2.c
+===================================================================
+--- kernel-rockchip.orig/net/netfilter/xt_quota2.c
++++ kernel-rockchip/net/netfilter/xt_quota2.c
+@@ -18,6 +18,8 @@
+ #include <linux/spinlock.h>
+ #include <asm/atomic.h>
+ #include <net/netlink.h>
++#include <net/net_namespace.h>
++#include <net/netns/generic.h>
+ 
+ #include <linux/netfilter/x_tables.h>
+ #include <linux/netfilter/xt_quota2.h>
+@@ -66,13 +68,24 @@
+ static struct sock *nflognl;
+ #endif
+ 
+-static LIST_HEAD(counter_list);
+-static DEFINE_SPINLOCK(counter_list_lock);
++/* Per network namespace state: the /proc/net/xt_quota dir and the list of
++ * named counters live under each netns rather than only in init_net, so the
++ * ARC++ container (which runs in its own netns) gets its own xt_quota dir and
++ * Android's netd can read/write /proc/net/xt_quota/<name> inside it. */
++struct xt_quota2_net {
++	struct proc_dir_entry *proc_xt_quota;
++	struct list_head counter_list;
++	spinlock_t counter_list_lock;
++};
++
++static unsigned int quota2_net_id __read_mostly;
++
++static inline struct xt_quota2_net *xt_quota2_pernet(struct net *net)
++{
++	return net_generic(net, quota2_net_id);
++}
+ 
+-static struct proc_dir_entry *proc_xt_quota;
+ static unsigned int quota_list_perms = S_IRUGO | S_IWUSR;
+-static kuid_t quota_list_uid = KUIDT_INIT(0);
+-static kgid_t quota_list_gid = KGIDT_INIT(0);
+ module_param_named(perms, quota_list_perms, uint, S_IRUGO | S_IWUSR);
+ 
+ #ifdef CONFIG_NETFILTER_XT_MATCH_QUOTA2_LOG
+@@ -197,8 +210,9 @@
+  * @name:	name of counter
+  */
+ static struct xt_quota_counter *
+-q2_get_counter(const struct xt_quota_mtinfo2 *q)
++q2_get_counter(struct net *net, const struct xt_quota_mtinfo2 *q)
+ {
++	struct xt_quota2_net *quota2_net = xt_quota2_pernet(net);
+ 	struct proc_dir_entry *p;
+ 	struct xt_quota_counter *e = NULL;
+ 	struct xt_quota_counter *new_e;
+@@ -211,18 +225,18 @@
+ 	if (new_e == NULL)
+ 		goto out;
+ 
+-	spin_lock_bh(&counter_list_lock);
+-	list_for_each_entry(e, &counter_list, list)
++	spin_lock_bh(&quota2_net->counter_list_lock);
++	list_for_each_entry(e, &quota2_net->counter_list, list)
+ 		if (strcmp(e->name, q->name) == 0) {
+ 			atomic_inc(&e->ref);
+-			spin_unlock_bh(&counter_list_lock);
++			spin_unlock_bh(&quota2_net->counter_list_lock);
+ 			kfree(new_e);
+ 			pr_debug("xt_quota2: old counter name=%s", e->name);
+ 			return e;
+ 		}
+ 	e = new_e;
+ 	pr_debug("xt_quota2: new_counter name=%s", e->name);
+-	list_add_tail(&e->list, &counter_list);
++	list_add_tail(&e->list, &quota2_net->counter_list);
+ 	/* The entry having a refcount of 1 is not directly destructible.
+ 	 * This func has not yet returned the new entry, thus iptables
+ 	 * has not references for destroying this entry.
+@@ -230,19 +244,23 @@
+ 	 * func* to be re-invoked, acquire a new ref for the same named quota.
+ 	 * Nobody will access the e->procfs_entry either.
+ 	 * So release the lock. */
+-	spin_unlock_bh(&counter_list_lock);
++	spin_unlock_bh(&quota2_net->counter_list_lock);
+ 
+ 	/* create_proc_entry() is not spin_lock happy */
+ 	p = e->procfs_entry = proc_create_data(e->name, quota_list_perms,
+-	                      proc_xt_quota, &q2_counter_fops, e);
++	                      quota2_net->proc_xt_quota, &q2_counter_fops, e);
+ 
+ 	if (IS_ERR_OR_NULL(p)) {
+-		spin_lock_bh(&counter_list_lock);
++		spin_lock_bh(&quota2_net->counter_list_lock);
+ 		list_del(&e->list);
+-		spin_unlock_bh(&counter_list_lock);
++		spin_unlock_bh(&quota2_net->counter_list_lock);
+ 		goto out;
+ 	}
+-	proc_set_user(p, quota_list_uid, quota_list_gid);
++	/* Own the counter file by the netns user-namespace root (uid 0 in
++	 * net->user_ns -> the container's root, e.g. host uid 655360) so netd
++	 * inside the container can write the 0644 quota file. In init_net this
++	 * resolves to global root, i.e. unchanged behaviour on the host. */
++	proc_set_user(p, make_kuid(net->user_ns, 0), make_kgid(net->user_ns, 0));
+ 	return e;
+ 
+  out:
+@@ -265,7 +283,7 @@
+ 		return -EINVAL;
+ 	}
+ 
+-	q->master = q2_get_counter(q);
++	q->master = q2_get_counter(par->net, q);
+ 	if (q->master == NULL) {
+ 		printk(KERN_ERR "xt_quota.3: memory alloc failure\n");
+ 		return -ENOMEM;
+@@ -276,23 +294,31 @@
+ 
+ static void quota_mt2_destroy(const struct xt_mtdtor_param *par)
+ {
++	struct xt_quota2_net *quota2_net = xt_quota2_pernet(par->net);
+ 	struct xt_quota_mtinfo2 *q = par->matchinfo;
+ 	struct xt_quota_counter *e = q->master;
++	struct proc_dir_entry *dir;
+ 
+ 	if (*q->name == '\0') {
+ 		kfree(e);
+ 		return;
+ 	}
+ 
+-	spin_lock_bh(&counter_list_lock);
++	spin_lock_bh(&quota2_net->counter_list_lock);
+ 	if (!atomic_dec_and_test(&e->ref)) {
+-		spin_unlock_bh(&counter_list_lock);
++		spin_unlock_bh(&quota2_net->counter_list_lock);
+ 		return;
+ 	}
+ 
+ 	list_del(&e->list);
+-	spin_unlock_bh(&counter_list_lock);
+-	remove_proc_entry(e->name, proc_xt_quota);
++	/* During netns teardown quota2_net_exit() runs before this destroy:
++	 * it clears proc_xt_quota and drops the whole subtree. Snapshot the
++	 * dir under the lock and only remove the per-counter entry when the
++	 * dir still exists, so we never touch a freed proc_dir_entry. */
++	dir = quota2_net->proc_xt_quota;
++	spin_unlock_bh(&quota2_net->counter_list_lock);
++	if (dir != NULL)
++		remove_proc_entry(e->name, dir);
+ 	kfree(e);
+ }
+ 
+@@ -359,6 +385,47 @@
+ 	},
+ };
+ 
++static int __net_init quota2_net_init(struct net *net)
++{
++	struct xt_quota2_net *quota2_net = xt_quota2_pernet(net);
++
++	INIT_LIST_HEAD(&quota2_net->counter_list);
++	spin_lock_init(&quota2_net->counter_list_lock);
++
++	quota2_net->proc_xt_quota = proc_mkdir("xt_quota", net->proc_net);
++	if (quota2_net->proc_xt_quota == NULL)
++		return -ENOMEM;
++	/* Own the dir by the netns user-namespace root so it resolves to the
++	 * container's root rather than overflowuid:overflowuid inside the
++	 * container (global root for init_net). */
++	proc_set_user(quota2_net->proc_xt_quota,
++		      make_kuid(net->user_ns, 0), make_kgid(net->user_ns, 0));
++	return 0;
++}
++
++static void __net_exit quota2_net_exit(struct net *net)
++{
++	struct xt_quota2_net *quota2_net = xt_quota2_pernet(net);
++
++	/* This runs before quota_mt2_destroy() during netns teardown. Clear
++	 * proc_xt_quota first (under the lock) so any later destroy() skips
++	 * its per-counter remove_proc_entry(), then drop the whole subtree --
++	 * every counter entry under it -- in one shot. The counter structs
++	 * themselves are freed by quota_mt2_destroy() as the rules go away. */
++	spin_lock_bh(&quota2_net->counter_list_lock);
++	quota2_net->proc_xt_quota = NULL;
++	spin_unlock_bh(&quota2_net->counter_list_lock);
++
++	remove_proc_subtree("xt_quota", net->proc_net);
++}
++
++static struct pernet_operations quota2_net_ops = {
++	.init	= quota2_net_init,
++	.exit	= quota2_net_exit,
++	.id	= &quota2_net_id,
++	.size	= sizeof(struct xt_quota2_net),
++};
++
+ static int __init quota_mt2_init(void)
+ {
+ 	int ret;
+@@ -370,21 +437,36 @@
+ 		return -ENOMEM;
+ #endif
+ 
+-	proc_xt_quota = proc_mkdir("xt_quota", init_net.proc_net);
+-	if (proc_xt_quota == NULL)
+-		return -EACCES;
++	/* Register the pernet ops before the matches so that every existing
++	 * and future netns has its xt_quota dir ready before any rule (and
++	 * thus quota_mt2_check -> q2_get_counter) can run. */
++	ret = register_pernet_subsys(&quota2_net_ops);
++	if (ret < 0)
++		goto err_pernet;
+ 
+ 	ret = xt_register_matches(quota_mt2_reg, ARRAY_SIZE(quota_mt2_reg));
+ 	if (ret < 0)
+-		remove_proc_entry("xt_quota", init_net.proc_net);
++		goto err_match;
++
+ 	pr_debug("xt_quota2: init() %d", ret);
++	return 0;
++
++err_match:
++	unregister_pernet_subsys(&quota2_net_ops);
++err_pernet:
++#ifdef CONFIG_NETFILTER_XT_MATCH_QUOTA2_LOG
++	netlink_kernel_release(nflognl);
++#endif
+ 	return ret;
+ }
+ 
+ static void __exit quota_mt2_exit(void)
+ {
+ 	xt_unregister_matches(quota_mt2_reg, ARRAY_SIZE(quota_mt2_reg));
+-	remove_proc_entry("xt_quota", init_net.proc_net);
++	unregister_pernet_subsys(&quota2_net_ops);
++#ifdef CONFIG_NETFILTER_XT_MATCH_QUOTA2_LOG
++	netlink_kernel_release(nflognl);
++#endif
+ }
+ 
+ module_init(quota_mt2_init);
