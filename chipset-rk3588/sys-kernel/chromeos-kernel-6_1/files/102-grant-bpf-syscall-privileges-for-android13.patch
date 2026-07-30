@@ -1,0 +1,223 @@
+Grant BPF syscall privileges for the Android 13 (fydroid) container.
+
+Companion to 097-grant-bpf-privileges-for-android13.patch, which made the
+container able to *mount* its own bpffs but not to *use* bpf(). The A13
+in-container bpfloader still failed:
+
+  LibBpfLoader: Failed to create maps: (ret=-1) in .../bpf/offload.o
+  bpfloader: === CRITICAL FAILURE LOADING BPF PROGRAMS FROM ... ===
+  bpfloader: --- DO NOT EXPECT SYSTEM TO BOOT SUCCESSFULLY ---
+
+bpfloader gives up on the whole directory after the first object fails, so it
+never reaches netd_shared/, and netd then dies in a restart loop:
+
+  BpfHandler: Failed to get program from
+    /sys/fs/bpf/netd_shared/prog_netd_cgroupskb_egress_stats: No such file
+  NetdUpdatable: libnetd_updatable_init: BPF handler init failed
+
+which blocks zygote/system_server and leaves the container at bootanim
+forever. /system/bin/gpuservice crash-loops on the same cause (libgpuwork
+BpfMap over the gpu_mem tracepoint program).
+
+Root cause: the container holds CAP_SYS_ADMIN/CAP_NET_ADMIN only in its own
+user namespace, but 6.1 evaluates BPF privileges with capable(), i.e. against
+init_user_ns, which a child userns can never satisfy -> EPERM.
+
+Upstream funnels every one of these gates through bpf_token_capable() (v6.9+),
+so the fydroid 6.12 patch relaxes exactly one function; 6.1 has no
+kernel/bpf/token.c, and its gates route through bpf_capable() instead. This
+introduces the equivalent helper with the same semantics as upstream's
+bpf_ns_capable() and routes the bpf() gates through it. The bpf_capable()
+change covers all ~25 map-allocator call sites in one place, and every
+bpf_capable() caller tree-wide is a BPF path (kernel/bpf/, net/core/filter.c,
+net/core/bpf_sk_storage.c, include/linux/filter.h).
+
+6.1 additionally keeps the per-map-type CAP_NET_ADMIN checks inside the
+individual allocators, which v6.12 lifted into map_create() where the token
+gate covers them (6.12 syscall.c gates SOCKMAP, SOCKHASH, DEVMAP,
+DEVMAP_HASH and XSKMAP on bpf_token_capable(token, CAP_NET_ADMIN), and its
+devmap.c/sock_map.c/xskmap.c carry no capable() call at all). Those four call
+sites -- the same five map types -- are routed through the helper too;
+Android's tethering offload.o needs it for its DEVMAP_HASH tether_dev_map.
+
+The verifier's five permission flags (bpf_allow_ptr_leaks,
+bpf_allow_uninit_stack, bpf_allow_ptr_to_map_access, bpf_bypass_spec_v1,
+bpf_bypass_spec_v4 in include/linux/bpf.h) derive from perfmon_capable() on
+6.1 and are routed through the helper too; without them the verifier rejects
+offload.o with EPERM ("access is allowed only to CAP_PERFMON and
+CAP_SYS_ADMIN"). v6.12 gates the same set on bpf_token_capable(token,
+CAP_PERFMON), so this matches it.
+
+perfmon_capable() itself is deliberately left alone -- it has non-BPF callers
+(perf events, arm_spe_pmu, i915, mali kbase) -- so only the BPF-internal
+perfmon gates are relaxed, matching the 6.12 patch's blast radius.
+hashtab.c's BPF_F_ZERO_SEED gate keeps its init-ns capable(CAP_SYS_ADMIN),
+as v6.12 does.
+
+SECURITY: as with the 6.12 patch, userns root holding CAP_BPF/CAP_SYS_ADMIN
+over its own userns can now drive the BPF verifier. This brings the board to
+parity with the boards already running fydroid on chromeos-kernel-6_12.
+
+Counterpart of the kernel/bpf/token.c hunk in project-openfyde-patches
+chromeos-kernel-6_12 069-grant-bpf-privileges-for-android13.patch.
+RE-CHECK ON KERNEL UPREV.
+
+Index: kernel-6_1/include/linux/capability.h
+===================================================================
+--- kernel-6_1.orig/include/linux/capability.h
++++ kernel-6_1/include/linux/capability.h
+@@ -259,9 +259,11 @@
+ 	return capable(CAP_PERFMON) || capable(CAP_SYS_ADMIN);
+ }
+
++extern bool bpf_ns_capable(int cap);
++
+ static inline bool bpf_capable(void)
+ {
+-	return capable(CAP_BPF) || capable(CAP_SYS_ADMIN);
++	return bpf_ns_capable(CAP_BPF);
+ }
+
+ static inline bool checkpoint_restore_ns_capable(struct user_namespace *ns)
+Index: kernel-6_1/include/linux/bpf.h
+===================================================================
+--- kernel-6_1.orig/include/linux/bpf.h
++++ kernel-6_1/include/linux/bpf.h
+@@ -1834,27 +1834,27 @@
+
+ static inline bool bpf_allow_ptr_leaks(void)
+ {
+-	return perfmon_capable();
++	return bpf_ns_capable(CAP_PERFMON);
+ }
+
+ static inline bool bpf_allow_uninit_stack(void)
+ {
+-	return perfmon_capable();
++	return bpf_ns_capable(CAP_PERFMON);
+ }
+
+ static inline bool bpf_allow_ptr_to_map_access(void)
+ {
+-	return perfmon_capable();
++	return bpf_ns_capable(CAP_PERFMON);
+ }
+
+ static inline bool bpf_bypass_spec_v1(void)
+ {
+-	return perfmon_capable();
++	return bpf_ns_capable(CAP_PERFMON);
+ }
+
+ static inline bool bpf_bypass_spec_v4(void)
+ {
+-	return perfmon_capable();
++	return bpf_ns_capable(CAP_PERFMON);
+ }
+
+ int bpf_map_new_fd(struct bpf_map *map, int flags);
+Index: kernel-6_1/kernel/capability.c
+===================================================================
+--- kernel-6_1.orig/kernel/capability.c
++++ kernel-6_1/kernel/capability.c
+@@ -513,6 +513,27 @@
+ EXPORT_SYMBOL(capable_wrt_inode_uidgid);
+
+ /**
++ * bpf_ns_capable - Check a BPF capability against the current user namespace
++ * @cap: The capability in question (CAP_BPF, CAP_NET_ADMIN, CAP_PERFMON)
++ *
++ * Mirrors bpf_ns_capable()/bpf_token_capable() from v6.9+, which evaluate BPF
++ * privileges against the user namespace of the calling task (upstream: of the
++ * BPF token, falling back to init_user_ns). fydroid uses current_user_ns() so
++ * the ARC++ (Android 13) container -- which holds CAP_SYS_ADMIN/CAP_NET_ADMIN
++ * only in its own userns and does not use BPF tokens -- can create maps and
++ * load its networking programs. In init_user_ns this is identical to upstream
++ * behaviour. RE-CHECK ON KERNEL UPREV.
++ */
++bool bpf_ns_capable(int cap)
++{
++	struct user_namespace *ns = current_user_ns();
++
++	return ns_capable(ns, cap) ||
++	       (cap != CAP_SYS_ADMIN && ns_capable(ns, CAP_SYS_ADMIN));
++}
++EXPORT_SYMBOL(bpf_ns_capable);
++
++/**
+  * ptracer_capable - Determine if the ptracer holds CAP_SYS_PTRACE in the namespace
+  * @tsk: The task that may be ptraced
+  * @ns: The user namespace to search for CAP_SYS_PTRACE in
+Index: kernel-6_1/kernel/bpf/syscall.c
+===================================================================
+--- kernel-6_1.orig/kernel/bpf/syscall.c
++++ kernel-6_1/kernel/bpf/syscall.c
+@@ -2523,9 +2523,9 @@
+ 	    !bpf_capable())
+ 		return -EPERM;
+
+-	if (is_net_admin_prog_type(type) && !capable(CAP_NET_ADMIN) && !capable(CAP_SYS_ADMIN))
++	if (is_net_admin_prog_type(type) && !bpf_ns_capable(CAP_NET_ADMIN))
+ 		return -EPERM;
+-	if (is_perfmon_prog_type(type) && !perfmon_capable())
++	if (is_perfmon_prog_type(type) && !bpf_ns_capable(CAP_PERFMON))
+ 		return -EPERM;
+
+ 	/* attach_prog_fd/attach_btf_obj_fd can specify fd of either bpf_prog
+@@ -3406,7 +3406,7 @@
+ 	case BPF_PROG_TYPE_SK_LOOKUP:
+ 		return attach_type == prog->expected_attach_type ? 0 : -EINVAL;
+ 	case BPF_PROG_TYPE_CGROUP_SKB:
+-		if (!capable(CAP_NET_ADMIN))
++		if (!bpf_ns_capable(CAP_NET_ADMIN))
+ 			/* cg-skb progs can be loaded by unpriv user.
+ 			 * check permissions at attach time.
+ 			 */
+Index: kernel-6_1/kernel/bpf/devmap.c
+===================================================================
+--- kernel-6_1.orig/kernel/bpf/devmap.c
++++ kernel-6_1/kernel/bpf/devmap.c
+@@ -160,7 +160,7 @@
+ 	struct bpf_dtab *dtab;
+ 	int err;
+
+-	if (!capable(CAP_NET_ADMIN))
++	if (!bpf_ns_capable(CAP_NET_ADMIN))
+ 		return ERR_PTR(-EPERM);
+
+ 	dtab = bpf_map_area_alloc(sizeof(*dtab), NUMA_NO_NODE);
+Index: kernel-6_1/net/core/sock_map.c
+===================================================================
+--- kernel-6_1.orig/net/core/sock_map.c
++++ kernel-6_1/net/core/sock_map.c
+@@ -32,7 +32,7 @@
+ {
+ 	struct bpf_stab *stab;
+
+-	if (!capable(CAP_NET_ADMIN))
++	if (!bpf_ns_capable(CAP_NET_ADMIN))
+ 		return ERR_PTR(-EPERM);
+ 	if (attr->max_entries == 0 ||
+ 	    attr->key_size    != 4 ||
+@@ -1078,7 +1078,7 @@
+ 	struct bpf_shtab *htab;
+ 	int i, err;
+
+-	if (!capable(CAP_NET_ADMIN))
++	if (!bpf_ns_capable(CAP_NET_ADMIN))
+ 		return ERR_PTR(-EPERM);
+ 	if (attr->max_entries == 0 ||
+ 	    attr->key_size    == 0 ||
+Index: kernel-6_1/net/xdp/xskmap.c
+===================================================================
+--- kernel-6_1.orig/net/xdp/xskmap.c
++++ kernel-6_1/net/xdp/xskmap.c
+@@ -64,7 +64,7 @@
+ 	int numa_node;
+ 	u64 size;
+
+-	if (!capable(CAP_NET_ADMIN))
++	if (!bpf_ns_capable(CAP_NET_ADMIN))
+ 		return ERR_PTR(-EPERM);
+
+ 	if (attr->max_entries == 0 || attr->key_size != 4 ||
