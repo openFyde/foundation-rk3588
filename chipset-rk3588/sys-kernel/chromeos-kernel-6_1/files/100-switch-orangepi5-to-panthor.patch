@@ -1,0 +1,68 @@
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi.dtsi
+@@ -311,7 +311,12 @@
+ &gpu {
+ 	mali-supply = <&vdd_gpu_s0>;
+ 	mem-supply = <&vdd_gpu_mem_s0>;
++	status = "disabled";
++};
++
++&gpu_panthor {
+ 	status = "okay";
++	mali-supply = <&vdd_gpu_s0>;
+ };
+ 
+ &i2s0_8ch {
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi.dtsi
+@@ -304,7 +304,12 @@
+ &gpu {
+ 	mali-supply = <&vdd_gpu_s0>;
+ 	mem-supply = <&vdd_gpu_mem_s0>;
++	status = "disabled";
++};
++
++&gpu_panthor {
+ 	status = "okay";
++	mali-supply = <&vdd_gpu_s0>;
+ };
+ 
+ &i2s0_8ch {
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-pro.dts
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-pro.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588s-orangepi-5-pro.dts
+@@ -301,7 +301,12 @@
+ &gpu {
+ 	mali-supply = <&vdd_gpu_s0>;
+ 	mem-supply = <&vdd_gpu_mem_s0>;
++	status = "disabled";
++};
++
++&gpu_panthor {
+ 	status = "okay";
++	mali-supply = <&vdd_gpu_s0>;
+ };
+ 
+ &iep {
+Index: kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-max.dts
+===================================================================
+--- kernel-rockchip.orig/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-max.dts
++++ kernel-rockchip/arch/arm64/boot/dts/rockchip/rk3588-orangepi-5-max.dts
+@@ -516,7 +516,12 @@
+ &gpu {
+ 	mali-supply = <&vdd_gpu_s0>;
+ 	mem-supply = <&vdd_gpu_mem_s0>;
++	status = "disabled";
++};
++
++&gpu_panthor {
+ 	status = "okay";
++	mali-supply = <&vdd_gpu_s0>;
+ };
+ 
+ &i2s0_8ch {
