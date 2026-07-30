@@ -1,0 +1,28 @@
+Index: kernel-rockchip/drivers/gpu/drm/panthor/panthor_drv.c
+===================================================================
+--- kernel-rockchip.orig/drivers/gpu/drm/panthor/panthor_drv.c
++++ kernel-rockchip/drivers/gpu/drm/panthor/panthor_drv.c
+@@ -13,6 +13,7 @@
+ #include <drm/drm_drv.h>
+ #include <drm/drm_exec.h>
+ #include <drm/drm_ioctl.h>
++#include <drm/drm_prime.h>
+ #include <drm/drm_syncobj.h>
+ #include <drm/drm_utils.h>
+ #include <drm/gpu_scheduler.h>
+@@ -1379,6 +1380,15 @@
+ 	.major = 1,
+ 	.minor = 0,
+ 
++	/*
++	 * The 6.1 DRM core only enables PRIME (DRM_CAP_PRIME and the
++	 * import/export ioctls) when a driver sets these hooks explicitly;
++	 * upstream panthor targets >=6.8 cores where PRIME is implicit for
++	 * GEM drivers. Without them, dmabuf import is -ENOSYS, mesa drops
++	 * EGL_EXT_image_dma_buf_import, and Chrome cannot scan out.
++	 */
++	.prime_fd_to_handle = drm_gem_prime_fd_to_handle,
++	.prime_handle_to_fd = drm_gem_prime_handle_to_fd,
+ 	.gem_create_object = panthor_gem_create_object,
+ 	.gem_prime_import_sg_table = drm_gem_shmem_prime_import_sg_table,
+ };
