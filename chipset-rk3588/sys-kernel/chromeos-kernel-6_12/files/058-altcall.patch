@@ -1,7 +1,7 @@
-Index: kernel-6_12/arch/arm64/Kconfig
+Index: v6.12/arch/arm64/Kconfig
 ===================================================================
---- kernel-6_12.orig/arch/arm64/Kconfig
-+++ kernel-6_12/arch/arm64/Kconfig
+--- v6.12.orig/arch/arm64/Kconfig
++++ v6.12/arch/arm64/Kconfig
 @@ -27,6 +27,7 @@ config ARM64
  	select ARCH_HAS_DMA_OPS if XEN
  	select ARCH_HAS_DMA_PREP_COHERENT
@@ -10,10 +10,10 @@ Index: kernel-6_12/arch/arm64/Kconfig
  	select ARCH_HAS_FAST_MULTIPLIER
  	select ARCH_HAS_FORTIFY_SOURCE
  	select ARCH_HAS_GCOV_PROFILE_ALL
-Index: kernel-6_12/arch/arm64/include/asm/thread_info.h
+Index: v6.12/arch/arm64/include/asm/thread_info.h
 ===================================================================
---- kernel-6_12.orig/arch/arm64/include/asm/thread_info.h
-+++ kernel-6_12/arch/arm64/include/asm/thread_info.h
+--- v6.12.orig/arch/arm64/include/asm/thread_info.h
++++ v6.12/arch/arm64/include/asm/thread_info.h
 @@ -17,6 +17,10 @@ struct task_struct;
  #include <asm/memory.h>
  #include <asm/stack_pointer.h>
@@ -66,10 +66,10 @@ Index: kernel-6_12/arch/arm64/include/asm/thread_info.h
  }
  
  #endif /* __ASM_THREAD_INFO_H */
-Index: kernel-6_12/arch/arm64/include/asm/unistd.h
+Index: v6.12/arch/arm64/include/asm/unistd.h
 ===================================================================
---- kernel-6_12.orig/arch/arm64/include/asm/unistd.h
-+++ kernel-6_12/arch/arm64/include/asm/unistd.h
+--- v6.12.orig/arch/arm64/include/asm/unistd.h
++++ v6.12/arch/arm64/include/asm/unistd.h
 @@ -17,6 +17,357 @@
  #define __ARCH_WANT_SYS_VFORK
  
@@ -428,10 +428,10 @@ Index: kernel-6_12/arch/arm64/include/asm/unistd.h
   * The following SVCs are ARM private.
   */
  #define __ARM_NR_COMPAT_BASE		0x0f0000
-Index: kernel-6_12/arch/arm64/kernel/syscall.c
+Index: v6.12/arch/arm64/kernel/syscall.c
 ===================================================================
---- kernel-6_12.orig/arch/arm64/kernel/syscall.c
-+++ kernel-6_12/arch/arm64/kernel/syscall.c
+--- v6.12.orig/arch/arm64/kernel/syscall.c
++++ v6.12/arch/arm64/kernel/syscall.c
 @@ -148,13 +148,26 @@ trace_exit:
  
  void do_el0_svc(struct pt_regs *regs)
@@ -459,10 +459,10 @@ Index: kernel-6_12/arch/arm64/kernel/syscall.c
 +#endif //CONFIG_ALT_SYSCALL
  }
  #endif
-Index: kernel-6_12/include/linux/alt-syscall.h
+Index: v6.12/include/linux/alt-syscall.h
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/include/linux/alt-syscall.h
++++ v6.12/include/linux/alt-syscall.h
 @@ -0,0 +1,60 @@
 +#ifndef _ALT_SYSCALL_H
 +#define _ALT_SYSCALL_H
@@ -524,10 +524,10 @@ Index: kernel-6_12/include/linux/alt-syscall.h
 +#endif
 +
 +#endif /* _ALT_SYSCALL_H */
-Index: kernel-6_12/include/linux/android_aid.h
+Index: v6.12/include/linux/android_aid.h
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/include/linux/android_aid.h
++++ v6.12/include/linux/android_aid.h
 @@ -0,0 +1,28 @@
 +/* include/linux/android_aid.h
 + *
@@ -557,10 +557,10 @@ Index: kernel-6_12/include/linux/android_aid.h
 +#define AID_NET_BW_ACCT  (3007)  /* change bandwidth statistics accounting */
 +
 +#endif
-Index: kernel-6_12/include/net/netns/core.h
+Index: v6.12/include/net/netns/core.h
 ===================================================================
---- kernel-6_12.orig/include/net/netns/core.h
-+++ kernel-6_12/include/net/netns/core.h
+--- v6.12.orig/include/net/netns/core.h
++++ v6.12/include/net/netns/core.h
 @@ -14,6 +14,7 @@ struct netns_core {
  
  	int	sysctl_somaxconn;
@@ -569,10 +569,10 @@ Index: kernel-6_12/include/net/netns/core.h
  	u8	sysctl_txrehash;
  
  #ifdef CONFIG_PROC_FS
-Index: kernel-6_12/include/net/sock.h
+Index: v6.12/include/net/sock.h
 ===================================================================
---- kernel-6_12.orig/include/net/sock.h
-+++ kernel-6_12/include/net/sock.h
+--- v6.12.orig/include/net/sock.h
++++ v6.12/include/net/sock.h
 @@ -2842,6 +2842,8 @@ bool sk_ns_capable(const struct sock *sk
  		   struct user_namespace *user_ns, int cap);
  bool sk_capable(const struct sock *sk, int cap);
@@ -582,10 +582,10 @@ Index: kernel-6_12/include/net/sock.h
  
  void sk_get_meminfo(const struct sock *sk, u32 *meminfo);
  
-Index: kernel-6_12/net/core/sock.c
+Index: v6.12/net/core/sock.c
 ===================================================================
---- kernel-6_12.orig/net/core/sock.c
-+++ kernel-6_12/net/core/sock.c
+--- v6.12.orig/net/core/sock.c
++++ v6.12/net/core/sock.c
 @@ -115,6 +115,9 @@
  #include <linux/memcontrol.h>
  #include <linux/prefetch.h>
@@ -658,10 +658,10 @@ Index: kernel-6_12/net/core/sock.c
  		sock_valbool_flag(sk, SOCK_RCVMARK, valbool);
  		break;
  
-Index: kernel-6_12/net/ipv4/af_inet.c
+Index: v6.12/net/ipv4/af_inet.c
 ===================================================================
---- kernel-6_12.orig/net/ipv4/af_inet.c
-+++ kernel-6_12/net/ipv4/af_inet.c
+--- v6.12.orig/net/ipv4/af_inet.c
++++ v6.12/net/ipv4/af_inet.c
 @@ -85,6 +85,7 @@
  #include <linux/netfilter_ipv4.h>
  #include <linux/random.h>
@@ -689,11 +689,11 @@ Index: kernel-6_12/net/ipv4/af_inet.c
  		goto out_rcu_unlock;
  
  	sock->ops = answer->ops;
-Index: kernel-6_12/security/Kconfig
+Index: v6.12/security/Kconfig
 ===================================================================
---- kernel-6_12.orig/security/Kconfig
-+++ kernel-6_12/security/Kconfig
-@@ -376,5 +376,13 @@ config LSM
+--- v6.12.orig/security/Kconfig
++++ v6.12/security/Kconfig
+@@ -377,5 +377,13 @@ config LSM
  
  source "security/Kconfig.hardening"
  
@@ -708,10 +708,10 @@ Index: kernel-6_12/security/Kconfig
 +	  Allow syscall table to be swapped on a running process.
  
 +endmenu
-Index: kernel-6_12/fs/ecryptfs/inode.c
+Index: v6.12/fs/ecryptfs/inode.c
 ===================================================================
---- kernel-6_12.orig/fs/ecryptfs/inode.c
-+++ kernel-6_12/fs/ecryptfs/inode.c
+--- v6.12.orig/fs/ecryptfs/inode.c
++++ v6.12/fs/ecryptfs/inode.c
 @@ -823,6 +823,12 @@ static int truncate_upper(struct dentry
  			       "continue without syncing; "
  			       "rc = [%d]\n", rc);
@@ -725,10 +725,10 @@ Index: kernel-6_12/fs/ecryptfs/inode.c
  		/* We are reducing the size of the ecryptfs file, and need to
  		 * know if we need to reduce the size of the lower file. */
  		lower_size_before_truncate =
-Index: kernel-6_12/net/ipv6/af_inet6.c
+Index: v6.12/net/ipv6/af_inet6.c
 ===================================================================
---- kernel-6_12.orig/net/ipv6/af_inet6.c
-+++ kernel-6_12/net/ipv6/af_inet6.c
+--- v6.12.orig/net/ipv6/af_inet6.c
++++ v6.12/net/ipv6/af_inet6.c
 @@ -39,6 +39,7 @@
  #include <linux/netdevice.h>
  #include <linux/icmpv6.h>
@@ -755,10 +755,10 @@ Index: kernel-6_12/net/ipv6/af_inet6.c
  		goto out_rcu_unlock;
  
  	sock->ops = answer->ops;
-Index: kernel-6_12/security/selinux/Kconfig
+Index: v6.12/security/selinux/Kconfig
 ===================================================================
---- kernel-6_12.orig/security/selinux/Kconfig
-+++ kernel-6_12/security/selinux/Kconfig
+--- v6.12.orig/security/selinux/Kconfig
++++ v6.12/security/selinux/Kconfig
 @@ -47,6 +47,16 @@ config SECURITY_SELINUX_PERMISSIVE_DONTA
  	  domain won't be logged.  This can prevent a significant amount of
  	  logspam.
@@ -776,10 +776,10 @@ Index: kernel-6_12/security/selinux/Kconfig
  config SECURITY_SELINUX_AVC_STATS
  	bool "SELinux AVC Statistics"
  	depends on SECURITY_SELINUX
-Index: kernel-6_12/security/selinux/avc.c
+Index: v6.12/security/selinux/avc.c
 ===================================================================
---- kernel-6_12.orig/security/selinux/avc.c
-+++ kernel-6_12/security/selinux/avc.c
+--- v6.12.orig/security/selinux/avc.c
++++ v6.12/security/selinux/avc.c
 @@ -764,6 +764,15 @@ noinline int slow_avc_audit(u32 ssid, u3
  		return 0;
  	}
@@ -796,10 +796,10 @@ Index: kernel-6_12/security/selinux/avc.c
  	if (!a) {
  		a = &stack_data;
  		a->type = LSM_AUDIT_DATA_NONE;
-Index: kernel-6_12/security/selinux/include/classmap.h
+Index: v6.12/security/selinux/include/classmap.h
 ===================================================================
---- kernel-6_12.orig/security/selinux/include/classmap.h
-+++ kernel-6_12/security/selinux/include/classmap.h
+--- v6.12.orig/security/selinux/include/classmap.h
++++ v6.12/security/selinux/include/classmap.h
 @@ -96,7 +96,7 @@ const struct security_class_mapping secc
  	{ "shm", { COMMON_IPC_PERMS, "lock", NULL } },
  	{ "ipc", { COMMON_IPC_PERMS, NULL } },
@@ -809,10 +809,10 @@ Index: kernel-6_12/security/selinux/include/classmap.h
  	{ "netlink_tcpdiag_socket",
  	  { COMMON_SOCK_PERMS, "nlmsg_read", "nlmsg_write", NULL } },
  	{ "netlink_nflog_socket", { COMMON_SOCK_PERMS, NULL } },
-Index: kernel-6_12/security/selinux/include/security.h
+Index: v6.12/security/selinux/include/security.h
 ===================================================================
---- kernel-6_12.orig/security/selinux/include/security.h
-+++ kernel-6_12/security/selinux/include/security.h
+--- v6.12.orig/security/selinux/include/security.h
++++ v6.12/security/selinux/include/security.h
 @@ -95,6 +95,8 @@ struct selinux_state {
  #endif
  	bool initialized;
@@ -857,10 +857,10 @@ Index: kernel-6_12/security/selinux/include/security.h
 +extern void selinux_nlmsg_init(void);
  
  #endif /* _SELINUX_SECURITY_H_ */
-Index: kernel-6_12/security/selinux/nlmsgtab.c
+Index: v6.12/security/selinux/nlmsgtab.c
 ===================================================================
---- kernel-6_12.orig/security/selinux/nlmsgtab.c
-+++ kernel-6_12/security/selinux/nlmsgtab.c
+--- v6.12.orig/security/selinux/nlmsgtab.c
++++ v6.12/security/selinux/nlmsgtab.c
 @@ -25,7 +25,8 @@ struct nlmsg_perm {
  	u32	perm;
  };
@@ -915,10 +915,10 @@ Index: kernel-6_12/security/selinux/nlmsgtab.c
 +					RTM_GETNEIGHTBL);
 +	}
 +}
-Index: kernel-6_12/security/selinux/ss/policydb.c
+Index: v6.12/security/selinux/ss/policydb.c
 ===================================================================
---- kernel-6_12.orig/security/selinux/ss/policydb.c
-+++ kernel-6_12/security/selinux/ss/policydb.c
+--- v6.12.orig/security/selinux/ss/policydb.c
++++ v6.12/security/selinux/ss/policydb.c
 @@ -2039,7 +2039,6 @@ static int filename_trans_read_helper(st
  		if (!datum)
  			goto out;
@@ -950,10 +950,10 @@ Index: kernel-6_12/security/selinux/ss/policydb.c
  	if (p->policyvers >= POLICYDB_VERSION_POLCAP) {
  		rc = ebitmap_read(&p->policycaps, fp);
  		if (rc)
-Index: kernel-6_12/security/selinux/ss/policydb.h
+Index: v6.12/security/selinux/ss/policydb.h
 ===================================================================
---- kernel-6_12.orig/security/selinux/ss/policydb.h
-+++ kernel-6_12/security/selinux/ss/policydb.h
+--- v6.12.orig/security/selinux/ss/policydb.h
++++ v6.12/security/selinux/ss/policydb.h
 @@ -235,6 +235,8 @@ struct genfs {
  /* The policy database */
  struct policydb {
@@ -972,10 +972,10 @@ Index: kernel-6_12/security/selinux/ss/policydb.h
  
  /* the config flags related to unknown classes/perms are bits 2 and 3 */
  #define REJECT_UNKNOWN 0x00000002
-Index: kernel-6_12/security/selinux/ss/services.c
+Index: v6.12/security/selinux/ss/services.c
 ===================================================================
---- kernel-6_12.orig/security/selinux/ss/services.c
-+++ kernel-6_12/security/selinux/ss/services.c
+--- v6.12.orig/security/selinux/ss/services.c
++++ v6.12/security/selinux/ss/services.c
 @@ -2122,7 +2122,8 @@ bad:
  	return 0;
  }
@@ -1006,11 +1006,11 @@ Index: kernel-6_12/security/selinux/ss/services.c
  
  	if (!selinux_initialized()) {
  		/*
-Index: kernel-6_12/drivers/net/tun.c
+Index: v6.12/drivers/net/tun.c
 ===================================================================
---- kernel-6_12.orig/drivers/net/tun.c
-+++ kernel-6_12/drivers/net/tun.c
-@@ -3096,6 +3096,12 @@ static long __tun_chr_ioctl(struct file
+--- v6.12.orig/drivers/net/tun.c
++++ v6.12/drivers/net/tun.c
+@@ -3099,6 +3099,12 @@ static long __tun_chr_ioctl(struct file
  	int ret;
  	bool do_notify = false;
  
@@ -1023,7 +1023,7 @@ Index: kernel-6_12/drivers/net/tun.c
  	if (cmd == TUNSETIFF || cmd == TUNSETQUEUE ||
  	    (_IOC_TYPE(cmd) == SOCK_IOC_TYPE && cmd != SIOCGSKNS)) {
  		if (copy_from_user(&ifr, argp, ifreq_len))
-@@ -3495,7 +3501,7 @@ static int tun_chr_open(struct inode *in
+@@ -3498,7 +3504,7 @@ static int tun_chr_open(struct inode *in
  	tfile->socket.file = file;
  	tfile->socket.ops = &tun_socket_ops;
  
@@ -1032,10 +1032,10 @@ Index: kernel-6_12/drivers/net/tun.c
  
  	tfile->sk.sk_write_space = tun_sock_write_space;
  	tfile->sk.sk_sndbuf = INT_MAX;
-Index: kernel-6_12/net/ipv4/devinet.c
+Index: v6.12/net/ipv4/devinet.c
 ===================================================================
---- kernel-6_12.orig/net/ipv4/devinet.c
-+++ kernel-6_12/net/ipv4/devinet.c
+--- v6.12.orig/net/ipv4/devinet.c
++++ v6.12/net/ipv4/devinet.c
 @@ -61,6 +61,7 @@
  #include <net/rtnetlink.h>
  #include <net/net_namespace.h>
@@ -1044,7 +1044,7 @@ Index: kernel-6_12/net/ipv4/devinet.c
  
  #define IPV6ONLY_FLAGS	\
  		(IFA_F_NODAD | IFA_F_OPTIMISTIC | IFA_F_DADFAILED | \
-@@ -1090,7 +1091,7 @@ int devinet_ioctl(struct net *net, unsig
+@@ -1089,7 +1090,7 @@ int devinet_ioctl(struct net *net, unsig
  
  	case SIOCSIFFLAGS:
  		ret = -EPERM;
@@ -1053,7 +1053,7 @@ Index: kernel-6_12/net/ipv4/devinet.c
  			goto out;
  		break;
  	case SIOCSIFADDR:	/* Set interface address (and family) */
-@@ -1098,7 +1099,7 @@ int devinet_ioctl(struct net *net, unsig
+@@ -1097,7 +1098,7 @@ int devinet_ioctl(struct net *net, unsig
  	case SIOCSIFDSTADDR:	/* Set the destination address */
  	case SIOCSIFNETMASK: 	/* Set the netmask for the interface */
  		ret = -EPERM;
@@ -1062,10 +1062,10 @@ Index: kernel-6_12/net/ipv4/devinet.c
  			goto out;
  		ret = -EINVAL;
  		if (sin->sin_family != AF_INET)
-Index: kernel-6_12/security/chromiumos/Kconfig
+Index: v6.12/security/chromiumos/Kconfig
 ===================================================================
---- kernel-6_12.orig/security/chromiumos/Kconfig
-+++ kernel-6_12/security/chromiumos/Kconfig
+--- v6.12.orig/security/chromiumos/Kconfig
++++ v6.12/security/chromiumos/Kconfig
 @@ -27,3 +27,11 @@ config SECURITY_CHROMIUMOS_NO_UNPRIVILEG
  	  is attempted that would cause the filesystem to have the exec, suid,
  	  or dev flags if the caller does not have the CAP_SYS_ADMIN capability
@@ -1078,20 +1078,20 @@ Index: kernel-6_12/security/chromiumos/Kconfig
 +    Register restricted, alternate syscall tables used by Chromium OS
 +    using the alt-syscall infrastructure.  Alternate syscall tables
 +    can be selected with prctl(PR_ALT_SYSCALL).
-Index: kernel-6_12/security/chromiumos/Makefile
+Index: v6.12/security/chromiumos/Makefile
 ===================================================================
---- kernel-6_12.orig/security/chromiumos/Makefile
-+++ kernel-6_12/security/chromiumos/Makefile
+--- v6.12.orig/security/chromiumos/Makefile
++++ v6.12/security/chromiumos/Makefile
 @@ -1,3 +1,5 @@
  obj-$(CONFIG_SECURITY_CHROMIUMOS) := chromiumos_lsm.o
  
  chromiumos_lsm-y := inode_mark.o lsm.o securityfs.o utils.o
 +
 +obj-$(CONFIG_ALT_SYSCALL_CHROMIUMOS) += alt-syscall.o
-Index: kernel-6_12/security/chromiumos/alt-syscall.c
+Index: v6.12/security/chromiumos/alt-syscall.c
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/security/chromiumos/alt-syscall.c
++++ v6.12/security/chromiumos/alt-syscall.c
 @@ -0,0 +1,558 @@
 +/*
 + * Chromium OS alt-syscall tables
@@ -1651,10 +1651,10 @@ Index: kernel-6_12/security/chromiumos/alt-syscall.c
 +	return 0;
 +}
 +module_init(chromiumos_alt_syscall_init);
-Index: kernel-6_12/security/chromiumos/alt-syscall.h
+Index: v6.12/security/chromiumos/alt-syscall.h
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/security/chromiumos/alt-syscall.h
++++ v6.12/security/chromiumos/alt-syscall.h
 @@ -0,0 +1,378 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -2034,11 +2034,11 @@ Index: kernel-6_12/security/chromiumos/alt-syscall.h
 +#endif
 +
 +#endif /* ALT_SYSCALL_H */
-Index: kernel-6_12/security/chromiumos/android_whitelists.h
+Index: v6.12/security/chromiumos/android_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/security/chromiumos/android_whitelists.h
-@@ -0,0 +1,653 @@
++++ v6.12/security/chromiumos/android_whitelists.h
+@@ -0,0 +1,654 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -2269,6 +2269,7 @@ Index: kernel-6_12/security/chromiumos/android_whitelists.h
 +	SYSCALL_ENTRY(socketpair),
 +	SYSCALL_ENTRY(splice),
 +	SYSCALL_ENTRY(statfs),
++	SYSCALL_ENTRY(statx),
 +	SYSCALL_ENTRY(symlinkat),
 +        SYSCALL_ENTRY(sync),
 +        SYSCALL_ENTRY(syncfs),
@@ -2692,10 +2693,10 @@ Index: kernel-6_12/security/chromiumos/android_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* ANDROID_WHITELISTS_H */
-Index: kernel-6_12/security/chromiumos/complete_whitelists.h
+Index: v6.12/security/chromiumos/complete_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/security/chromiumos/complete_whitelists.h
++++ v6.12/security/chromiumos/complete_whitelists.h
 @@ -0,0 +1,373 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -3070,10 +3071,10 @@ Index: kernel-6_12/security/chromiumos/complete_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* COMPLETE_WHITELISTS_H */
-Index: kernel-6_12/security/chromiumos/read_write_test_whitelists.h
+Index: v6.12/security/chromiumos/read_write_test_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/security/chromiumos/read_write_test_whitelists.h
++++ v6.12/security/chromiumos/read_write_test_whitelists.h
 @@ -0,0 +1,56 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -3131,10 +3132,10 @@ Index: kernel-6_12/security/chromiumos/read_write_test_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* READ_WRITE_TESTS_WHITELISTS_H */
-Index: kernel-6_12/security/chromiumos/third_party_whitelists.h
+Index: v6.12/security/chromiumos/third_party_whitelists.h
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/security/chromiumos/third_party_whitelists.h
++++ v6.12/security/chromiumos/third_party_whitelists.h
 @@ -0,0 +1,252 @@
 +/*
 + * Linux Security Module for Chromium OS
@@ -3388,10 +3389,10 @@ Index: kernel-6_12/security/chromiumos/third_party_whitelists.h
 +#endif /* CONFIG_COMPAT */
 +
 +#endif /* THIRD_PARTY_WHITELISTS_H */
-Index: kernel-6_12/net/core/sysctl_net_core.c
+Index: v6.12/net/core/sysctl_net_core.c
 ===================================================================
---- kernel-6_12.orig/net/core/sysctl_net_core.c
-+++ kernel-6_12/net/core/sysctl_net_core.c
+--- v6.12.orig/net/core/sysctl_net_core.c
++++ v6.12/net/core/sysctl_net_core.c
 @@ -636,6 +636,15 @@ static struct ctl_table net_core_table[]
  };
  
@@ -3436,10 +3437,10 @@ Index: kernel-6_12/net/core/sysctl_net_core.c
  	if (net->core.sysctl_hdr == NULL)
  		goto err_reg;
  
-Index: kernel-6_12/arch/arm64/include/asm/syscall.h
+Index: v6.12/arch/arm64/include/asm/syscall.h
 ===================================================================
---- kernel-6_12.orig/arch/arm64/include/asm/syscall.h
-+++ kernel-6_12/arch/arm64/include/asm/syscall.h
+--- v6.12.orig/arch/arm64/include/asm/syscall.h
++++ v6.12/arch/arm64/include/asm/syscall.h
 @@ -17,6 +17,8 @@ extern const syscall_fn_t sys_call_table
  extern const syscall_fn_t compat_sys_call_table[];
  #endif
@@ -3449,10 +3450,10 @@ Index: kernel-6_12/arch/arm64/include/asm/syscall.h
  static inline int syscall_get_nr(struct task_struct *task,
  				 struct pt_regs *regs)
  {
-Index: kernel-6_12/arch/arm64/kernel/Makefile
+Index: v6.12/arch/arm64/kernel/Makefile
 ===================================================================
---- kernel-6_12.orig/arch/arm64/kernel/Makefile
-+++ kernel-6_12/arch/arm64/kernel/Makefile
+--- v6.12.orig/arch/arm64/kernel/Makefile
++++ v6.12/arch/arm64/kernel/Makefile
 @@ -75,6 +75,8 @@ obj-$(CONFIG_COMPAT_VDSO)		+= vdso32-wra
  $(obj)/vdso-wrap.o: $(obj)/vdso/vdso.so
  $(obj)/vdso32-wrap.o: $(obj)/vdso32/vdso.so
@@ -3462,10 +3463,10 @@ Index: kernel-6_12/arch/arm64/kernel/Makefile
  obj-y					+= probes/
  obj-y					+= head.o
  extra-y					+= vmlinux.lds
-Index: kernel-6_12/arch/arm64/kernel/alt-syscall.c
+Index: v6.12/arch/arm64/kernel/alt-syscall.c
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/arch/arm64/kernel/alt-syscall.c
++++ v6.12/arch/arm64/kernel/alt-syscall.c
 @@ -0,0 +1,81 @@
 +/*
 + * AArch64 alt-syscall implementation
@@ -3548,10 +3549,10 @@ Index: kernel-6_12/arch/arm64/kernel/alt-syscall.c
 +
 +	return 0;
 +}
-Index: kernel-6_12/include/linux/syscalls.h
+Index: v6.12/include/linux/syscalls.h
 ===================================================================
---- kernel-6_12.orig/include/linux/syscalls.h
-+++ kernel-6_12/include/linux/syscalls.h
+--- v6.12.orig/include/linux/syscalls.h
++++ v6.12/include/linux/syscalls.h
 @@ -1303,4 +1303,24 @@ int __sys_getsockopt(int fd, int level,
  		int __user *optlen);
  int __sys_setsockopt(int fd, int level, int optname, char __user *optval,
@@ -3577,10 +3578,10 @@ Index: kernel-6_12/include/linux/syscalls.h
 +int ksys_adjtimex_time32(struct old_timex32 __user *utp);
 +
  #endif
-Index: kernel-6_12/include/uapi/linux/prctl.h
+Index: v6.12/include/uapi/linux/prctl.h
 ===================================================================
---- kernel-6_12.orig/include/uapi/linux/prctl.h
-+++ kernel-6_12/include/uapi/linux/prctl.h
+--- v6.12.orig/include/uapi/linux/prctl.h
++++ v6.12/include/uapi/linux/prctl.h
 @@ -155,6 +155,9 @@ struct prctl_mm_map {
  #define PR_SET_PTRACER 0x59616d61
  # define PR_SET_PTRACER_ANY ((unsigned long)-1)
@@ -3591,10 +3592,10 @@ Index: kernel-6_12/include/uapi/linux/prctl.h
  #define PR_SET_CHILD_SUBREAPER	36
  #define PR_GET_CHILD_SUBREAPER	37
  
-Index: kernel-6_12/kernel/Makefile
+Index: v6.12/kernel/Makefile
 ===================================================================
---- kernel-6_12.orig/kernel/Makefile
-+++ kernel-6_12/kernel/Makefile
+--- v6.12.orig/kernel/Makefile
++++ v6.12/kernel/Makefile
 @@ -52,6 +52,8 @@ obj-y += dma/
  obj-y += entry/
  obj-$(CONFIG_MODULES) += module/
@@ -3604,10 +3605,10 @@ Index: kernel-6_12/kernel/Makefile
  obj-$(CONFIG_KCMP) += kcmp.o
  obj-$(CONFIG_FREEZER) += freezer.o
  obj-$(CONFIG_PROFILING) += profile.o
-Index: kernel-6_12/kernel/alt-syscall.c
+Index: v6.12/kernel/alt-syscall.c
 ===================================================================
 --- /dev/null
-+++ kernel-6_12/kernel/alt-syscall.c
++++ v6.12/kernel/alt-syscall.c
 @@ -0,0 +1,65 @@
 +/*
 + * Alternate Syscall Table Infrastructure
@@ -3674,10 +3675,10 @@ Index: kernel-6_12/kernel/alt-syscall.c
 +
 +	return -ENOENT;
 +}
-Index: kernel-6_12/kernel/sys.c
+Index: v6.12/kernel/sys.c
 ===================================================================
---- kernel-6_12.orig/kernel/sys.c
-+++ kernel-6_12/kernel/sys.c
+--- v6.12.orig/kernel/sys.c
++++ v6.12/kernel/sys.c
 @@ -48,6 +48,7 @@
  
  #include <linux/compat.h>
@@ -3831,7 +3832,7 @@ Index: kernel-6_12/kernel/sys.c
  
  	if (rgid != (gid_t) -1)
  		new->gid = krgid;
-@@ -2454,8 +2454,8 @@ static int prctl_get_auxv(void __user *a
+@@ -2472,8 +2472,8 @@ static int prctl_get_auxv(void __user *a
  	return sizeof(mm->saved_auxv);
  }
  
@@ -3842,7 +3843,7 @@ Index: kernel-6_12/kernel/sys.c
  {
  	struct task_struct *me = current;
  	unsigned char comm[sizeof(me->comm)];
-@@ -2538,6 +2538,12 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
+@@ -2556,6 +2556,12 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
  	case PR_SET_SECCOMP:
  		error = prctl_set_seccomp(arg2, (char __user *)arg3);
  		break;
@@ -3855,7 +3856,7 @@ Index: kernel-6_12/kernel/sys.c
  	case PR_GET_TSC:
  		error = GET_TSC_CTL(arg2);
  		break;
-@@ -2791,8 +2797,14 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
+@@ -2809,8 +2815,14 @@ SYSCALL_DEFINE5(prctl, int, option, unsi
  	return error;
  }
  
@@ -3872,7 +3873,7 @@ Index: kernel-6_12/kernel/sys.c
  {
  	int err = 0;
  	int cpu = raw_smp_processor_id();
-@@ -2804,6 +2816,12 @@ SYSCALL_DEFINE3(getcpu, unsigned __user
+@@ -2822,6 +2834,12 @@ SYSCALL_DEFINE3(getcpu, unsigned __user
  	return err ? -EFAULT : 0;
  }
  
@@ -3885,10 +3886,10 @@ Index: kernel-6_12/kernel/sys.c
  /**
   * do_sysinfo - fill in sysinfo struct
   * @info: pointer to buffer to fill
-Index: kernel-6_12/security/security.c
+Index: v6.12/security/security.c
 ===================================================================
---- kernel-6_12.orig/security/security.c
-+++ kernel-6_12/security/security.c
+--- v6.12.orig/security/security.c
++++ v6.12/security/security.c
 @@ -1236,6 +1236,7 @@ int security_vm_enough_memory_mm(struct
  	}
  	return __vm_enough_memory(mm, pages, cap_sys_admin);
@@ -3897,10 +3898,10 @@ Index: kernel-6_12/security/security.c
  
  /**
   * security_bprm_creds_for_exec() - Prepare the credentials for exec()
-Index: kernel-6_12/kernel/time/time.c
+Index: v6.12/kernel/time/time.c
 ===================================================================
---- kernel-6_12.orig/kernel/time/time.c
-+++ kernel-6_12/kernel/time/time.c
+--- v6.12.orig/kernel/time/time.c
++++ v6.12/kernel/time/time.c
 @@ -266,7 +266,7 @@ COMPAT_SYSCALL_DEFINE2(settimeofday, str
  #endif
  
@@ -3944,10 +3945,10 @@ Index: kernel-6_12/kernel/time/time.c
  #endif
  
  /**
-Index: kernel-6_12/kernel/time/posix-timers.c
+Index: v6.12/kernel/time/posix-timers.c
 ===================================================================
---- kernel-6_12.orig/kernel/time/posix-timers.c
-+++ kernel-6_12/kernel/time/posix-timers.c
+--- v6.12.orig/kernel/time/posix-timers.c
++++ v6.12/kernel/time/posix-timers.c
 @@ -1182,8 +1182,8 @@ int do_clock_adjtime(const clockid_t whi
  	return kc->clock_adj(which_clock, ktx);
  }
@@ -3995,10 +3996,10 @@ Index: kernel-6_12/kernel/time/posix-timers.c
  SYSCALL_DEFINE2(clock_getres_time32, clockid_t, which_clock,
  		struct old_timespec32 __user *, tp)
  {
-Index: kernel-6_12/kernel/events/core.c
+Index: v6.12/kernel/events/core.c
 ===================================================================
---- kernel-6_12.orig/kernel/events/core.c
-+++ kernel-6_12/kernel/events/core.c
+--- v6.12.orig/kernel/events/core.c
++++ v6.12/kernel/events/core.c
 @@ -12819,9 +12819,8 @@ perf_check_permission(struct perf_event_
   * @group_fd:		group leader event fd
   * @flags:		perf event open flags
@@ -4024,10 +4025,10 @@ Index: kernel-6_12/kernel/events/core.c
  /**
   * perf_event_create_kernel_counter
   *
-Index: kernel-6_12/kernel/kcmp.c
+Index: v6.12/kernel/kcmp.c
 ===================================================================
---- kernel-6_12.orig/kernel/kcmp.c
-+++ kernel-6_12/kernel/kcmp.c
+--- v6.12.orig/kernel/kcmp.c
++++ v6.12/kernel/kcmp.c
 @@ -134,8 +134,8 @@ static int kcmp_epoll_target(struct task
  }
  #endif
@@ -4052,10 +4053,10 @@ Index: kernel-6_12/kernel/kcmp.c
  static __init int kcmp_cookies_init(void)
  {
  	int i;
-Index: kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+Index: v6.12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
 ===================================================================
---- kernel-6_12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
-+++ kernel-6_12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
+--- v6.12.orig/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
++++ v6.12/arch/arm64/boot/dts/rockchip/rk3588s-fydetab_duo.dts
 @@ -25,7 +25,7 @@
    };
  
