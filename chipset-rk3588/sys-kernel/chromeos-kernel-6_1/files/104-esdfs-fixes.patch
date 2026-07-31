@@ -1,0 +1,444 @@
+CHROMIUM: esdfs: fix spurious EACCES, dead case-insensitive lookup and
+the ACCESS_DISABLE latch
+
+Ports the esdfs fixes made on the 6.12 copy (project-openfyde-patches
+065-add-esdfs.patch, commit b30acaa) to the 6.1 esdfs port that
+002-chromiumos-fs-mm.patch installs. orangepi5 builds this with
+CONFIG_ESD_FS=y, and fydroid's /sdcard is a FUSE mount stacked on these
+esdfs views, so every one of these is on the hot path for Android
+storage.
+
+1. derive.c, esdfs_set_derived_perms(): the mode was built by
+   read-modify-writing inode->i_mode in place ~11 times, starting with
+   "i_mode &= S_IFMT" -- i.e. momentarily mode 0000. This runs from
+   esdfs_getattr() (every stat) and esdfs_open(), with no lock, on an
+   inode other threads are using concurrently. A racing
+   esdfs_permission() -> generic_permission() reading i_mode inside that
+   window sees no permission bits and returns -EACCES for a file the
+   caller is entitled to -- a spurious, load-dependent failure on a
+   live, byte-correct file. Build the mode in a local and publish it
+   with a single WRITE_ONCE.
+
+2. esdfs.h, esdfs_copy_lower_attr(): same hazard, "dest->i_mode =
+   src->i_mode & S_IFMT" also publishes a permission-less mode on a live
+   inode. Store (src type | dest perms) in one WRITE_ONCE instead.
+
+3. esdfs.h + file.c: ESDFS_IOC_DIS_ACCESS was a one-way latch. Every
+   path that tests ACCESS_DISABLE returns -ENOENT, so once set the whole
+   mount looks permanently empty and only umount recovers it. Add the
+   counterpart ESDFS_IOC_EN_ACCESS (CAP_SYS_ADMIN).
+
+4. file.c, esdfs_file_llseek(): replayed the seek against the lower file
+   after seeking the upper one, so SEEK_CUR applied its delta twice.
+   Mirror the resulting f_pos instead. Drop the creds override (nothing
+   below touches the lower fs or checks permissions, so it only added a
+   GFP_KERNEL allocation and an -ENOMEM failure mode to a hot syscall),
+   and refresh the stale cached i_size for the whences that actually
+   consult it. The same lower tree is exported through several esdfs
+   superblocks, each with its own inode, so a write through one never
+   updates the size another has cached. Also install it as
+   esdfs_main_fops.llseek, which was still generic_file_llseek.
+
+5. file.c, esdfs_open(): refresh i_size from the lower inode.
+   esdfs_copy_attr() deliberately leaves i_size alone, but SEEK_END is
+   answered out of it.
+
+6. lookup.c: the filldir_t callback returned the wrong polarity.
+   filldir_t returns true to keep iterating and false to stop, but this
+   returned false on a mismatch, aborting iterate_dir() at the very
+   first entry -- normally "." -- so buf->found was never set and
+   esdfs_lookup_nocase() always returned -ENOENT. Case-insensitive
+   lookup was dead code. Also bound the comparison by namelen:
+   qstr_case_eq() -> strcasecmp() is NUL-terminated and ignores the
+   length, but dir_emit() makes no termination guarantee, so it read
+   past the entry into inter-dirent padding.
+
+7. lookup.c: the case-insensitive fallback leaked its errno to the
+   caller. The exact lookup already proved the name absent, so the only
+   useful outcomes are "found a case-variant" or -ENOENT.
+   __esdfs_lookup() treats any non-ENOENT error as fatal before it
+   reaches the LOOKUP_CREATE rescue, so leaking -ENOMEM, -EIO, -EINTR or
+   -EACCES turned "create a .tmp file" into a hard failure.
+
+8. inode.c: log the inputs when generic_permission() denies, and when a
+   stuck ACCESS_DISABLE latch reports -ENOENT. stat() claiming a file
+   does not exist is indistinguishable from the file really being gone,
+   and userspace reacts by deleting and re-fetching it.
+
+Two fixes from the 6.12 commit are deliberately NOT ported:
+
+ - The mmap probe change (a_ops->writepage -> a_ops->writepages) fixes a
+   post-folio-conversion defect. 6.1's ext4 still provides .writepage
+   (fs/ext4/inode.c), so the existing probe is correct here and there is
+   no bug to fix.
+
+ - The splice creds fix does not apply: 6.1 has no backing-file API
+   (include/linux/backing-file.h is 6.9+), so this port uses
+   generic_file_splice_read/iter_file_splice_write and never had the
+   miswritten backing_file_ctx.cred assignment.
+
+Index: kernel-rockchip/fs/esdfs/derive.c
+===================================================================
+--- kernel-rockchip.orig/fs/esdfs/derive.c
++++ kernel-rockchip/fs/esdfs/derive.c
+@@ -159,9 +159,24 @@
+ 	struct esdfs_sb_info *sbi = ESDFS_SB(inode->i_sb);
+ 	struct esdfs_inode_info *inode_i = ESDFS_I(inode);
+ 	gid_t gid = sbi->upper_perms.gid;
++	umode_t mode = inode->i_mode & S_IFMT;
+ 
++	/*
++	 * Build the mode in a local and publish it with a single store below.
++	 *
++	 * This used to read-modify-write inode->i_mode in place ~11 times,
++	 * starting with "i_mode &= S_IFMT" -- i.e. momentarily mode 0000.  This
++	 * runs from esdfs_getattr() (every stat) and esdfs_open(), with no lock,
++	 * on an inode that other threads are using concurrently.  A racing
++	 * esdfs_permission() -> generic_permission() reading i_mode inside that
++	 * window sees no permission bits and returns -EACCES for a file the
++	 * caller is perfectly entitled to -- a spurious, load-dependent failure
++	 * on a live, byte-correct file.
++	 *
++	 * uid/gid are still published as separate stores; they never transit
++	 * through a "deny everything" value, so they are less dangerous.
++	 */
+ 	esdfs_i_uid_write(inode, sbi->upper_perms.uid);
+-	inode->i_mode &= S_IFMT;
+ 	if (ESDFS_RESTRICT_PERMS(sbi))
+ 		esdfs_i_gid_write(inode, gid);
+ 	else {
+@@ -169,16 +184,16 @@
+ 			esdfs_i_gid_write(inode, AID_SDCARD_RW);
+ 		else
+ 			esdfs_i_gid_write(inode, derive_uid(inode_i, gid));
+-		inode->i_mode |= sbi->upper_perms.dmask;
++		mode |= sbi->upper_perms.dmask;
+ 	}
+ 
+ 	switch (inode_i->tree) {
+ 	case ESDFS_TREE_ROOT_LEGACY:
+ 		if (ESDFS_RESTRICT_PERMS(sbi))
+-			inode->i_mode |= sbi->upper_perms.dmask;
++			mode |= sbi->upper_perms.dmask;
+ 		else if (test_opt(sbi, DERIVE_MULTI)) {
+-			inode->i_mode &= S_IFMT;
+-			inode->i_mode |= 0711;
++			mode &= S_IFMT;
++			mode |= 0711;
+ 		}
+ 		break;
+ 
+@@ -186,18 +201,18 @@
+ 	case ESDFS_TREE_ROOT:
+ 		if (ESDFS_RESTRICT_PERMS(sbi)) {
+ 			esdfs_i_gid_write(inode, AID_SDCARD_R);
+-			inode->i_mode |= sbi->upper_perms.dmask;
++			mode |= sbi->upper_perms.dmask;
+ 		} else if (test_opt(sbi, DERIVE_PUBLIC) &&
+ 			   test_opt(ESDFS_SB(inode->i_sb), DERIVE_CONFINE)) {
+-			inode->i_mode &= S_IFMT;
+-			inode->i_mode |= 0771;
++			mode &= S_IFMT;
++			mode |= 0771;
+ 		}
+ 		break;
+ 
+ 	case ESDFS_TREE_MEDIA:
+ 		if (ESDFS_RESTRICT_PERMS(sbi)) {
+ 			esdfs_i_gid_write(inode, AID_SDCARD_R);
+-			inode->i_mode |= 0770;
++			mode |= 0770;
+ 		}
+ 		break;
+ 
+@@ -207,7 +222,7 @@
+ 	case ESDFS_TREE_ANDROID_OBB:
+ 	case ESDFS_TREE_ANDROID_MEDIA:
+ 		if (ESDFS_RESTRICT_PERMS(sbi))
+-			inode->i_mode |= 0771;
++			mode |= 0771;
+ 		break;
+ 
+ 	case ESDFS_TREE_ANDROID_APP:
+@@ -216,21 +231,27 @@
+ 			esdfs_i_uid_write(inode, derive_uid(inode_i,
+ 							inode_i->appid));
+ 		if (ESDFS_RESTRICT_PERMS(sbi))
+-			inode->i_mode |= 0770;
++			mode |= 0770;
+ 		break;
+ 
+ 	case ESDFS_TREE_ANDROID_USER:
+ 		if (ESDFS_RESTRICT_PERMS(sbi)) {
+ 			esdfs_i_gid_write(inode, AID_SDCARD_ALL);
+-			inode->i_mode |= 0770;
++			mode |= 0770;
+ 		}
+-		inode->i_mode |= 0770;
++		mode |= 0770;
+ 		break;
+ 	}
+ 
+ 	/* strip execute bits from any non-directories */
+-	if (!S_ISDIR(inode->i_mode))
+-		inode->i_mode &= ~S_IXUGO;
++	if (!S_ISDIR(mode))
++		mode &= ~S_IXUGO;
++
++	/*
++	 * Publish atomically: readers see the old mode or the new, never 0000.
++	 * WRITE_ONCE because this races plain loads in generic_permission().
++	 */
++	WRITE_ONCE(inode->i_mode, mode);
+ }
+ 
+ /*
+Index: kernel-rockchip/fs/esdfs/esdfs.h
+===================================================================
+--- kernel-rockchip.orig/fs/esdfs/esdfs.h
++++ kernel-rockchip/fs/esdfs/esdfs.h
+@@ -43,6 +43,12 @@
+ /* ioctl command */
+ #define ESDFS_IOCTL_MAGIC	'e'
+ #define ESDFS_IOC_DIS_ACCESS	_IO(ESDFS_IOCTL_MAGIC, 1)
++/*
++ * Counterpart to DIS_ACCESS.  Without this, ACCESS_DISABLE is a one-way latch:
++ * every path that tests it returns -ENOENT, so once set the whole mount looks
++ * permanently empty and only umount can recover it.
++ */
++#define ESDFS_IOC_EN_ACCESS	_IO(ESDFS_IOCTL_MAGIC, 2)
+ 
+ /* esdfs root inode number */
+ #define ESDFS_ROOT_INO     1
+@@ -497,7 +503,18 @@
+ static inline void esdfs_copy_lower_attr(struct inode *dest,
+ 					 const struct inode *src)
+ {
+-	dest->i_mode = src->i_mode & S_IFMT;
++	/*
++	 * Never publish a permission-less mode on a live inode.  Every caller
++	 * but esdfs_iget() runs esdfs_set_perms() immediately after us, and that
++	 * stores the final mode in a single store; esdfs_iget() runs under I_NEW
++	 * with dest perms already 0, so preserving them is a no-op there.
++	 *
++	 * Storing (src type | dest perms) instead of bare "src->i_mode & S_IFMT"
++	 * keeps a racing esdfs_permission() -> generic_permission() from ever
++	 * observing mode 0000 and denying access to a file the caller owns.
++	 */
++	WRITE_ONCE(dest->i_mode,
++		   (src->i_mode & S_IFMT) | (dest->i_mode & ~S_IFMT));
+ 	dest->i_rdev = src->i_rdev;
+ 	dest->i_atime = src->i_atime;
+ 	dest->i_mtime = src->i_mtime;
+Index: kernel-rockchip/fs/esdfs/file.c
+===================================================================
+--- kernel-rockchip.orig/fs/esdfs/file.c
++++ kernel-rockchip/fs/esdfs/file.c
+@@ -107,6 +107,16 @@
+ 		goto out;
+ 	}
+ 
++	if (cmd == ESDFS_IOC_EN_ACCESS) {
++		if (!capable(CAP_SYS_ADMIN)) {
++			err = -EPERM;
++			goto out;
++		}
++		clear_opt(sbi, ACCESS_DISABLE);
++		err = 0;
++		goto out;
++	}
++
+ 	lower_file = esdfs_lower_file(file);
+ 
+ 	/* XXX: use vfs_ioctl if/when VFS exports it */
+@@ -262,10 +272,16 @@
+ 		esdfs_set_lower_file(file, lower_file);
+ 	}
+ 
+-	if (err)
++	if (err) {
+ 		kfree(ESDFS_F(file));
+-	else
++	} else {
+ 		esdfs_copy_attr(inode, esdfs_lower_inode(inode));
++		/*
++		 * esdfs_copy_attr() deliberately leaves i_size alone, but
++		 * SEEK_END is answered out of it, so refresh it here as well.
++		 */
++		fsstack_copy_inode_size(inode, esdfs_lower_inode(inode));
++	}
+ out_err:
+ 	esdfs_revert_creds(creds, NULL);
+ 	return err;
+@@ -357,23 +373,40 @@
+  */
+ static loff_t esdfs_file_llseek(struct file *file, loff_t offset, int whence)
+ {
+-	int err;
+-	struct file *lower_file;
+-	struct esdfs_sb_info *sbi = ESDFS_SB(file->f_path.dentry->d_sb);
+-	const struct cred *creds = esdfs_override_creds(sbi,
+-				ESDFS_I(file->f_inode), NULL);
+-	if (!creds)
+-		return -ENOMEM;
++	loff_t err;
++	struct file *lower_file = esdfs_lower_file(file);
++	struct inode *inode = file_inode(file);
++
++	/*
++	 * No creds override here: nothing below touches the lower filesystem or
++	 * performs a permission check, so overriding would only add a
++	 * GFP_KERNEL allocation -- and a new -ENOMEM failure mode -- to what is
++	 * frequently the hottest syscall on this mount.
++	 *
++	 * Our cached i_size goes stale.  The same lower tree is exported
++	 * through several esdfs superblocks (/storage/emulated,
++	 * /mnt/runtime/default, /mnt/user/0, /mnt/pass_through/0, and so on),
++	 * each with its own inode, so a write through one never updates the
++	 * size another one has cached, and esdfs_open() does not copy i_size
++	 * either.  Refresh it from the lower inode, but ONLY for the whences
++	 * that actually consult i_size: an unconditional refresh is wasted work
++	 * on every SEEK_SET, and inside the esdfs_setattr() window it can copy a
++	 * not-yet-truncated lower size back over the upper size that
++	 * esdfs_setattr() has already updated (upper i_size_write() happens
++	 * before the lower notify_change()).
++	 */
++	if (whence == SEEK_END || whence == SEEK_DATA || whence == SEEK_HOLE)
++		fsstack_copy_inode_size(inode, file_inode(lower_file));
+ 
+ 	err = generic_file_llseek(file, offset, whence);
+ 	if (err < 0)
+-		goto out;
++		return err;
+ 
+-	lower_file = esdfs_lower_file(file);
+-	err = generic_file_llseek(lower_file, offset, whence);
+-
+-out:
+-	esdfs_revert_creds(creds, NULL);
++	/*
++	 * Mirror the resulting position instead of replaying the seek against
++	 * the lower file: replaying SEEK_CUR would apply the delta twice.
++	 */
++	lower_file->f_pos = file->f_pos;
+ 	return err;
+ }
+ 
+@@ -437,7 +470,7 @@
+ }
+ 
+ const struct file_operations esdfs_main_fops = {
+-	.llseek		= generic_file_llseek,
++	.llseek		= esdfs_file_llseek,
+ 	.read		= esdfs_read,
+ 	.write		= esdfs_write,
+ 	.unlocked_ioctl	= esdfs_unlocked_ioctl,
+Index: kernel-rockchip/fs/esdfs/inode.c
+===================================================================
+--- kernel-rockchip.orig/fs/esdfs/inode.c
++++ kernel-rockchip/fs/esdfs/inode.c
+@@ -348,6 +348,24 @@
+ 	/* First, check the upper permissions */
+ 	err = generic_permission(mnt_userns, inode, mask);
+ 
++	/*
++	 * generic_permission() on the derived i_mode/i_uid is the only EACCES
++	 * producer in this driver, so log the inputs when it denies.  This
++	 * discriminates the competing explanations for spurious "file not
++	 * exist" on byte-correct files in one shot:
++	 *   mode=100000/40000       -> a permission-less i_mode was observed
++	 *   uid=0 on an app dir     -> the uid publish was caught mid-update
++	 *   fsuid=1023 w/ sane mode -> the caller's creds are poisoned
++	 * No hits across a full pass rules the whole permission family out.
++	 */
++	if (err == -EACCES)
++		pr_warn_ratelimited("ESDFS-fs: EACCES ino=%lu mode=%o uid=%u gid=%u mask=%x fsuid=%u fsgid=%u\n",
++				    inode->i_ino, (unsigned int)inode->i_mode,
++				    i_uid_read(inode), i_gid_read(inode),
++				    (unsigned int)mask,
++				    from_kuid(&init_user_ns, current_fsuid()),
++				    from_kgid(&init_user_ns, current_fsgid()));
++
+ 	/* Basic checking of the lower inode (can't override creds here) */
+ 	lower_inode = esdfs_lower_inode(inode);
+ 	if (S_ISSOCK(lower_inode->i_mode) ||
+@@ -501,6 +519,17 @@
+ 		return -ENOMEM;
+ 
+ 	if (test_opt(ESDFS_SB(inode->i_sb), ACCESS_DISABLE)) {
++		/*
++		 * -ENOENT here is deliberate and matches the other seven
++		 * ACCESS_DISABLE sites: a disabled mount is meant to look
++		 * empty.  But stat() claiming a file does not exist is
++		 * indistinguishable from the file really being gone, and
++		 * userspace reacts by deleting and re-fetching it.  Say so in
++		 * the log (ratelimited) so a stuck latch is diagnosable
++		 * instead of masquerading as missing data.
++		 */
++		pr_warn_ratelimited("ESDFS-fs: access disabled, reporting ENOENT for %pd\n",
++				    dentry);
+ 		esdfs_revert_creds(creds, NULL);
+ 		return -ENOENT;
+ 	}
+Index: kernel-rockchip/fs/esdfs/lookup.c
+===================================================================
+--- kernel-rockchip.orig/fs/esdfs/lookup.c
++++ kernel-rockchip/fs/esdfs/lookup.c
+@@ -24,15 +24,27 @@
+ 		loff_t offset, u64 ino, unsigned int d_type)
+ {
+ 	struct esdfs_name_data *buf = container_of(ctx, struct esdfs_name_data, ctx);
+-	struct qstr candidate = QSTR_INIT(name, namelen);
+ 
+-	if (qstr_case_eq(buf->to_find, &candidate)) {
++	/*
++	 * filldir_t returns 'true' to keep iterating and 'false' to stop
++	 * (include/linux/fs.h).  These were inverted: returning false on a
++	 * mismatch aborted iterate_dir() at the very first entry -- normally
++	 * "." -- so buf->found was never set and esdfs_lookup_nocase() always
++	 * returned -ENOENT, making case-insensitive lookup dead code.
++	 *
++	 * The comparison is bounded by namelen.  qstr_case_eq() -> strcasecmp()
++	 * is NUL-terminated and ignores the length, but dir_emit() makes no
++	 * termination guarantee -- so it would read past the entry into
++	 * inter-dirent padding and mis-report a genuine match as unequal.
++	 */
++	if (buf->to_find->len == namelen &&
++	    str_n_case_eq(buf->to_find->name, name, namelen)) {
+ 		memcpy(buf->match_name, name, namelen);
+ 		buf->match_name[namelen] = 0;
+ 		buf->found = true;
+-		return true;
++		return false;	/* found it: stop iterating */
+ 	}
+-	return false;
++	return true;		/* no match: keep going */
+ }
+ 
+ int esdfs_lookup_nocase(struct path *parent,
+@@ -52,13 +64,23 @@
+ 			.found = false,
+ 		};
+ 
++		/*
++		 * Never leak this fallback's errno to the caller.  The exact
++		 * lookup above already proved the name is absent, so the only
++		 * useful outcome here is "found a case-variant" or "-ENOENT".
++		 * __esdfs_lookup() treats any non-ENOENT error as fatal before
++		 * it reaches the LOOKUP_CREATE rescue, so leaking -ENOMEM from
++		 * ext4's per-entry allocation (this board runs at ~1% free
++		 * memory), -EIO, -EINTR or -EACCES from security_file_open()
++		 * would turn "create a .tmp file" into a hard failure.
++		 */
+ 		file = dentry_open(parent, O_RDONLY | O_DIRECTORY, cred);
+ 		if (IS_ERR(file))
+-			return PTR_ERR(file);
++			return -ENOENT;
+ 		err = iterate_dir(file, &buffer.ctx);
+ 		fput(file);
+ 		if (err)
+-			return err;
++			return -ENOENT;
+ 
+ 		if (buffer.found)
+ 			err = vfs_path_lookup(parent->dentry, parent->mnt,
