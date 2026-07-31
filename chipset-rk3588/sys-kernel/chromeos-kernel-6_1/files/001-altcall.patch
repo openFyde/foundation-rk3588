@@ -2513,7 +2513,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/android_whitelists.h
-@@ -0,0 +1,653 @@
+@@ -0,0 +1,654 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -2744,6 +2744,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	SYSCALL_ENTRY(socketpair),
 +	SYSCALL_ENTRY(splice),
 +	SYSCALL_ENTRY(statfs),
++	SYSCALL_ENTRY(statx),
 +	SYSCALL_ENTRY(symlinkat),
 +        SYSCALL_ENTRY(sync),
 +        SYSCALL_ENTRY(syncfs),
