@@ -1,0 +1,26 @@
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/bcmsdh_linux.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/bcmsdh_linux.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/bcmsdh_linux.c
+@@ -375,6 +375,13 @@
+ 
+ 	bcmsdh_osinfo = bcmsdh->os_cxt;
+ 	spin_lock_irqsave(&bcmsdh_osinfo->oob_irq_spinlock, flags);
++	/* The irq is freed on wifi-off (bcmsdh_oob_intr_unregister) and not
++	 * re-requested until bcmsdh_oob_intr_register() later in the wifi-on
++	 * path; enable_irq() on the freed irq WARNs at __irq_startup and arms
++	 * a handler-less irq. Skip until it is registered again.
++	 */
++	if (!bcmsdh_osinfo->oob_irq_registered)
++		goto exit;
+ 	if (bcmsdh_osinfo->oob_irq_enabled != enable) {
+ 		if (enable)
+ 			enable_irq(bcmsdh_osinfo->oob_irq_num);
+@@ -382,6 +389,7 @@
+ 			disable_irq_nosync(bcmsdh_osinfo->oob_irq_num);
+ 		bcmsdh_osinfo->oob_irq_enabled = enable;
+ 	}
++exit:
+ 	spin_unlock_irqrestore(&bcmsdh_osinfo->oob_irq_spinlock, flags);
+ }
+ 
