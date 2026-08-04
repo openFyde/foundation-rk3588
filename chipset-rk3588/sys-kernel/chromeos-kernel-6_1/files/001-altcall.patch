@@ -2513,7 +2513,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 ===================================================================
 --- /dev/null
 +++ kernel-rockchip/security/chromiumos/android_whitelists.h
-@@ -0,0 +1,654 @@
+@@ -0,0 +1,657 @@
 +/*
 + * Linux Security Module for Chromium OS
 + *
@@ -2680,6 +2680,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	SYSCALL_ENTRY(openat),
 +	SYSCALL_ENTRY_ALT(perf_event_open, android_perf_event_open),
 +	SYSCALL_ENTRY(personality),
++	SYSCALL_ENTRY(pidfd_open),
 +	SYSCALL_ENTRY(pipe2),
 +	SYSCALL_ENTRY(ppoll),
 +	SYSCALL_ENTRY_ALT(prctl, alt_sys_prctl),
@@ -2768,6 +2769,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	SYSCALL_ENTRY(uname),
 +	SYSCALL_ENTRY(unlinkat),
 +	SYSCALL_ENTRY(unshare),
++	SYSCALL_ENTRY(userfaultfd),
 +	SYSCALL_ENTRY(utimensat),
 +	SYSCALL_ENTRY(vmsplice),
 +	SYSCALL_ENTRY(wait4),
@@ -3056,6 +3058,7 @@ Index: kernel-rockchip/security/chromiumos/android_whitelists.h
 +	COMPAT_SYSCALL_ENTRY(unlink),
 +	COMPAT_SYSCALL_ENTRY(unlinkat),
 +	COMPAT_SYSCALL_ENTRY(unshare),
++	COMPAT_SYSCALL_ENTRY(userfaultfd),
 +	COMPAT_SYSCALL_ENTRY(ustat),
 +	COMPAT_SYSCALL_ENTRY(utimensat),
 +	COMPAT_SYSCALL_ENTRY(utimes),
