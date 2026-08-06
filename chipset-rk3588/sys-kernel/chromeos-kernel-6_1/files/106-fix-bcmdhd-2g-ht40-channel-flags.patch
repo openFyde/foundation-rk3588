@@ -1,0 +1,45 @@
+CHROMIUM: bcmdhd: fix 2.4 GHz HT40 channel flags to stop periodic
+reg-enforcement disconnects
+
+Connections to 40 MHz-wide 2.4 GHz APs drop every ~70 s with
+
+	[dhd] [wlan0] wl_cfg80211_disconnect : Reason 3, act 1, ...
+
+The disconnect comes from cfg80211's regulatory enforcement worker
+(reg_check_chans_work -> cfg80211_leave, confirmed via the
+cfg80211:rdev_disconnect tracepoint): every association files a
+regulatory hint (country IE), which arms the worker with its 60 s
+grace period; the worker then fetches the live chandef from the
+driver (channel 11, width 40 MHz) and rejects it against the wiphy
+channel flags, because every 2.4 GHz channel is registered with
+IEEE80211_CHAN_NO_HT40MINUS|PLUS. Firmware associates at 40 MHz
+regardless, so the link is torn down and the cycle repeats after
+reconnect.
+
+The wrong flags come from wl_construct_reginfo(): the 2 GHz
+"ht40_allowed = WL_BW_CAP_40MHZ(bw_cap_2g)" assignment sits inside
+"#ifdef EXT_REGD_INFO", which this build never defines (the only
+Makefile reference is commented out and misspelled EXT_REG_INFO),
+while the 5 GHz/6 GHz assignments are unconditional. ht40_allowed
+therefore stays false for the whole 2 GHz pass: the 40 MHz chanspecs
+that would clear the NO_HT40 flags are skipped, and every 20 MHz
+entry gets flags = IEEE80211_CHAN_NO_HT40 - contradicting both the
+firmware bw_cap and the band's own HT caps (HT20/HT40).
+
+Make the 2 GHz assignment unconditional, matching the 5 GHz/6 GHz
+handling and older bcmdhd releases.
+
+Index: kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
+===================================================================
+--- kernel-rockchip.orig/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
++++ kernel-rockchip/drivers/net/wireless/rockchip_wlan/rkwifi/bcmdhd/wl_cfg80211.c
+@@ -19395,9 +19395,7 @@ static int wl_construct_reginfo(struct b
+ 			(channel <= CH_MAX_2G_CHANNEL)) {
+ 			band_chan_arr = __wl_2ghz_channels;
+ 			array_size = ARRAYSIZE(__wl_2ghz_channels);
+-#ifdef EXT_REGD_INFO
+ 			ht40_allowed = WL_BW_CAP_40MHZ(bw_cap_2g);
+-#endif /* EXT_REGD_INFO */
+ 		}
+ #ifdef CFG80211_6G_SUPPORT
+ 		else if (CHSPEC_IS6G(chspec) && (channel >= CH_MIN_6G_CHANNEL) &&
