@@ -1,0 +1,68 @@
+Index: kernel-6_12/drivers/phy/rockchip/phy-rockchip-usbdp.c
+===================================================================
+--- kernel-6_12.orig/drivers/phy/rockchip/phy-rockchip-usbdp.c
++++ kernel-6_12/drivers/phy/rockchip/phy-rockchip-usbdp.c
+@@ -173,6 +173,8 @@
+ 	bool flip;
+ 	bool mode_change;
+ 	u8 mode;
++	/* modes rk_udphy_setup() last initialised the hardware with */
++	u8 setup_mode;
+ 	u8 status;
+ 
+ 	/* utilized for USB */
+@@ -867,6 +869,8 @@
+ 		return ret;
+ 	}
+ 
++	udphy->setup_mode = udphy->mode;
++
+ 	return 0;
+ }
+ 
+@@ -1007,7 +1011,7 @@
+ 
+ 		if (udphy->mode & UDPHY_MODE_USB)
+ 			rk_udphy_u3_port_disable(udphy, false);
+-	} else if (udphy->mode_change) {
++	} else if (udphy->mode_change || (udphy->mode & ~udphy->setup_mode)) {
+ 		udphy->mode_change = false;
+ 		udphy->status = UDPHY_MODE_NONE;
+ 		if (udphy->mode == UDPHY_MODE_DP)
+@@ -1381,15 +1385,19 @@
+ 
+ 		if (!data) {
+ 			rk_udphy_dp_hpd_event_trigger(udphy, false);
+-		} else if (data->status & DP_STATUS_IRQ_HPD) {
+-			rk_udphy_dp_hpd_event_trigger(udphy, false);
+-			usleep_range(750, 800);
+-			rk_udphy_dp_hpd_event_trigger(udphy, true);
+ 		} else if (data->status & DP_STATUS_HPD_STATE) {
+ 			if (udphy->mode != mode) {
+ 				udphy->mode = mode;
+ 				udphy->mode_change = true;
+ 			}
++			if (data->status & DP_STATUS_IRQ_HPD) {
++				rk_udphy_dp_hpd_event_trigger(udphy, false);
++				usleep_range(750, 800);
++			}
++			rk_udphy_dp_hpd_event_trigger(udphy, true);
++		} else if (data->status & DP_STATUS_IRQ_HPD) {
++			rk_udphy_dp_hpd_event_trigger(udphy, false);
++			usleep_range(750, 800);
+ 			rk_udphy_dp_hpd_event_trigger(udphy, true);
+ 		} else {
+ 			rk_udphy_dp_hpd_event_trigger(udphy, false);
+Index: kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
+===================================================================
+--- kernel-6_12.orig/drivers/gpu/drm/rockchip/dw-dp.c
++++ kernel-6_12/drivers/gpu/drm/rockchip/dw-dp.c
+@@ -5699,7 +5699,7 @@
+ 			dp->hotplug.long_hpd = true;
+ 			dp->hotplug.status = false;
+ 			schedule_work(&dp->hpd_work);
+-		} else if (data->status & DP_STATUS_IRQ_HPD) {
++		} else if ((data->status & DP_STATUS_IRQ_HPD) && dp->hotplug.status) {
+ 			dev_info(dp->dev, "IRQ from the usbdp status=0x%x\n", data->status);
+ 			dp->hotplug.long_hpd = false;
+ 			dp->hotplug.status = true;
