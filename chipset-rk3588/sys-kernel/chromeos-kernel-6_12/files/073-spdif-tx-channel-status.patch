@@ -1,0 +1,133 @@
+Index: kernel-6_12/sound/soc/rockchip/rockchip_spdif.h
+===================================================================
+--- kernel-6_12.orig/sound/soc/rockchip/rockchip_spdif.h
++++ kernel-6_12/sound/soc/rockchip/rockchip_spdif.h
+@@ -29,6 +29,10 @@
+ #define SPDIF_CFGR_VDW_20	SPDIF_CFGR_VDW(0x1)
+ #define SPDIF_CFGR_VDW_24	SPDIF_CFGR_VDW(0x2)
+ 
++#define SPDIF_CFGR_CSE_SHIFT	6
++#define SPDIF_CFGR_CSE_MASK	(1 << SPDIF_CFGR_CSE_SHIFT)
++#define SPDIF_CFGR_CSE_EN	(1 << SPDIF_CFGR_CSE_SHIFT)
++
+ /*
+  * DMACR
+  * DMA control register
+@@ -56,5 +60,6 @@
+ #define SPDIF_INTSR	(0x0010)
+ #define SPDIF_XFER	(0x0018)
+ #define SPDIF_SMPDR	(0x0020)
++#define SPDIF_CHNSRn(x)	(0x00c0 + (x) * 4)
+ 
+ #endif /* _ROCKCHIP_SPDIF_H */
+Index: kernel-6_12/sound/soc/rockchip/rockchip_spdif.c
+===================================================================
+--- kernel-6_12.orig/sound/soc/rockchip/rockchip_spdif.c
++++ kernel-6_12/sound/soc/rockchip/rockchip_spdif.c
+@@ -16,6 +16,7 @@
+ #include <linux/mfd/syscon.h>
+ #include <linux/regmap.h>
+ #include <sound/pcm_params.h>
++#include <sound/pcm_iec958.h>
+ #include <sound/dmaengine_pcm.h>
+ 
+ #include "rockchip_spdif.h"
+@@ -29,6 +30,10 @@
+ 
+ #define RK3288_GRF_SOC_CON2 0x24c
+ 
++/* IEC958 channel status: 6 bytes, each byte duplicated into both subframes */
++#define CS_BYTE		6
++#define CS_FRAME(c)	((c) << 16 | (c))
++
+ struct rk_spdif_dev {
+ 	struct device *dev;
+ 
+@@ -110,11 +115,12 @@
+ {
+ 	struct rk_spdif_dev *spdif = snd_soc_dai_get_drvdata(dai);
+ 	unsigned int val = SPDIF_CFGR_HALFWORD_ENABLE;
+-	int srate, mclk;
+-	int ret;
++	int srate, div;
++	int ret, i;
++	u8 cs[CS_BYTE];
++	u16 *fc = (u16 *)cs;
+ 
+ 	srate = params_rate(params);
+-	mclk = srate * 128;
+ 
+ 	switch (params_format(params)) {
+ 	case SNDRV_PCM_FORMAT_S16_LE:
+@@ -130,13 +136,19 @@
+ 		return -EINVAL;
+ 	}
+ 
+-	/* Set clock and calculate divider */
+-	ret = clk_set_rate(spdif->mclk, mclk);
+-	if (ret != 0) {
+-		dev_err(spdif->dev, "Failed to set module clock rate: %d\n",
+-			ret);
++	ret = snd_pcm_create_iec958_consumer_hw_params(params, cs, sizeof(cs));
++	if (ret < 0)
+ 		return ret;
+-	}
++
++	for (i = 0; i < CS_BYTE / 2; i++)
++		regmap_write(spdif->regmap, SPDIF_CHNSRn(i), CS_FRAME(fc[i]));
++
++	regmap_update_bits(spdif->regmap, SPDIF_CFGR, SPDIF_CFGR_CSE_MASK,
++			   SPDIF_CFGR_CSE_EN);
++
++	/* mclk from machine driver (mclk-fs); CLK_DIV field is divider - 1 */
++	div = DIV_ROUND_CLOSEST(clk_get_rate(spdif->mclk), 128 * srate) - 1;
++	val |= SPDIF_CFGR_CLK_DIV(div);
+ 
+ 	ret = regmap_update_bits(spdif->regmap, SPDIF_CFGR,
+ 				 SPDIF_CFGR_CLK_DIV_MASK |
+@@ -200,8 +212,20 @@
+ 	return 0;
+ }
+ 
++static int rk_spdif_set_sysclk(struct snd_soc_dai *dai, int clk_id,
++			       unsigned int freq, int dir)
++{
++	struct rk_spdif_dev *spdif = snd_soc_dai_get_drvdata(dai);
++
++	if (!freq)
++		return 0;
++
++	return clk_set_rate(spdif->mclk, freq);
++}
++
+ static const struct snd_soc_dai_ops rk_spdif_dai_ops = {
+ 	.probe = rk_spdif_dai_probe,
++	.set_sysclk = rk_spdif_set_sysclk,
+ 	.hw_params = rk_spdif_hw_params,
+ 	.trigger = rk_spdif_trigger,
+ };
+@@ -236,6 +260,7 @@
+ 	case SPDIF_INTCR:
+ 	case SPDIF_XFER:
+ 	case SPDIF_SMPDR:
++	case SPDIF_CHNSRn(0) ... SPDIF_CHNSRn(5):
+ 		return true;
+ 	default:
+ 		return false;
+@@ -251,6 +276,7 @@
+ 	case SPDIF_INTSR:
+ 	case SPDIF_XFER:
+ 	case SPDIF_SMPDR:
++	case SPDIF_CHNSRn(0) ... SPDIF_CHNSRn(5):
+ 		return true;
+ 	default:
+ 		return false;
+@@ -273,7 +299,7 @@
+ 	.reg_bits = 32,
+ 	.reg_stride = 4,
+ 	.val_bits = 32,
+-	.max_register = SPDIF_SMPDR,
++	.max_register = SPDIF_CHNSRn(5),
+ 	.writeable_reg = rk_spdif_wr_reg,
+ 	.readable_reg = rk_spdif_rd_reg,
+ 	.volatile_reg = rk_spdif_volatile_reg,
