@@ -1,0 +1,41 @@
+alt-syscall: allow rseq, clone3, faccessat2 and close_range in "complete"
+
+A current glibc calls all four on every process start or on common paths
+(rseq registration at startup, clone3 for posix_spawn/pthread_create,
+faccessat2 for access()/test -x, close_range in exec helpers). Under the
+enforcing "complete" table each one hit block_syscall(), which returns
+-ENOSYS; libc falls back, so nothing broke, but every process start
+logged "blocked syscall 334/435/436/439" and flooded dmesg.
+
+The entries go in the section shared by all architectures: the table is
+keyed on __NR_<name>, and all four exist on both x86_64 (334, 435, 436,
+439) and arm64 (asm-generic: 293, 435, 436, 439), so this covers both.
+The compat (32-bit) whitelist is unchanged.
+--- a/security/chromiumos/complete_whitelists.h
++++ b/security/chromiumos/complete_whitelists.h
+@@ -46,7 +46,9 @@
+ 	SYSCALL_ENTRY(clock_nanosleep),
+ 	SYSCALL_ENTRY(clock_settime),
+ 	SYSCALL_ENTRY(clone),
++	SYSCALL_ENTRY(clone3),
+ 	SYSCALL_ENTRY(close),
++	SYSCALL_ENTRY(close_range),
+ 	SYSCALL_ENTRY(connect),
+ 	SYSCALL_ENTRY(copy_file_range),
+ 	SYSCALL_ENTRY(delete_module),
+@@ -60,6 +62,7 @@
+ 	SYSCALL_ENTRY(exit),
+ 	SYSCALL_ENTRY(exit_group),
+ 	SYSCALL_ENTRY(faccessat),
++	SYSCALL_ENTRY(faccessat2),
+ 	SYSCALL_ENTRY(fallocate),
+ 	SYSCALL_ENTRY(fanotify_init),
+ 	SYSCALL_ENTRY(fanotify_mark),
+@@ -203,6 +206,7 @@
+ 	SYSCALL_ENTRY(rt_sigsuspend),
+ 	SYSCALL_ENTRY(rt_sigtimedwait),
+ 	SYSCALL_ENTRY(rt_tgsigqueueinfo),
++	SYSCALL_ENTRY(rseq),
+ 	SYSCALL_ENTRY(sched_getaffinity),
+ 	SYSCALL_ENTRY(sched_getattr),
+ 	SYSCALL_ENTRY(sched_getparam),
