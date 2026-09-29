@@ -1,18 +1,21 @@
-alt-syscall: allow rseq, clone3, faccessat2 and close_range in "complete"
+alt-syscall: allow rseq, clone3, faccessat2, close_range and pidfd_open in "complete"
 
-A current glibc calls all four on every process start or on common paths
-(rseq registration at startup, clone3 for posix_spawn/pthread_create,
-faccessat2 for access()/test -x, close_range in exec helpers). Under the
+A current glibc and dbus call all five on every process start or on common
+paths (rseq registration at startup, clone3 for posix_spawn/pthread_create,
+faccessat2 for access()/test -x, close_range in exec helpers, pidfd_open in
+dbus-daemon and at-spi-bus-launcher to watch their children). Under the
 enforcing "complete" table each one hit block_syscall(), which returns
--ENOSYS; libc falls back, so nothing broke, but every process start
-logged "blocked syscall 334/435/436/439" and flooded dmesg.
+-ENOSYS; userspace falls back, so nothing broke, but every process start
+logged "blocked syscall 334/434/435/436/439" and flooded dmesg.
 
 The entries go in the section shared by all architectures: the table is
-keyed on __NR_<name>, and all four exist on both x86_64 (334, 435, 436,
-439) and arm64 (asm-generic: 293, 435, 436, 439), so this covers both.
-The compat (32-bit) whitelist is unchanged.
---- a/security/chromiumos/complete_whitelists.h
-+++ b/security/chromiumos/complete_whitelists.h
+keyed on __NR_<name>, and all five exist on both x86_64 (334, 434, 435,
+436, 439) and arm64 (asm-generic: 293, 434, 435, 436, 439), so this
+covers both. The compat (32-bit) whitelist is unchanged.
+Index: v6.12/security/chromiumos/complete_whitelists.h
+===================================================================
+--- v6.12.orig/security/chromiumos/complete_whitelists.h	2026-09-08 19:02:09.141362237 +0800
++++ v6.12/security/chromiumos/complete_whitelists.h	2026-09-29 12:43:43.142030232 +0800
 @@ -46,7 +46,9 @@
  	SYSCALL_ENTRY(clock_nanosleep),
  	SYSCALL_ENTRY(clock_settime),
@@ -31,7 +34,15 @@ The compat (32-bit) whitelist is unchanged.
  	SYSCALL_ENTRY(fallocate),
  	SYSCALL_ENTRY(fanotify_init),
  	SYSCALL_ENTRY(fanotify_mark),
-@@ -203,6 +206,7 @@
+@@ -164,6 +167,7 @@
+ 	SYSCALL_ENTRY(open_by_handle_at),
+ 	SYSCALL_ENTRY(perf_event_open),
+ 	SYSCALL_ENTRY(personality),
++	SYSCALL_ENTRY(pidfd_open),
+ 	SYSCALL_ENTRY(pipe2),
+ 	SYSCALL_ENTRY(pivot_root),
+ 	SYSCALL_ENTRY(pkey_alloc),
+@@ -203,6 +207,7 @@
  	SYSCALL_ENTRY(rt_sigsuspend),
  	SYSCALL_ENTRY(rt_sigtimedwait),
  	SYSCALL_ENTRY(rt_tgsigqueueinfo),
