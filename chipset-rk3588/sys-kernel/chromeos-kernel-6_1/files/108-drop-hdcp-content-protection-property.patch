@@ -1,0 +1,61 @@
+CHROMIUM: drm/rockchip: do not expose "Content Protection" on DP and HDMI
+
+Neither dw-dp nor dw-hdmi-qp can complete HDCP on these boards: the
+HDCP 2.x controller/ESM firmware is never provisioned and vendor
+storage holds no HDCP 1.x key, so every authentication attempt fails.
+The enable paths nevertheless commit hardware state before trying
+(dw-dp asks BL31 for HDCP encrypt mode, dw-hdmi-qp clears
+HDCP2_BYPASS) and only undo it on a success that never comes.
+
+Chrome writes Content Protection=DESIRED on HDMI/DP displays for any
+protected (Widevine) playback, which is enough to trigger this: the
+output turns solid green and stays so across hotplug and after the
+protection request is withdrawn, until reboot.
+
+Only software (L3) Widevine is supported on these boards, so HDCP is
+never needed. Drop the property from both connectors; Chrome then
+reports no protectable link and playback continues unprotected, while
+licenses that require HDCP become output-restricted as intended.
+
+diff --git a/drivers/gpu/drm/rockchip/dw-dp.c b/drivers/gpu/drm/rockchip/dw-dp.c
+index d26c01ce8..3999b5c44 100644
+--- a/drivers/gpu/drm/rockchip/dw-dp.c
++++ b/drivers/gpu/drm/rockchip/dw-dp.c
+@@ -4237,12 +4237,6 @@ static int dw_dp_connector_init(struct dw_dp *dp)
+ 	dp->color_format_capacity = prop;
+ 	drm_object_attach_property(&connector->base, prop, 0);
+ 
+-	ret = drm_connector_attach_content_protection_property(&dp->connector, true);
+-	if (ret) {
+-		dev_err(dp->dev, "failed to attach content protection: %d\n", ret);
+-		return ret;
+-	}
+-
+ 	prop = drm_property_create_range(connector->dev, 0, RK_IF_PROP_ENCRYPTED,
+ 					 RK_IF_HDCP_ENCRYPTED_NONE, RK_IF_HDCP_ENCRYPTED_LEVEL2);
+ 	if (!prop) {
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c
+index 0100065d0..555458008 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c
+@@ -3031,7 +3031,6 @@ dw_hdmi_rockchip_attach_properties(struct drm_connector *connector,
+ 	struct rockchip_hdmi *hdmi = (struct rockchip_hdmi *)data;
+ 	struct drm_property *prop;
+ 	struct rockchip_drm_private *private = connector->dev->dev_private;
+-	int ret;
+ 
+ 	parse_bus_format(color, &hdmi->hdmi_output, &hdmi->colordepth);
+ 
+@@ -3169,12 +3168,6 @@ dw_hdmi_rockchip_attach_properties(struct drm_connector *connector,
+ 					   connector->colorspace_property, 0);
+ 	drm_object_attach_property(&connector->base, private->connector_id_prop, hdmi->id);
+ 
+-	ret = drm_connector_attach_content_protection_property(connector, true);
+-	if (ret) {
+-		dev_err(hdmi->dev, "failed to attach content protection: %d\n", ret);
+-		return;
+-	}
+-
+ 	prop = drm_property_create_range(connector->dev, 0, RK_IF_PROP_ENCRYPTED,
+ 					 RK_IF_HDCP_ENCRYPTED_NONE, RK_IF_HDCP_ENCRYPTED_LEVEL2);
+ 	if (!prop) {
