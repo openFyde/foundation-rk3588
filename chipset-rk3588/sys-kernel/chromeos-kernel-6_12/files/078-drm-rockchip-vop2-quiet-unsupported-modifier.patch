@@ -1,0 +1,32 @@
+From: openFyde
+Subject: [PATCH] drm/rockchip: vop2: log an unsupported scanout modifier at
+ debug level
+
+rockchip_vop2_mod_supported() is the plane's format_mod_supported hook:
+DRM asks it for every plane whenever a client offers a buffer for direct
+scanout. The BSP driver answers "no" with DRM_ERROR, so an ordinary
+fallback to composition fills the kernel log -- on fydetab_duo, a
+fullscreen Notialis window rendered by Mesa 26.2's panfrost (AFBC 32x8
+split sparse, 0x0800000000000062, which only the RK3576's VOP3 tables
+list) produced eight errors per probe, one for each Esmart and Cluster
+window. Upstream's version of this check uses drm_dbg_kms; do the same.
+
+---
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c	2026-10-15 16:56:56.013690004 +0800
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop2.c	2026-10-15 16:56:56.026690466 +0800
+@@ -2549,7 +2549,14 @@
+ 	if (!rockchip_afbc(plane, modifier) &&
+ 	    !rockchip_rfbc(plane, modifier) &&
+ 	    !rockchip_tiled(plane, modifier)) {
+-		DRM_ERROR("%s unsupported format modifier 0x%llx\n", plane->name, modifier);
++		/*
++		 * Not an error: DRM asks this for every plane when a client
++		 * offers a buffer for scanout, and a modifier the hardware
++		 * cannot scan out simply means "composite it". Upstream logs
++		 * it at debug level too.
++		 */
++		drm_dbg_kms(plane->dev, "%s unsupported format modifier 0x%llx\n",
++			    plane->name, modifier);
+ 
+ 		return false;
+ 	}
