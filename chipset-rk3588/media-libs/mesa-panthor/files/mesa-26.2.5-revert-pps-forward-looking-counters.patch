@@ -1,0 +1,98 @@
+Revert "pps: generate forward-looking counters"
+
+This reverts upstream commit 2e6507f0e8bb569752b6aa8365dcffd96e3486c3,
+which is in Mesa 26.2.5. It calls GpuCounterSpec::set_value_direction(),
+which the board's Perfetto (chromeos-base/perfetto 53.0) does not have, so
+pps-producer fails to compile:
+
+  error: no member named 'set_value_direction' in
+  'perfetto::protos::pbzero::GpuCounterDescriptor_GpuCounterSpec'
+
+The commit's timestamp change depends on that field, so it is reverted
+whole: pps keeps the end-of-interval counters 26.1.8 shipped. Drop this
+when the board's Perfetto has value_direction.
+
+diff --git a/src/freedreno/ds/fd_pps_driver.h b/src/freedreno/ds/fd_pps_driver.h
+index 311be30ef61..b552c5fbda3 100644
+--- a/src/freedreno/ds/fd_pps_driver.h
++++ b/src/freedreno/ds/fd_pps_driver.h
+@@ -34,7 +34,6 @@ public:
+    void disable_perfcnt() override;
+    bool dump_perfcnt() override;
+    uint64_t next() override;
+-   bool sample_timestamps_are_interval_starts() const override { return true; }
+    uint32_t gpu_clock_id() const override;
+    uint64_t gpu_timestamp() const override;
+    bool cpu_gpu_timestamp(uint64_t &cpu_timestamp,
+diff --git a/src/tool/pps/pps_datasource.cc b/src/tool/pps/pps_datasource.cc
+index c358a6c08db..a64504613bc 100644
+--- a/src/tool/pps/pps_datasource.cc
++++ b/src/tool/pps/pps_datasource.cc
+@@ -168,10 +168,6 @@ template <typename GpuCounterDescriptor> void add_descriptors(GpuCounterDescript
+       spec->set_name(counter.name);
+       spec->set_description(counter.description);
+ 
+-      // These counters describe the interval starting at the sample timestamp.
+-      spec->set_value_direction(
+-         GpuCounterDescriptor::GpuCounterSpec::VALUE_DIRECTION_FORWARDS_LOOKING);
+-
+       auto units = GpuCounterDescriptor::NONE;
+       switch (counter.units) {
+       case Counter::Units::Percent:
+@@ -318,27 +314,10 @@ void GpuDataSource::trace(TraceContext &ctx)
+       descriptor_gpu_timestamp = driver->gpu_timestamp();
+       state->was_cleared = false;
+       state->last_counter_vals.clear();
+-      state->has_prev_sample_end_timestamp = false;
+-      state->prev_sample_end_timestamp = 0;
+    }
+ 
+    if (driver->dump_perfcnt()) {
+-      while (auto sample_timestamp = driver->next()) {
+-         uint64_t gpu_timestamp = sample_timestamp;
+-
+-         if (!driver->sample_timestamps_are_interval_starts()) {
+-            if (!state->has_prev_sample_end_timestamp) {
+-               state->has_prev_sample_end_timestamp = true;
+-               state->prev_sample_end_timestamp = sample_timestamp;
+-               continue;
+-            }
+-
+-            // Convert end-of-interval timestamps to start-of-interval
+-            // for VALUE_DIRECTION_FORWARDS_LOOKING counters.
+-            gpu_timestamp = state->prev_sample_end_timestamp;
+-            state->prev_sample_end_timestamp = sample_timestamp;
+-         }
+-
++      while (auto gpu_timestamp = driver->next()) {
+          if (gpu_timestamp <= descriptor_gpu_timestamp) {
+             // Do not send counter values before counter descriptors
+             PPS_LOG_ERROR("Skipping counter values coming before descriptors");
+diff --git a/src/tool/pps/pps_datasource.h b/src/tool/pps/pps_datasource.h
+index a4c4e7de4dc..0700fe25937 100644
+--- a/src/tool/pps/pps_datasource.h
++++ b/src/tool/pps/pps_datasource.h
+@@ -17,8 +17,6 @@ namespace pps
+ struct GpuIncrementalState {
+    bool was_cleared = true;
+    std::unordered_map<uint32_t, double> last_counter_vals;
+-   bool has_prev_sample_end_timestamp = false;
+-   uint64_t prev_sample_end_timestamp = 0;
+ };
+ 
+ struct GpuDataSourceTraits : public perfetto::DefaultDataSourceTraits {
+diff --git a/src/tool/pps/pps_driver.h b/src/tool/pps/pps_driver.h
+index adc497807cc..b46c0f58bf6 100644
+--- a/src/tool/pps/pps_driver.h
++++ b/src/tool/pps/pps_driver.h
+@@ -78,10 +78,6 @@ class Driver
+    /// @return The GPU timestamp associated to current sample, or 0 if there are no more samples
+    virtual uint64_t next() = 0;
+ 
+-   /// @return True when next() timestamps mark the start of the sampling interval.
+-   /// Drivers returning end-of-interval timestamps should leave this false.
+-   virtual bool sample_timestamps_are_interval_starts() const { return false; }
+-
+    /// Clock ID in which the values returned by gpu_timestamp() belong
+    virtual uint32_t gpu_clock_id() const = 0;
+ 

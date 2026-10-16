@@ -4,12 +4,12 @@
 EAPI=7
 
 EGIT_REPO_URI="git://anongit.freedesktop.org/mesa/mesa"
-CROS_WORKON_COMMIT="0fadfea4f394211946f308458f614839ef253ee8"
-CROS_WORKON_TREE="37cab8cb62626d8c33d536e6a74ba7cf9bea602d"
+CROS_WORKON_COMMIT="ddaf85e353442d9d7f192fdcf1823e652e3f2ee3"
+CROS_WORKON_TREE="530997e99b40566a33cc61d22b921c08873dd65e"
 CROS_WORKON_PROJECT="chromiumos/third_party/mesa"
 CROS_WORKON_LOCALNAME="mesa"
 CROS_WORKON_MANUAL_UPREV="1"
-CROS_WORKON_EGIT_BRANCH="cros/upstream/26.1"
+CROS_WORKON_EGIT_BRANCH="cros/upstream/26.2"
 
 KEYWORDS="*"
 
@@ -52,6 +52,15 @@ BDEPEND="
 	virtual/pkgconfig
 	dev-util/mesa_clc
 "
+
+PATCHES=(
+	# pps-producer needs a newer Perfetto than the board's; see the patch.
+	"${FILESDIR}/mesa-26.2.5-revert-pps-forward-looking-counters.patch"
+)
+
+src_prepare() {
+	default
+}
 
 src_configure() {
   cros_optimize_package_for_speed
