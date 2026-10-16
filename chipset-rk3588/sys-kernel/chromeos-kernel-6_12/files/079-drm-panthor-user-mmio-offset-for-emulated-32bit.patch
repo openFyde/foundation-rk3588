@@ -1,0 +1,42 @@
+From: openFyde
+Subject: [PATCH] drm/panthor: accept the 32-bit user MMIO offset from 64-bit
+ tasks
+
+A 32-bit UMD maps the LATEST_FLUSH_ID page at
+DRM_PANTHOR_USER_MMIO_OFFSET_32BIT (1 << 43), because mmap2's pgoff
+cannot reach the 64-bit offset (1 << 56). panthor_mmap() only translates
+that offset for tasks flagged TIF_32BIT. An i386 or armhf Mesa run by an
+emulator such as FEX or box64 lives inside a 64-bit arm64 process, so
+the offset reaches drm_gem_mmap() untranslated and fails with -EINVAL.
+Mesa then drops the device ("failed to mmap the LATEST_FLUSH_ID register
+(err=22)") and falls back to llvmpipe. This hit 32-bit x86 Steam games
+under FEX on fydetab_duo.
+
+Upstream fixes this with DRM_IOCTL_PANTHOR_SET_USER_MMIO_OFFSET. Mesa only
+issues it on panthor >= 1.5, and this driver reports 1.0. Translate the
+32-bit window for every task instead. This cannot shadow a GEM mapping:
+on 64-bit kernels the fake GEM offsets end at
+DRM_FILE_PAGE_OFFSET_START + DRM_FILE_PAGE_OFFSET_SIZE, about 1 TiB, well
+below 1 << 43. A 64-bit task's offsets in [1 << 43, 1 << 56) used to fail.
+Now they map the MMIO page, which is all that window can mean.
+
+---
+--- a/drivers/gpu/drm/panthor/panthor_drv.c
++++ b/drivers/gpu/drm/panthor/panthor_drv.c
+@@ -1357,9 +1357,14 @@
+ 	 * mmap2's pgoffset field, we need to make the MMIO offset arch
+ 	 * specific. This converts a user MMIO offset into something the kernel
+ 	 * driver understands.
++	 *
++	 * Do it for 64-bit tasks too: an emulator (FEX, box64) running a
++	 * 32-bit UMD is a 64-bit task that still uses the 32-bit offset.
++	 * Fake GEM offsets end far below OFFSET_32BIT, so nothing else can
++	 * live in [OFFSET_32BIT, OFFSET_64BIT).
+ 	 */
+-	if (test_tsk_thread_flag(current, TIF_32BIT) &&
+-	    offset >= DRM_PANTHOR_USER_MMIO_OFFSET_32BIT) {
++	if (offset >= DRM_PANTHOR_USER_MMIO_OFFSET_32BIT &&
++	    offset < DRM_PANTHOR_USER_MMIO_OFFSET_64BIT) {
+ 		offset += DRM_PANTHOR_USER_MMIO_OFFSET_64BIT -
+ 			  DRM_PANTHOR_USER_MMIO_OFFSET_32BIT;
+ 		vma->vm_pgoff = offset >> PAGE_SHIFT;
