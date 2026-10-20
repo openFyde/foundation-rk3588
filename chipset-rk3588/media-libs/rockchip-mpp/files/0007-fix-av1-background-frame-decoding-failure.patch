@@ -1,0 +1,48 @@
+From 8202197857069b7495b1c46a319509c14b4aa9c1 Mon Sep 17 00:00:00 2001
+From: Hongjin Li <vic.hong@rock-chips.com>
+Date: Tue, 9 Sep 2025 20:26:15 +0800
+Subject: [PATCH] fix[hal_av1d]: Fix AV1 background frame decoding failure.
+
+Platform: RK3588
+Spec: av1
+
+Error case:
+Decode the AV1 bitstream from Bilibili that includes
+background frames.
+
+Err log:
+Correct: mpp_av1dec: irq_status: 00001100
+Error:   mpp_av1dec: irq_status: 00040100 // hw timeout
+
+Solution:
+The swreg8.sw_idr_pic_e shall be set to 1 when current frame
+is an intra frame.
+
+Source: Bilibili AV1 videos
+ex: https://www.bilibili.com/video/BV11ibPzLEhe
+
+Reported-by: redmine #575039
+
+Change-Id: I9f83fe7025f2c7ed70c8121798f9db0bfc4b0a24
+Signed-off-by: Hongjin Li <vic.hong@rock-chips.com>
+---
+ mpp/hal/vpu/av1d/hal_av1d_vdpu.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/mpp/hal/vpu/av1d/hal_av1d_vdpu.c b/mpp/hal/vpu/av1d/hal_av1d_vdpu.c
+index 5b6e1f9ad..1c2d019f9 100644
+--- a/mpp/hal/vpu/av1d/hal_av1d_vdpu.c
++++ b/mpp/hal/vpu/av1d/hal_av1d_vdpu.c
+@@ -2058,7 +2058,8 @@ MPP_RET vdpu_av1d_gen_regs(void *hal, HalTaskInfo *task)
+     regs->swreg7.sw_delta_q_res_log     = dxva->quantization.delta_q_res;
+     regs->swreg7.sw_delta_q_present     = dxva->quantization.delta_q_present;
+ 
+-    regs->swreg8.sw_idr_pic_e           = !dxva->format.frame_type;
++    regs->swreg8.sw_idr_pic_e           = dxva->format.frame_type == AV1_FRAME_KEY ||
++                                          dxva->format.frame_type == AV1_FRAME_INTRA_ONLY;
+     regs->swreg8.sw_quant_base_qindex   = dxva->quantization.base_qindex;
+     regs->swreg8.sw_bit_depth_y_minus8  = dxva->bitdepth - 8;
+     regs->swreg8.sw_bit_depth_c_minus8  = dxva->bitdepth - 8;
+-- 
+2.43.0
+

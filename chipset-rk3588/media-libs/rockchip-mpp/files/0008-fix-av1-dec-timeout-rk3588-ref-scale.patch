@@ -1,0 +1,51 @@
+From 20f21ddddbb5c4f321fe2e6ef5dc50430c217018 Mon Sep 17 00:00:00 2001
+From: Yandong Lin <yandong.lin@rock-chips.com>
+Date: Thu, 5 Feb 2026 09:25:04 +0800
+Subject: [PATCH] fix[hal_av1d]: Fix dec timeout in some case for rk3588
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Redmine: #606315
+Issue av1 stream:
+\\172.16.4.246\MediaFramework\4. 问题记录\4.1 redmine\#606315
+
+Signed-off-by: Yandong Lin <yandong.lin@rock-chips.com>
+Change-Id: I624924733d5a61aabf591292d09c993c66b8ffd7
+---
+ mpp/hal/vpu/av1d/hal_av1d_vdpu.c | 12 +++++++-----
+ 1 file changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/mpp/hal/vpu/av1d/hal_av1d_vdpu.c b/mpp/hal/vpu/av1d/hal_av1d_vdpu.c
+index 1fe16ce17..cef60303c 100644
+--- a/mpp/hal/vpu/av1d/hal_av1d_vdpu.c
++++ b/mpp/hal/vpu/av1d/hal_av1d_vdpu.c
+@@ -775,7 +775,7 @@ static void vdpu_av1d_set_reference_frames(Av1dHalCtx *p_hal, VdpuAv1dRegCtx *ct
+     VdpuAv1dRegSet *regs = ctx->regs;
+     RK_S32 ref_count[AV1DEC_MAX_PIC_BUFFERS] = {0};
+ 
+-    RK_U32 ref_scale_e = 0;
++    RK_U32 ref_scale_e = 1;
+     RK_U32 y_stride = ctx->luma_size;
+     RK_U32 uv_stride = y_stride / 2;
+     RK_U32 mv_offset = ctx->luma_size + ctx->chroma_size + 64;
+@@ -820,10 +820,12 @@ static void vdpu_av1d_set_reference_frames(Av1dHalCtx *p_hal, VdpuAv1dRegCtx *ct
+ 
+         set_ref_hor_scale(regs, ref, tmp1);
+         set_ref_ver_scale(regs, ref, tmp2);
+-        if (tmp1 != (1 << AV1_REF_SCALE_SHIFT) ||
+-            tmp2 != (1 << AV1_REF_SCALE_SHIFT)) {
+-            ref_scale_e = 1;
+-        }
++
++        /* Keep ref_scale_e always 1 for hw bug */
++        // if (tmp1 != (1 << AV1_REF_SCALE_SHIFT) ||
++        //     tmp2 != (1 << AV1_REF_SCALE_SHIFT)) {
++        //     ref_scale_e = 1;
++        // }
+ 
+         if (idx == ctx->prev_out_buffer_i) {
+             prev_valid = 1;
+-- 
+2.43.0
+

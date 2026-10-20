@@ -52,6 +52,8 @@ PATCHES=(
   "${FILESDIR}/0003-use-drm-allocator-as-default.patch"
   "${FILESDIR}/0005-fix-rk3588-vepu580-encoder-selection.patch"
   "${FILESDIR}/0006-fix-rk3588-rkvdec-hw_id.patch"
+  "${FILESDIR}/0007-fix-av1-background-frame-decoding-failure.patch"
+  "${FILESDIR}/0008-fix-av1-dec-timeout-rk3588-ref-scale.patch"
 )
 #  "${FILESDIR}/0002-disable-output-for-debug.patch"
 #  "${FILESDIR}/0004-add-debug-info.patch"
