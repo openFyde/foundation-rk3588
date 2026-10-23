@@ -1,0 +1,21 @@
+diff --git a/chrome/browser/ash/login/chrome_restart_request.cc b/chrome/browser/ash/login/chrome_restart_request.cc
+index 23fbb91f3aa51..1fa691c345c51 100644
+--- a/chrome/browser/ash/login/chrome_restart_request.cc
++++ b/chrome/browser/ash/login/chrome_restart_request.cc
+@@ -73,6 +73,7 @@ using ::content::BrowserThread;
+ 
+ // Increase logging level for Guest mode to avoid INFO messages in logs.
+ const char kGuestModeLoggingLevel[] = "1";
++const char kDisableBufferBwCompression[] = "disable-buffer-bw-compression";
+ 
+ bool IsRunningTest() {
+   const base::CommandLine* current_command_line =
+@@ -155,6 +156,8 @@ void DeriveCommandLine(const GURL& start_url,
+       ::switches::kEnableWebGPUDeveloperFeatures,
+       ::switches::kOzonePlatform,
+       ::switches::kRenderNodeOverride,
++      ::switches::kDisableExplicitDmaFences,
++      kDisableBufferBwCompression,
+       switches::kAshConstrainPointerToRoot,
+       switches::kAshDebugShortcuts,
+       switches::kAshDeveloperShortcuts,

@@ -1,0 +1,881 @@
+diff --git a/content/common/gpu_pre_sandbox_hook_linux.cc b/content/common/gpu_pre_sandbox_hook_linux.cc
+index 2e53794fa3374..f82fe8a9a0af8 100644
+--- a/content/common/gpu_pre_sandbox_hook_linux.cc
++++ b/content/common/gpu_pre_sandbox_hook_linux.cc
+@@ -91,11 +91,15 @@ static const char kLibGlesPath[] = "/usr/lib64/libGLESv2.so.2";
+ static const char kLibEglPath[] = "/usr/lib64/libEGL.so.1";
+ static const char kLibMaliPath[] = "/usr/lib64/libmali.so";
+ static const char kLibTegraPath[] = "/usr/lib64/libtegrav4l2.so";
++static const char kLibV4l2Path[] = "/usr/lib64/libv4l2.so";
++static const char kLibRkmppPath[] = "/usr/lib64/libv4l/plugins/libv4l-encplugin.so";
+ #else
+ static const char kLibGlesPath[] = "/usr/lib/libGLESv2.so.2";
+ static const char kLibEglPath[] = "/usr/lib/libEGL.so.1";
+ static const char kLibMaliPath[] = "/usr/lib/libmali.so";
+ static const char kLibTegraPath[] = "/usr/lib/libtegrav4l2.so";
++static const char kLibV4l2Path[] = "/usr/lib/libv4l2.so";
++static const char kLibRkmppPath[] = "/usr/lib/libv4l/plugins/libv4l-encplugin.so";
+ #endif
+ 
+ constexpr int dlopen_flag = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
+@@ -189,6 +193,14 @@ void AddV4L2GpuPermissions(
+     permissions->push_back(
+         BrokerFilePermission::ReadWrite(kAmlogicAvcEncoderPath));
+   }
++
++  permissions->push_back(BrokerFilePermission::ReadOnly("/proc/device-tree/compatible"));
++  permissions->push_back(BrokerFilePermission::AllPermissions("/dev/mpp_service"));
++  permissions->push_back(BrokerFilePermission::ReadOnly("/etc/localtime"));
++  permissions->push_back(BrokerFilePermission::ReadWrite("/dev/rga"));
++  permissions->push_back(BrokerFilePermission::ReadWrite("/var/log/libv4l2.log"));
++  permissions->push_back(BrokerFilePermission::ReadOnly(kLibRkmppPath));
++  permissions->push_back(BrokerFilePermission::ReadOnly(kLibV4l2Path));
+ }
+ 
+ void AddArmMaliGpuPermissions(std::vector<BrokerFilePermission>* permissions) {
+@@ -615,6 +627,7 @@ sandbox::syscall_broker::BrokerCommandSet CommandSetForGPU(
+        options.use_nvidia_specific_policies ||
+        options.use_virtio_specific_policies || IsArchitectureArm())) {
+     command_set.set(sandbox::syscall_broker::COMMAND_READLINK);
++    command_set.set(sandbox::syscall_broker::COMMAND_INOTIFY_ADD_WATCH);
+   }
+   return command_set;
+ }
+@@ -672,6 +685,11 @@ std::vector<BrokerFilePermission> FilePermissionsForGpu(
+   return permissions;
+ }
+ 
++void LoadV4l2LibPlugInLibraries() {
++  dlopen(kLibV4l2Path, dlopen_flag);
++  dlopen(kLibRkmppPath, dlopen_flag);
++}
++
+ bool LoadLibrariesForGpu(
+     const sandbox::policy::SandboxSeccompBPF::Options& options) {
+   LoadVulkanLibraries();
+@@ -683,6 +701,9 @@ bool LoadLibrariesForGpu(
+       if (!LoadAmdGpuLibraries())
+         return false;
+     }
++    if (UseV4L2Codec(options)) {
++      LoadV4l2LibPlugInLibraries();
++    }
+   } else {
+     if (UseChromecastSandboxAllowlist() && IsArchitectureArm()) {
+       if (UseV4L2Codec(options)) {
+diff --git a/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc b/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc
+index 37f44c9813db7..375a75dea2d29 100644
+--- a/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc
++++ b/media/gpu/sandbox/hardware_video_decoding_sandbox_hook_linux.cc
+@@ -7,6 +7,7 @@
+ #include <dlfcn.h>
+ #include <sys/stat.h>
+ 
++#include <utility>
+ #include "base/process/process_metrics.h"
+ #include "base/strings/stringprintf.h"
+ #include "build/build_config.h"
+@@ -165,11 +166,14 @@ bool HardwareVideoDecodingPreSandboxHookForV4L2(
+     std::vector<BrokerFilePermission>& permissions) {
+ #if BUILDFLAG(USE_V4L2_CODEC)
+   command_set.set(sandbox::syscall_broker::COMMAND_OPEN);
++  command_set.set(sandbox::syscall_broker::COMMAND_STAT);
++  command_set.set(sandbox::syscall_broker::COMMAND_READLINK);
++  command_set.set(sandbox::syscall_broker::COMMAND_INOTIFY_ADD_WATCH);
+ 
+   // TODO(b/210759684): we should open the render node for minigbm before
+   // entering the sandbox so that we can remove this permission.
+   AllowAccessToRenderNodes(permissions, /*include_sys_dev_char=*/false,
+-                           /*read_write=*/false);
++                           /*read_write=*/true);
+ 
+   // Device nodes for V4L2 video decode accelerator drivers.
+   // We do not use a FileEnumerator because the device files may not exist yet
+@@ -202,6 +206,32 @@ bool HardwareVideoDecodingPreSandboxHookForV4L2(
+   // Files needed for protected DMA allocations.
+   static const char kDmaHeapPath[] = "/dev/dma_heap/restricted_mtk_cma";
+   permissions.push_back(BrokerFilePermission::ReadWrite(kDmaHeapPath));
++  permissions.push_back(BrokerFilePermission::ReadOnly("/proc/device-tree/compatible"));
++  permissions.push_back(BrokerFilePermission::ReadWrite("/dev/mpp_service"));
++  permissions.push_back(BrokerFilePermission::ReadOnly("/etc/localtime"));
++  permissions.push_back(BrokerFilePermission::ReadWrite("/dev/rga"));
++  permissions.push_back(BrokerFilePermission::ReadWrite("/var/log/libv4l2.log"));
++  constexpr unsigned int kFlags = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
++#if defined(__aarch64__)
++  if (nullptr == dlopen("/usr/lib64/libv4l/plugins/libv4l-encplugin.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l-encplugin.so) failed with error: " << dlerror();
++    return false;
++  }
++  if (nullptr == dlopen("/usr/lib64/libv4l2.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l2.so) failed with error: " << dlerror();
++    return false;
++  }
++#else
++  if (nullptr == dlopen("/usr/lib/libv4l/plugins/libv4l-encplugin.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l-encplugin.so) failed with error: " << dlerror();
++    return false;
++  }
++  if (nullptr == dlopen("/usr/lib/libv4l2.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l2.so) failed with error: " << dlerror();
++    return false;
++  }
++#endif  // defined(__aarch64__)
++  LOG(INFO) << "success to load libv4l2.so";
+   return true;
+ #else
+   NOTREACHED();
+@@ -244,6 +274,7 @@ bool HardwareVideoDecodingPreSandboxHook(
+   std::vector<BrokerFilePermission> permissions;
+ 
+   bool result_for_platform_policy;
++  LOG(INFO) << "policy type:" << std::to_underlying(policy_type);
+   switch (policy_type) {
+     case PolicyType::kVaapiOnIntel:
+       result_for_platform_policy =
+diff --git a/media/gpu/sandbox/hardware_video_encoding_sandbox_hook_linux.cc b/media/gpu/sandbox/hardware_video_encoding_sandbox_hook_linux.cc
+index 56f0bb400bf44..cd9d9d592f455 100644
+--- a/media/gpu/sandbox/hardware_video_encoding_sandbox_hook_linux.cc
++++ b/media/gpu/sandbox/hardware_video_encoding_sandbox_hook_linux.cc
+@@ -36,6 +36,9 @@ bool HardwareVideoEncodingPreSandboxHook(
+   // surface in mixed builds compared to a single-backend build.
+ #if BUILDFLAG(USE_V4L2_CODEC)
+   command_set.set(sandbox::syscall_broker::COMMAND_OPEN);
++  command_set.set(sandbox::syscall_broker::COMMAND_STAT);
++  command_set.set(sandbox::syscall_broker::COMMAND_READLINK);
++  command_set.set(sandbox::syscall_broker::COMMAND_INOTIFY_ADD_WATCH);
+ 
+   // Device nodes for V4L2 video encode accelerator drivers.
+   // We do not use a FileEnumerator because the device files may not exist
+@@ -57,6 +60,33 @@ bool HardwareVideoEncodingPreSandboxHook(
+   // permission to only platforms that need it.
+   static const char kDevImageProc0Path[] = "/dev/image-proc0";
+   permissions.push_back(BrokerFilePermission::ReadWrite(kDevImageProc0Path));
++  permissions.push_back(BrokerFilePermission::ReadOnly("/proc/device-tree/compatible"));
++  permissions.push_back(BrokerFilePermission::ReadWrite("/dev/mpp_service"));
++  permissions.push_back(BrokerFilePermission::ReadWrite("/dev/rga"));
++  permissions.push_back(BrokerFilePermission::ReadWrite("/dev/dri/renderD128"));
++  permissions.push_back(BrokerFilePermission::ReadOnly("/etc/localtime"));
++  permissions.push_back(BrokerFilePermission::ReadWrite("/var/log/libv4l2.log"));
++  constexpr unsigned int kFlags = RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE;
++#if defined(__aarch64__)
++  if (nullptr == dlopen("/usr/lib64/libv4l/plugins/libv4l-encplugin.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l-encplugin.so) failed with error: " << dlerror();
++    return false;
++  }
++  if (nullptr == dlopen("/usr/lib64/libv4l2.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l2.so) failed with error: " << dlerror();
++    return false;
++  }
++#else
++  if (nullptr == dlopen("/usr/lib/libv4l/plugins/libv4l-encplugin.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l-encplugin.so) failed with error: " << dlerror();
++    return false;
++  }
++  if (nullptr == dlopen("/usr/lib/libv4l2.so", kFlags)) {
++    LOG(ERROR) << "dlopen(libv4l2.so) failed with error: " << dlerror();
++    return false;
++  }
++#endif  // defined(__aarch64__)
++  LOG(INFO) << "success to load libv4l2.so";
+ #endif  // BUILDFLAG(USE_V4L2_CODEC)
+ 
+ #if BUILDFLAG(USE_VAAPI)
+diff --git a/media/gpu/v4l2/BUILD.gn b/media/gpu/v4l2/BUILD.gn
+index 0427cb60c89c0..9aa2bc20abfb9 100644
+--- a/media/gpu/v4l2/BUILD.gn
++++ b/media/gpu/v4l2/BUILD.gn
+@@ -6,10 +6,18 @@ import("//build/config/ui.gni")
+ import("//media/gpu/args.gni")
+ import("//media/media_options.gni")
+ import("//testing/test.gni")
++import("//tools/generate_stubs/rules.gni")
+ import("//ui/gl/features.gni")
+ 
+ assert(use_v4l2_codec)
+ 
++generate_stubs("libv4l2_stubs") {
++  extra_header = "v4l2_stub_header.fragment"
++  sigs = [ "v4l2.sig" ]
++  output_name = "v4l2_stubs"
++  deps = [ "//base" ]
++}
++
+ source_set("v4l2") {
+   defines = [ "MEDIA_GPU_IMPLEMENTATION" ]
+   sources = [
+@@ -102,6 +110,7 @@ source_set("v4l2") {
+   public_deps = [ "//ui/gl" ]
+ 
+   deps = [
++    ":libv4l2_stubs",
+     ":v4l2_status",
+     "//base",
+     "//build/config/linux/libdrm",
+diff --git a/media/gpu/v4l2/v4l2.sig b/media/gpu/v4l2/v4l2.sig
+index 32931df372017..8f1894536a7aa 100644
+--- a/media/gpu/v4l2/v4l2.sig
++++ b/media/gpu/v4l2/v4l2.sig
+@@ -8,3 +8,5 @@
+ LIBV4L_PUBLIC int v4l2_close(int fd);
+ LIBV4L_PUBLIC int v4l2_ioctl(int fd, unsigned long int request, ...);
+ LIBV4L_PUBLIC int v4l2_fd_open(int fd, int v4l2_flags);
++LIBV4L_PUBLIC void *v4l2_mmap(void *start, size_t length, int prot, int flags, int fd, int64_t offset);
++LIBV4L_PUBLIC int v4l2_munmap(void *_start, size_t length);
+diff --git a/media/gpu/v4l2/v4l2_device.cc b/media/gpu/v4l2/v4l2_device.cc
+index fecd6a9a70bfb..d11b01d87249a 100644
+--- a/media/gpu/v4l2/v4l2_device.cc
++++ b/media/gpu/v4l2/v4l2_device.cc
+@@ -35,6 +35,13 @@
+ #include "media/gpu/macros.h"
+ #include "media/gpu/v4l2/v4l2_queue.h"
+ #include "media/gpu/v4l2/v4l2_utils.h"
++#include "media/gpu/v4l2/v4l2_stubs.h"
++#include "third_party/v4l-utils/lib/include/libv4l2.h"
++
++using media_gpu_v4l2::InitializeStubs;
++using media_gpu_v4l2::IsV4l2Initialized;
++using media_gpu_v4l2::kModuleV4l2;
++using media_gpu_v4l2::StubPathMap;
+ 
+ namespace media {
+ 
+@@ -57,7 +64,7 @@ uint32_t V4L2PixFmtToDrmFormat(uint32_t format) {
+       return DRM_FORMAT_ARGB8888;
+ 
+     default:
+-      DVLOGF(1) << "Unrecognized format " << FourccToString(format);
++      VLOGF(1) << "Unrecognized format " << FourccToString(format);
+       return 0;
+   }
+ }
+@@ -80,6 +87,12 @@ class V4L2QueueFactory {
+ };
+ 
+ V4L2Device::V4L2Device() {
++  StubPathMap paths;
++  if (!IsV4l2Initialized()) {
++    paths[kModuleV4l2].push_back(V4L2Device::kLibV4l2Path);
++    if (!InitializeStubs(paths))
++      LOG(ERROR) << "failed to init v4l2 lib.";
++  }
+   DETACH_FROM_SEQUENCE(client_sequence_checker_);
+ }
+ 
+@@ -122,7 +135,7 @@ void V4L2Device::OnQueueDestroyed(v4l2_buf_type buf_type) {
+ }
+ 
+ bool V4L2Device::Open(Type type, uint32_t v4l2_pixfmt) {
+-  DVLOGF(3);
++  VLOGF(3);
+   std::string path = GetDevicePathFor(type, v4l2_pixfmt);
+ 
+   if (path.empty()) {
+@@ -208,7 +221,7 @@ int32_t V4L2Device::VideoCodecProfileToV4L2H264Profile(
+     case H264PROFILE_MULTIVIEWHIGH:
+       return V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH;
+     default:
+-      DVLOGF(1) << "Add more cases as needed";
++      VLOGF(1) << "Add more cases as needed";
+       return -1;
+   }
+ }
+@@ -249,7 +262,7 @@ int32_t V4L2Device::H264LevelIdcToV4L2H264Level(uint8_t level_idc) {
+     case 51:
+       return V4L2_MPEG_VIDEO_H264_LEVEL_5_1;
+     default:
+-      DVLOGF(1) << "Unrecognized level_idc: " << static_cast<int>(level_idc);
++      VLOGF(1) << "Unrecognized level_idc: " << static_cast<int>(level_idc);
+       return -1;
+   }
+ }
+@@ -344,7 +357,7 @@ gfx::Size V4L2Device::AllocatedSizeFromV4L2Format(
+ 
+ int V4L2Device::Ioctl(int request, void* arg) {
+   DCHECK(device_fd_.is_valid());
+-  return HANDLE_EINTR(ioctl(device_fd_.get(), request, arg));
++  return HANDLE_EINTR(v4l2_ioctl(device_fd_.get(), request, arg));
+ }
+ 
+ bool V4L2Device::Poll(bool poll_device, bool* event_pending) {
+@@ -378,11 +391,11 @@ void* V4L2Device::Mmap(void* addr,
+                        int flags,
+                        unsigned int offset) {
+   DCHECK(device_fd_.is_valid());
+-  return mmap(addr, len, prot, flags, device_fd_.get(), offset);
++  return v4l2_mmap(addr, len, prot, flags, device_fd_.get(), offset);
+ }
+ 
+ void V4L2Device::Munmap(void* addr, unsigned int len) {
+-  munmap(addr, len);
++  v4l2_munmap(addr, len);
+ }
+ 
+ bool V4L2Device::SetDevicePollInterrupt() {
+@@ -579,7 +592,7 @@ V4L2Device::EnumerateSupportedDecodeProfiles(
+       profile.profile = video_codec_profile;
+       profiles.push_back(profile);
+ 
+-      DVLOGF(3) << "Found decoder profile " << GetProfileName(profile.profile)
++      VLOGF(3) << "Found decoder profile " << GetProfileName(profile.profile)
+                 << ", resolutions: " << profile.min_resolution.ToString() << " "
+                 << profile.max_resolution.ToString();
+     }
+@@ -849,14 +862,28 @@ bool V4L2Device::SetGOPLength(uint32_t gop_length) {
+ 
+ bool V4L2Device::OpenDevicePath(const std::string& path) {
+   DCHECK(!device_fd_.is_valid());
+-
++  if (!IsV4l2Initialized()) {
++    VLOGF(3) << "V4l2plugin is null.";
++    return false;
++  };
+   device_fd_.reset(
+       HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC)));
++  if (!device_fd_.is_valid())
++    return false;
++
++  if (HANDLE_EINTR(v4l2_fd_open(device_fd_.get(), V4L2_DISABLE_CONVERSION)) !=
++          -1) {
++    VLOGF(3) << "Using libv4l2 for " << path;
++  } else {
++    VLOGF(3) << "Failed to open libv4l2 for " << path;
++  }
+   return device_fd_.is_valid();
+ }
+ 
+ void V4L2Device::CloseDevice() {
+-  DVLOGF(3);
++  VLOGF(3);
++  if (device_fd_.is_valid())
++    v4l2_close(device_fd_.release());
+   device_fd_.reset();
+ }
+ 
+@@ -1002,7 +1029,7 @@ void V4L2Device::EnumerateDevicesForType(Type type) {
+ #endif
+ 
+     if (found_valid_device) {
+-      DVLOGF(3) << "Found device: " << path;
++      VLOGF(3) << "Found device: " << path;
+       devices.push_back(std::make_pair(path, supported_pixelformats_input));
+     }
+ 
+diff --git a/media/gpu/v4l2/v4l2_device.h b/media/gpu/v4l2/v4l2_device.h
+index c644cf3ef5b27..a4dfdead2294c 100644
+--- a/media/gpu/v4l2/v4l2_device.h
++++ b/media/gpu/v4l2/v4l2_device.h
+@@ -90,6 +90,12 @@ class MEDIA_GPU_EXPORT V4L2Device
+ 
+   V4L2Device();
+ 
++  inline static constexpr char kLibV4l2Path[] =
++#if defined(__aarch64__)
++      "/usr/lib64/libv4l2.so";
++#else
++      "/usr/lib/libv4l2.so";
++#endif
+   // Open a V4L2 device of |type| for use with |v4l2_pixfmt|.
+   // Return true on success.
+   // The device will be closed in the destructor.
+diff --git a/media/gpu/v4l2/v4l2_queue.cc b/media/gpu/v4l2/v4l2_queue.cc
+index 709456f044584..4219848bfbd78 100644
+--- a/media/gpu/v4l2/v4l2_queue.cc
++++ b/media/gpu/v4l2/v4l2_queue.cc
+@@ -24,6 +24,7 @@
+ #include "media/gpu/macros.h"
+ #include "third_party/perfetto/include/perfetto/tracing/string_helpers.h"
+ #include "third_party/perfetto/include/perfetto/tracing/track.h"
++#include "third_party/v4l-utils/lib/include/libv4l2.h"
+ 
+ namespace media {
+ 
+@@ -251,8 +252,8 @@ V4L2Buffer::~V4L2Buffer() {
+   if (v4l2_buffer_.memory == V4L2_MEMORY_MMAP) {
+     for (size_t i = 0; i < plane_mappings_.size(); i++) {
+       if (plane_mappings_[i] != nullptr) {
+-        munmap(plane_mappings_[i],
+-               UNSAFE_TODO(v4l2_buffer_.m.planes[i].length));
++        v4l2_munmap(plane_mappings_[i],
++                    UNSAFE_TODO(v4l2_buffer_.m.planes[i].length));
+       }
+     }
+   }
+@@ -751,7 +752,9 @@ bool V4L2WritableBufferRef::QueueDMABuf(scoped_refptr<FrameResource> frame,
+   size_t num_planes = self.PlanesCount();
+   for (size_t i = 0; i < num_planes; i++) {
+     UNSAFE_TODO(self.buffer_data_->v4l2_buffer_.m.planes[i].m.fd =
+-                    planes[i].fd.get());
++                    frame->GetDmabufFd(i));
++    VLOGF(3) << "planes fd:" << planes[i].fd.get()
++             << " frame dma:" << frame->GetDmabufFd(i);
+   }
+ 
+   return std::move(self).DoQueue(request_ref, std::move(frame));
+diff --git a/media/gpu/v4l2/v4l2_stateful_video_decoder.cc b/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
+index e262ad22d96ec..c9bf1ea509407 100644
+--- a/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
++++ b/media/gpu/v4l2/v4l2_stateful_video_decoder.cc
+@@ -35,12 +35,22 @@
+ #include "third_party/abseil-cpp/absl/cleanup/cleanup.h"
+ #include "ui/gfx/geometry/size.h"
+ 
++#include "media/gpu/v4l2/v4l2_stubs.h"
++#include "media/gpu/v4l2/v4l2_device.h"
++#include "third_party/v4l-utils/lib/include/libv4l2.h"
++
+ namespace {
++using media_gpu_v4l2::InitializeStubs;
++using media_gpu_v4l2::kModuleV4l2;
++using media_gpu_v4l2::StubPathMap;
++using media_gpu_v4l2::IsV4l2Initialized;
++using media::V4L2Device;
++
+ // Numerical value of ioctl() OK return value;
+ constexpr int kIoctlOk = 0;
+ 
+ int HandledIoctl(int fd, int request, void* arg) {
+-  return HANDLE_EINTR(ioctl(fd, request, arg));
++  return HANDLE_EINTR(v4l2_ioctl(fd, request, arg));
+ }
+ 
+ void* Mmap(int fd,
+@@ -49,7 +59,28 @@ void* Mmap(int fd,
+            int prot,
+            int flags,
+            unsigned int offset) {
+-  return mmap(addr, len, prot, flags, fd, offset);
++  return v4l2_mmap(addr, len, prot, flags, fd, offset);
++}
++
++bool InitV4l2Plugin() {
++  StubPathMap paths;
++  paths[kModuleV4l2].push_back(V4L2Device::kLibV4l2Path);
++  return InitializeStubs(paths);
++}
++
++bool OpenDevice(int fd) {
++  if (!IsV4l2Initialized() && !InitV4l2Plugin()) {
++    VLOG(2) << "Failed to init v4l2plugin";
++    return false;
++  }
++  if (HANDLE_EINTR(v4l2_fd_open(fd, V4L2_DISABLE_CONVERSION)) ==
++          -1)
++    return false;
++  return true;
++}
++
++void CloseDevice(int fd) {
++  v4l2_close(fd);
+ }
+ 
+ // This method blocks waiting for an event from either |device_fd| or
+@@ -273,7 +304,7 @@ void V4L2StatefulVideoDecoder::Initialize(const VideoDecoderConfig& config,
+                                           const WaitingCB& /*waiting_cb*/) {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+   DCHECK(config.IsValidConfig());
+-  DVLOGF(1) << config.AsHumanReadableString();
++  VLOGF(1) << config.AsHumanReadableString();
+ 
+   if (config.is_encrypted() || !!cdm_context) {
+     std::move(init_cb).Run(DecoderStatus::Codes::kUnsupportedEncryptionMode);
+@@ -312,7 +343,7 @@ void V4L2StatefulVideoDecoder::Initialize(const VideoDecoderConfig& config,
+ 
+   if (!device_fd_.is_valid()) {
+     device_fd_ = V4L2Device::OpenFDForType(V4L2Device::Type::kDecoder);
+-    if (!device_fd_.is_valid()) {
++    if (!device_fd_.is_valid() || !OpenDevice(device_fd_.get())) {
+       std::move(init_cb).Run(DecoderStatus::Codes::kFailedToCreateDecoder);
+       return;
+     }
+@@ -424,7 +455,7 @@ void V4L2StatefulVideoDecoder::Initialize(const VideoDecoderConfig& config,
+   struct v4l2_event_subscription sub = {.type = V4L2_EVENT_SOURCE_CHANGE};
+   if (HandledIoctl(device_fd_.get(), VIDIOC_SUBSCRIBE_EVENT, &sub) !=
+       kIoctlOk) {
+-    PLOG(ERROR) << "Failed to subscribe to V4L2_EVENT_SOURCE_CHANGE";
++    LOG(ERROR) << "Failed to subscribe to V4L2_EVENT_SOURCE_CHANGE";
+     std::move(init_cb).Run(DecoderStatus::Codes::kFailedToCreateDecoder);
+     return;
+   }
+@@ -436,6 +467,7 @@ void V4L2StatefulVideoDecoder::Initialize(const VideoDecoderConfig& config,
+   }
+ 
+   std::move(init_cb).Run(DecoderStatus::Codes::kOk);
++  VLOGF(1) << "to the end";
+ }
+ 
+ void V4L2StatefulVideoDecoder::Decode(scoped_refptr<DecoderBuffer> buffer,
+@@ -577,6 +609,8 @@ void V4L2StatefulVideoDecoder::Reset(base::OnceClosure closure) {
+ 
+   OUTPUT_queue_.reset();
+   CAPTURE_queue_.reset();
++  if (device_fd_.is_valid())
++		CloseDevice(device_fd_.get());
+   device_fd_.reset();
+ 
+   event_task_runner_.reset();
+@@ -615,7 +649,7 @@ bool V4L2StatefulVideoDecoder::IsPlatformDecoder() const {
+ 
+ void V4L2StatefulVideoDecoder::ApplyResolutionChange() {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+-  DVLOGF(2);
++  VLOGF(2);
+   // It's possible that we have been Reset()ed in the interval between receiving
+   // the resolution change event in WaitOnceForEvents() (in a background thread)
+   // and arriving here from our |client_|. Check if that's the case.
+@@ -696,6 +730,7 @@ bool V4L2StatefulVideoDecoder::InitializeCAPTUREQueue() {
+ 
+   const auto v4l2_format_or_error = CAPTURE_queue_->GetFormat();
+   if (!v4l2_format_or_error.first || v4l2_format_or_error.second != kIoctlOk) {
++    LOG(ERROR) << "faild to get capture queue v4l2 format";
+     return false;
+   }
+   const struct v4l2_format v4l2_format = *(v4l2_format_or_error.first);
+@@ -923,8 +958,13 @@ void V4L2StatefulVideoDecoder::RearmCAPTUREQueueMonitoring() {
+ void V4L2StatefulVideoDecoder::TryAndDequeueCAPTUREQueueBuffers() {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+   DCHECK(CAPTURE_queue_) << "|CAPTURE_queue_| must be created at this point";
++  if (!CAPTURE_queue_) {
++    LOG(ERROR) << "|CAPTURE_queue_| must be created at this point";
++    return;
++  }
+ 
+   const v4l2_memory queue_type = CAPTURE_queue_->GetMemoryType();
++  VLOG(1) << "mem type:" << (int) queue_type;
+   DCHECK(queue_type == V4L2_MEMORY_MMAP || queue_type == V4L2_MEMORY_DMABUF);
+   const bool use_v4l2_allocated_buffers = !client_->GetVideoFramePool();
+   DCHECK((queue_type == V4L2_MEMORY_MMAP && use_v4l2_allocated_buffers) ||
+@@ -1209,11 +1249,12 @@ bool V4L2StatefulVideoDecoder::IsInitialized() const {
+ 
+ // static
+ int V4L2StatefulVideoDecoder::GetMaxNumDecoderInstances() {
++#if 0
+   if (!base::FeatureList::IsEnabled(media::kLimitConcurrentDecoderInstances)) {
+     return std::numeric_limits<int>::max();
+   }
+   auto device_fd = V4L2Device::OpenFDForType(V4L2Device::Type::kDecoder);
+-  if (!device_fd.is_valid()) {
++  if (!device_fd.is_valid() && !OpenDevice(device_fd.get())) {
+     return std::numeric_limits<int>::max();
+   }
+   struct v4l2_capability caps = {};
+@@ -1229,7 +1270,11 @@ int V4L2StatefulVideoDecoder::GetMaxNumDecoderInstances() {
+   // to 15 with e.g. Qualcomm SC7180.
+   // [1] https://source.chromium.org/chromium/chromium/src/+/main:media/gpu/v4l2/legacy/v4l2_video_decode_accelerator.h;l=449-454;drc=83195d4d1e1a4e54f148ddc80d0edcf5daa755ff
+   // [2] https://source.chromium.org/chromium/chromium/src/+/main:media/gpu/v4l2/v4l2_video_decoder.h;l=183-189;drc=90fa47c897b589bc4857fb7ccafab46a4be2e2ae
++	CloseDevice(device_fd.get());
+   return is_mtk8173 ? 10 : 15;
++#else
++  return 8;
++#endif
+ }
+ 
+ std::vector<std::pair<scoped_refptr<DecoderBuffer>, VideoDecoder::DecodeCB>>
+diff --git a/media/gpu/v4l2/v4l2_utils.cc b/media/gpu/v4l2/v4l2_utils.cc
+index 3337f51d343dd..8e38c149c71e2 100644
+--- a/media/gpu/v4l2/v4l2_utils.cc
++++ b/media/gpu/v4l2/v4l2_utils.cc
+@@ -32,6 +32,9 @@
+ #include "media/gpu/v4l2/v4l2_device.h"
+ #include "media/media_buildflags.h"
+ #include "ui/gfx/geometry/size.h"
++#include "media/gpu/v4l2/v4l2_stubs.h"
++#include "third_party/v4l-utils/lib/include/libv4l2.h"
++#include "media/gpu/v4l2/v4l2_device.h"
+ 
+ // This has not been accepted upstream.
+ #ifndef V4L2_PIX_FMT_AV1
+@@ -51,10 +54,36 @@
+ #endif
+ 
+ namespace {
++using media_gpu_v4l2::InitializeStubs;
++using media_gpu_v4l2::kModuleV4l2;
++using media_gpu_v4l2::StubPathMap;
++using media_gpu_v4l2::IsV4l2Initialized;
++using media::V4L2Device;
++
+ int HandledIoctl(int fd, int request, void* arg) {
+-  return HANDLE_EINTR(ioctl(fd, request, arg));
++  return HANDLE_EINTR(v4l2_ioctl(fd, request, arg));
++}
++bool InitV4l2Plugin() {
++	StubPathMap paths;
++	paths[kModuleV4l2].push_back(V4L2Device::kLibV4l2Path);
++	return InitializeStubs(paths);
+ }
+ 
++bool OpenDevice(int fd) {
++  if (!IsV4l2Initialized() && !InitV4l2Plugin()) {
++    VLOG(2) << "Failed to init plugin";
++    return false;
++  }
++  if (HANDLE_EINTR(v4l2_fd_open(fd, V4L2_DISABLE_CONVERSION)) ==
++          -1)
++    return false;
++  return true;
++}
++
++void CloseDevice(int fd) {
++  v4l2_close(fd);
++}
++#if 0
+ std::string GetDriverName(const media::IoctlAsCallback& ioctl_cb) {
+   struct v4l2_capability caps = {};
+   if (ioctl_cb.Run(VIDIOC_QUERYCAP, &caps) != 0) {
+@@ -65,6 +94,7 @@ std::string GetDriverName(const media::IoctlAsCallback& ioctl_cb) {
+ 
+   return std::string(reinterpret_cast<const char*>(caps.driver));
+ }
++#endif
+ }  // namespace
+ namespace media {
+ 
+@@ -336,6 +366,7 @@ static const std::map<v4l2_enum_type, v4l2_enum_type>
+ #if BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+         {V4L2_PIX_FMT_HEVC, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE},
+         {V4L2_PIX_FMT_HEVC_SLICE, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE},
++        {V4L2_PIX_FMT_HEVC, V4L2_CID_MPEG_VIDEO_HEVC_PROFILE},
+ #endif  // BUILDFLAG(ENABLE_HEVC_PARSER_AND_HW_DECODER)
+         {V4L2_PIX_FMT_VP8, V4L2_CID_MPEG_VIDEO_VP8_PROFILE},
+         {V4L2_PIX_FMT_VP8_FRAME, V4L2_CID_MPEG_VIDEO_VP8_PROFILE},
+@@ -594,6 +625,7 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
+ #endif
+ 
+   for (const auto& path : candidate_paths) {
++#if 0
+     base::ScopedFD device_fd(
+         HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC)));
+     if (!device_fd.is_valid()) {
+@@ -602,6 +634,10 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
+ #endif
+       continue;
+     }
++    if (!OpenDevice(device_fd.get())) {
++      LOG(ERROR) << "Failed to open libv4l2 device";
++      continue;
++    }
+ 
+     std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
+         base::BindRepeating(&HandledIoctl, device_fd.get()),
+@@ -629,6 +665,47 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
+             /*require_encrypted=*/false));
+       }
+     }
++    CloseDevice(device_fd.get());
++#else
++    int fd = HANDLE_EINTR(open(path.c_str(), O_RDWR | O_NONBLOCK | O_CLOEXEC));
++    if (fd < 0) {
++      PLOG(WARNING) << "Could not open " << path;
++      continue;
++    }
++    if (!OpenDevice(fd)) {
++      LOG(ERROR) << "Failed to open libv4l2 device";
++      continue;
++    }
++
++    std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
++        base::BindRepeating(&HandledIoctl, fd),
++        V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
++
++    for (const uint32_t v4l2_codec : v4l2_codecs) {
++      const std::vector<VideoCodecProfile> media_codec_profiles =
++          EnumerateSupportedProfilesForV4L2Codec(
++              base::BindRepeating(&HandledIoctl, fd), v4l2_codec);
++
++      gfx::Size min_coded_size;
++      gfx::Size max_coded_size;
++      GetSupportedResolution(
++          base::BindRepeating(&HandledIoctl, fd), v4l2_codec,
++          &min_coded_size, &max_coded_size);
++
++      for (const auto& profile : media_codec_profiles) {
++        supported_media_configs.emplace_back(SupportedVideoDecoderConfig(
++            profile, profile, min_coded_size, max_coded_size,
++#if BUILDFLAG(USE_CHROMEOS_PROTECTED_MEDIA)
++            /*allow_encrypted=*/true,
++#else
++            /*allow_encrypted=*/false,
++#endif
++            /*require_encrypted=*/false));
++      }
++    }
++    CloseDevice(fd);
++		HANDLE_EINTR(close(fd));
++#endif
+   }
+ 
+ #if DCHECK_IS_ON()
+@@ -643,11 +720,17 @@ std::optional<SupportedVideoDecoderConfigs> GetSupportedV4L2DecoderConfigs() {
+ }
+ 
+ bool IsV4L2DecoderStateful() {
++#if 0
+   auto device_fd = V4L2Device::OpenFDForType(V4L2Device::Type::kDecoder);
+   if (!device_fd.is_valid()) {
+     return false;
+   }
+ 
++  if (!OpenDevice(device_fd.get())) {
++    LOG(ERROR) << "Failed to open libv4l2 device";
++    return false;
++  }
++
+   std::vector<uint32_t> v4l2_codecs = EnumerateSupportedPixFmts(
+       base::BindRepeating(&HandledIoctl, device_fd.get()),
+       V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+@@ -659,13 +742,19 @@ bool IsV4L2DecoderStateful() {
+       V4L2_PIX_FMT_VP9,
+   };
+ 
++  CloseDevice(device_fd.get());
++
+   return std::find_first_of(v4l2_codecs.begin(), v4l2_codecs.end(),
+                             kSupportedStatefulInputCodecs.begin(),
+                             kSupportedStatefulInputCodecs.end()) !=
+          v4l2_codecs.end();
++#else
++  return true;
++#endif
+ }
+ 
+ bool IsVislDriver() {
++#if 0
+   auto device_fd = V4L2Device::OpenFDForType(V4L2Device::Type::kDecoder);
+   if (!device_fd.is_valid()) {
+     return false;
+@@ -675,6 +764,9 @@ bool IsVislDriver() {
+       GetDriverName(base::BindRepeating(&HandledIoctl, device_fd.get()));
+ 
+   return v4l2_driver_name.compare("visl") == 0;
++#else
++  return false;
++#endif
+ }
+ 
+ #ifndef NDEBUG
+diff --git a/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc b/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
+index 4704ff73fa5fc..037c2847a1dcd 100644
+--- a/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
++++ b/sandbox/policy/linux/bpf_cros_arm_gpu_policy_linux.cc
+@@ -45,6 +45,9 @@ ResultExpr CrosArmGpuProcessPolicy::EvaluateSyscall(int sysno) const {
+ #endif  // defined(__arm__) || defined(__aarch64__)
+ 
+   switch (sysno) {
++#if defined(__aarch64__)
++    case __NR_mmap:
++#endif
+ #if defined(__arm__) || defined(__aarch64__)
+     // ARM GPU sandbox is started earlier so we need to allow networking
+     // in the sandbox.
+@@ -53,8 +56,47 @@ ResultExpr CrosArmGpuProcessPolicy::EvaluateSyscall(int sysno) const {
+     case __NR_getsockname:
+     case __NR_sched_setaffinity:
+     case __NR_sched_setscheduler:
++      return Allow();
+     case __NR_sysinfo:
+     case __NR_uname:
++    case __NR_ioctl:
++    case __NR_madvise:
++    case __NR_futex:
++      return Allow();
++    case __NR_process_vm_readv:
++    case __NR_clock_nanosleep:
++    case __NR_munmap:
++    case __NR_rt_sigprocmask:
++      return Allow();
++    case __NR_getpid:
++    case __NR_sendto:
++    case __NR_gettid:
++    case __NR_faccessat:
++      return Allow();
++    case __NR_fstatfs:
++    case __NR_set_robust_list:
++    case __NR_rseq:
++    case __NR_brk:
++    case __NR_clone:
++      return Allow();
++    case __NR_exit:
++    case __NR_lseek:
++    case __NR_fcntl:
++    case __NR_write:
++    case __NR_execve:
++      return Allow();
++    case __NR_set_tid_address:
++    case __NR_prlimit64:
++    case __NR_getrandom:
++    case __NR_rt_sigaction:
++      return Allow();
++    case __NR_exit_group:
++    case __NR_restart_syscall:
++    case __NR_rt_sigreturn:
++#if defined(__arm__)
++    // Only available on ARM 32bit devices
++    case __NR_mmap2:
++#endif
+       return Allow();
+     // Allow only AF_UNIX for |domain|.
+     case __NR_socket:
+diff --git a/sandbox/policy/linux/bpf_hardware_video_decoding_policy_linux.cc b/sandbox/policy/linux/bpf_hardware_video_decoding_policy_linux.cc
+index c44b331c1fb0f..c982d2afecc81 100644
+--- a/sandbox/policy/linux/bpf_hardware_video_decoding_policy_linux.cc
++++ b/sandbox/policy/linux/bpf_hardware_video_decoding_policy_linux.cc
+@@ -151,8 +151,57 @@ ResultExpr HardwareVideoDecodingProcessPolicy::EvaluateSyscallForV4L2(
+     return CrashSIGSYS();
+   }
+ 
+-  if (system_call_number == __NR_ioctl)
+-    return Allow();
++  switch (system_call_number) {
++    case __NR_ioctl:
++    case __NR_madvise:
++    case __NR_futex:
++    case __NR_process_vm_readv:
++#if defined(__aarch64__)
++    case __NR_mmap:
++		case __NR_connect:
++    case __NR_getpeername:
++    case __NR_getsockname:
++    case __NR_sched_setaffinity:
++    case __NR_sched_setscheduler:
++      return Allow();
++    case __NR_sysinfo:
++    case __NR_uname:
++      return Allow();
++    case __NR_clock_nanosleep:
++    case __NR_munmap:
++    case __NR_rt_sigprocmask:
++      return Allow();
++    case __NR_getpid:
++    case __NR_sendto:
++    case __NR_newfstatat:
++    case __NR_gettid:
++    case __NR_faccessat:
++      return Allow();
++    case __NR_fstatfs:
++    case __NR_set_robust_list:
++    case __NR_rseq:
++    case __NR_brk:
++    case __NR_clone:
++      return Allow();
++    case __NR_exit:
++    case __NR_lseek:
++    case __NR_fcntl:
++    case __NR_write:
++    case __NR_execve:
++      return Allow();
++    case __NR_set_tid_address:
++    case __NR_prlimit64:
++    case __NR_getrandom:
++    case __NR_rt_sigaction:
++      return Allow();
++    case __NR_exit_group:
++    case __NR_restart_syscall:
++    case __NR_rt_sigreturn:
++#elif defined(__arm__)
++    case __NR_mmap2:
++#endif
++      return Allow();
++  }
+ 
+   if (system_call_number == __NR_sched_setaffinity) {
+     return RestrictSchedTarget(GetPolicyPid(), system_call_number);
