@@ -1,0 +1,111 @@
+alt-syscall: allow the syscalls AOSP 17 userspace uses in "android"
+
+Port of project-vmware 027 to rk3588; the hunks are identical. The ARC++
+container runs under the "android" alt-syscall table (config.json
+"altSyscall": "android"), and every process init starts inherits it.
+AOSP 17 userspace calls syscalls the table predates, which then fail with
+-ENOSYS. On fydetab_duo (.124, android-container-cb) that shows up as about
+400 "blocked syscall 276" (renameat2) lines an hour: bionic's rename() now
+calls renameat2 first and falls back to renameat, so nothing breaks, but
+UnityMain, usagestats, LazyTaskWriter and gms flood the kernel log.
+
+  * renameat2: bionic's rename()/renameat(), installd's atomic writes and
+    netbpfload's RENAME_NOREPLACE pinning.
+  * faccessat2, fchmodat2, close_range, copy_file_range, preadv2,
+    pwritev2, epoll_pwait2, clone3, rseq, mlock2, mseal: newer variants of
+    calls the table already allows, which bionic, ART and libbase now try
+    first. 074 and 080 add some of these to the "complete" table only; the
+    "android" table had none of them, so nothing here is a duplicate.
+  * process_madvise, process_mrelease, pidfd_send_signal, sched_getattr:
+    used by lmkd and ActivityManager (compaction, reaping, pidfd kills)
+    alongside the already allowed pidfd_open.
+
+Each has the same permission checks as the call it extends, so they go
+in the shared 64-bit list (the fydroid images are 64-bit only).
+sched_setattr stays out: the table routes sched_setscheduler and
+sched_setparam through android_* wrappers that limit priorities, and
+sched_setattr would bypass them.
+
+--- v6.12.orig/security/chromiumos/android_whitelists.h	2026-10-27 18:34:23.938890316 +0800
++++ v6.12/security/chromiumos/android_whitelists.h	2026-10-27 18:34:23.958891152 +0800
+@@ -73,22 +73,28 @@
+ 	SYSCALL_ENTRY(clock_nanosleep),
+ 	SYSCALL_ENTRY(clock_settime),
+ 	SYSCALL_ENTRY(clone),
++	SYSCALL_ENTRY(clone3),
+ 	SYSCALL_ENTRY(close),
++	SYSCALL_ENTRY(close_range),
+ 	SYSCALL_ENTRY(connect),
++	SYSCALL_ENTRY(copy_file_range),
+ 	SYSCALL_ENTRY(dup),
+ 	SYSCALL_ENTRY(dup3),
+ 	SYSCALL_ENTRY(epoll_create1),
+ 	SYSCALL_ENTRY(epoll_ctl),
+ 	SYSCALL_ENTRY(epoll_pwait),
++	SYSCALL_ENTRY(epoll_pwait2),
+ 	SYSCALL_ENTRY(eventfd2),
+ 	SYSCALL_ENTRY(execve),
+ 	SYSCALL_ENTRY(exit),
+ 	SYSCALL_ENTRY(exit_group),
+ 	SYSCALL_ENTRY(faccessat),
++	SYSCALL_ENTRY(faccessat2),
+ 	SYSCALL_ENTRY(fallocate),
+ 	SYSCALL_ENTRY(fchdir),
+ 	SYSCALL_ENTRY(fchmod),
+ 	SYSCALL_ENTRY(fchmodat),
++	SYSCALL_ENTRY(fchmodat2),
+ 	SYSCALL_ENTRY(fchownat),
+ 	SYSCALL_ENTRY(fcntl),
+ 	SYSCALL_ENTRY(fdatasync),
+@@ -150,7 +156,9 @@
+ 	SYSCALL_ENTRY(mkdirat),
+ 	SYSCALL_ENTRY(mknodat),
+ 	SYSCALL_ENTRY(mlock),
++	SYSCALL_ENTRY(mlock2),
+ 	SYSCALL_ENTRY(mlockall),
++	SYSCALL_ENTRY(mseal),
+ 	SYSCALL_ENTRY(munlock),
+ 	SYSCALL_ENTRY(munlockall),
+ 	SYSCALL_ENTRY(mount),
+@@ -165,18 +173,23 @@
+ 	SYSCALL_ENTRY_ALT(perf_event_open, android_perf_event_open),
+ 	SYSCALL_ENTRY(personality),
+ 	SYSCALL_ENTRY(pidfd_open),
++	SYSCALL_ENTRY(pidfd_send_signal),
+ 	SYSCALL_ENTRY(pipe2),
+ 	SYSCALL_ENTRY(ppoll),
+ 	SYSCALL_ENTRY_ALT(prctl, alt_sys_prctl),
+ 	SYSCALL_ENTRY(pread64),
+ 	SYSCALL_ENTRY(preadv),
++	SYSCALL_ENTRY(preadv2),
+ 	SYSCALL_ENTRY(prlimit64),
++	SYSCALL_ENTRY(process_madvise),
++	SYSCALL_ENTRY(process_mrelease),
+ 	SYSCALL_ENTRY(process_vm_readv),
+ 	SYSCALL_ENTRY(process_vm_writev),
+ 	SYSCALL_ENTRY(pselect6),
+ 	SYSCALL_ENTRY(ptrace),
+ 	SYSCALL_ENTRY(pwrite64),
+ 	SYSCALL_ENTRY(pwritev),
++	SYSCALL_ENTRY(pwritev2),
+ 	SYSCALL_ENTRY(read),
+ 	SYSCALL_ENTRY(readahead),
+ 	SYSCALL_ENTRY(readv),
+@@ -187,7 +200,9 @@
+ 	SYSCALL_ENTRY(remap_file_pages),
+ 	SYSCALL_ENTRY(removexattr),
+ 	SYSCALL_ENTRY(renameat),
++	SYSCALL_ENTRY(renameat2),
+ 	SYSCALL_ENTRY(restart_syscall),
++	SYSCALL_ENTRY(rseq),
+ 	SYSCALL_ENTRY(rt_sigaction),
+ 	SYSCALL_ENTRY(rt_sigpending),
+ 	SYSCALL_ENTRY(rt_sigprocmask),
+@@ -199,6 +214,7 @@
+ 	SYSCALL_ENTRY(sched_get_priority_max),
+ 	SYSCALL_ENTRY(sched_get_priority_min),
+ 	SYSCALL_ENTRY(sched_getaffinity),
++	SYSCALL_ENTRY(sched_getattr),
+ 	SYSCALL_ENTRY(sched_getparam),
+ 	SYSCALL_ENTRY(sched_getscheduler),
+ 	SYSCALL_ENTRY(sched_setaffinity),
