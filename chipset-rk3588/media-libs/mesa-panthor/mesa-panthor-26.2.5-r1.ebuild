@@ -56,6 +56,9 @@ BDEPEND="
 PATCHES=(
 	# pps-producer needs a newer Perfetto than the board's; see the patch.
 	"${FILESDIR}/mesa-26.2.5-revert-pps-forward-looking-counters.patch"
+	# Upstream 45582c89 (not in 26.2.5): lets bi_ra spill the node being allocated,
+	# which cuts spills in high-register-pressure shaders.
+	"${FILESDIR}/mesa-26.2.5-pan-ra-consider-spilling-node-being-allocated.patch"
 )
 
 src_prepare() {
